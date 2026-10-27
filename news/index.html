@@ -33,6 +33,21 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.9.267" id="jstats-09267">jstats 0.9.267<a class="anchor" aria-label="anchor" href="#jstats-09267"></a></h2>
+<p>Thank you for trying jstats. Here is what is new since 0.9.265.</p>
+<ul><li>
+<strong>“Not at all” scales read as Likert.</strong> A single question whose labels run from Not at all to Extremely, Very or A great deal, among others, now reads as a Likert item: <code><a href="../reference/jscreen.html">jscreen()</a></code> shows it as Likert, and <code><a href="../reference/jdesc.html">jdesc()</a></code> no longer warns that it seems categorical.</li>
+<li>
+<strong>Infinite values.</strong> When a variable holds Inf or -Inf, such as the log of a zero, <code><a href="../reference/jt.html">jt()</a></code>, <code><a href="../reference/jaov.html">jaov()</a></code>, <code><a href="../reference/jlm.html">jlm()</a></code>, <code><a href="../reference/jlogistic.html">jlogistic()</a></code>, <code><a href="../reference/jalpha.html">jalpha()</a></code>, <code><a href="../reference/jcorr.html">jcorr()</a></code> for Pearson’s r, and <code><a href="../reference/jplot.html">jplot()</a></code> for a histogram, scatter or box plot say how many, and give the line that sets them to missing in a new variable. Before, R stopped with “missing value where TRUE/FALSE needed” or “NA/NaN/Inf in ‘y’”. <code><a href="../reference/jdesc.html">jdesc()</a></code> prints -Inf with its sign, where it printed Inf.</li>
+<li>
+<strong>Messages easier to read.</strong> Notes, warnings and errors put one sentence on a line, and they say outcome and predictor where they said DV and IV.</li>
+<li>
+<strong>Words beyond A to Z in <code><a href="../reference/jencode.html">jencode()</a></code>.</strong> When the words hold letters such as Á or 北, its note says it coded them in character-code order, which may not be alphabetical: Ávila comes after Zebrinha. A map sets any order you like: <code>d$CityN &lt;- jencode(d, City, map = "Ávila=1; Belém=2; Zebrinha=3")</code>
+</li>
+</ul><p>When something you typed before now stops, its message says what to type instead.</p>
+<p>Problems or suggestions: tell me, or open an issue at <a href="https://github.com/jma61/jstats/issues" class="external-link uri">https://github.com/jma61/jstats/issues</a>.</p>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.265" id="jstats-09265">jstats 0.9.265<a class="anchor" aria-label="anchor" href="#jstats-09265"></a></h2>
 <p>Thank you for trying jstats. Here is what is new since 0.9.254.</p>
 <ul><li>

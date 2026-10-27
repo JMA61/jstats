@@ -1,5 +1,47 @@
 # Changelog
 
+## jstats 0.9.267
+
+Thank you for trying jstats. Here is what is new since 0.9.265.
+
+- **“Not at all” scales read as Likert.** A single question whose labels
+  run from Not at all to Extremely, Very or A great deal, among others,
+  now reads as a Likert item:
+  [`jscreen()`](https://jma61.github.io/jstats/reference/jscreen.md)
+  shows it as Likert, and
+  [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md) no
+  longer warns that it seems categorical.
+- **Infinite values.** When a variable holds Inf or -Inf, such as the
+  log of a zero,
+  [`jt()`](https://jma61.github.io/jstats/reference/jt.md),
+  [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md),
+  [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md),
+  [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md),
+  [`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md),
+  [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md) for
+  Pearson’s r, and
+  [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) for a
+  histogram, scatter or box plot say how many, and give the line that
+  sets them to missing in a new variable. Before, R stopped with
+  “missing value where TRUE/FALSE needed” or “NA/NaN/Inf in ‘y’”.
+  [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md) prints
+  -Inf with its sign, where it printed Inf.
+- **Messages easier to read.** Notes, warnings and errors put one
+  sentence on a line, and they say outcome and predictor where they said
+  DV and IV.
+- **Words beyond A to Z in
+  [`jencode()`](https://jma61.github.io/jstats/reference/jencode.md).**
+  When the words hold letters such as Á or 北, its note says it coded
+  them in character-code order, which may not be alphabetical: Ávila
+  comes after Zebrinha. A map sets any order you like:
+  `d$CityN <- jencode(d, City, map = "Ávila=1; Belém=2; Zebrinha=3")`
+
+When something you typed before now stops, its message says what to type
+instead.
+
+Problems or suggestions: tell me, or open an issue at
+<https://github.com/jma61/jstats/issues>.
+
 ## jstats 0.9.265
 
 Thank you for trying jstats. Here is what is new since 0.9.254.
