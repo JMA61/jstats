@@ -11,7 +11,7 @@ must not be word-filled apart), then R's own message relayed.
 ## Usage
 
 ``` r
-.jst_create_data_dir(dir, fn, tail = "")
+.jst_create_data_dir(dir, fn, tail = "", what = "data")
 ```
 
 ## Arguments

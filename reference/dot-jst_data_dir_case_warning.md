@@ -12,7 +12,7 @@ operating systems.
 ## Usage
 
 ``` r
-.jst_data_dir_case_warning(dir)
+.jst_data_dir_case_warning(dir, slot = "data.dir")
 ```
 
 ## Arguments

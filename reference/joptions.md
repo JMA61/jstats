@@ -24,6 +24,7 @@ joptions(
   missing.convention = NULL,
   missing.convention.codes = NULL,
   data.dir = NULL,
+  output.dir = NULL,
   corr.layout = NULL,
   missing.detail = NULL,
   message.width = NULL,
@@ -46,6 +47,10 @@ joptions(
   Numeric vector, length 1 to 3. See Slots.
 
 - data.dir:
+
+  Character string (length 1), or `NULL`. See Slots.
+
+- output.dir:
 
   Character string (length 1), or `NULL`. See Slots.
 
@@ -140,6 +145,18 @@ query, or as an echo of the slots a setting call touched.
   with forward slashes: a folder typed with single backslashes, which R
   reads as special characters, stops the call with nothing set.
 
+- output.dir:
+
+  Character string (length 1), or `NULL`. Default: `NULL`. The folder a
+  file of output is written into: when `NULL`, a table written with a
+  bare file name goes in the working directory; when set, names the
+  folder (relative to the working directory, or a full path) such a file
+  goes in. Created when the setting is made, as `data.dir` is, and
+  created again at the first write if it has been removed since; cleared
+  with `output.dir = NULL` or `output.dir = ""`. A file name with a
+  folder in it bypasses the setting. Distinct from `data.dir` on
+  purpose: data come in from one folder, and output goes out to another.
+
 - corr.layout:
 
   Character, length 1. One of `"wide"` or `"stacked"`. Default:
@@ -190,8 +207,9 @@ query, or as an echo of the slots a setting call touched.
 
 - `joptions()`:
 
-  Print the full settings panel: all six slots, whatever the convention.
-  The `missing.convention.codes` row is labeled as SPSS-style;
+  Print the full settings panel: all seven slots, whatever the
+  convention. The `missing.convention.codes` row is labeled as
+  SPSS-style;
   [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md) to
   SPSS-style missing values uses those codes under any setting.
 
@@ -200,7 +218,7 @@ query, or as an echo of the slots a setting call touched.
   Print one slot and nothing else – `joptions("data.dir")`, or several
   at once with `joptions(c("data.dir", "corr.layout"))` – closed by a
   pointer to `joptions()` for the full panel. A slot name given WITHOUT
-  an argument name is read as a query rather than a setting; the six
+  an argument name is read as a query rather than a setting; the seven
   slot names and the four `missing.convention` values share no string,
   so the two readings cannot collide. A named argument is always a
   setting, which leaves `joptions(missing.convention = "data.dir")` an
@@ -261,6 +279,7 @@ joptions()                                        # show current settings
 #> Missing-value convention: SPSS-style
 #> SPSS-style missing value codes: -99, -98, -97
 #> Data folder: Working directory
+#> Output folder: Working directory
 #> Correlation layout: wide
 #> Missing-value detail: per_code
 #> Message width: Auto (currently 79)
@@ -299,16 +318,29 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> 
 joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: /tmp/RtmpeUftOz/Data
+#> Data folder: /tmp/RtmpvHxscM/Data
 #> Run joptions() to see all settings.
 #> 
 #> Created the data folder:
-#>   /tmp/RtmpeUftOz/Data
+#>   /tmp/RtmpvHxscM/Data
 #> 
                                                   # (created if absent)
 joptions(data.dir = NULL)                         # back to the working directory
 #> Options Settings
 #> Data folder: Working directory
+#> Run joptions() to see all settings.
+#> 
+joptions(output.dir = file.path(tempdir(), "Tables")) # where tables are written
+#> Options Settings
+#> Output folder: /tmp/RtmpvHxscM/Tables
+#> Run joptions() to see all settings.
+#> 
+#> Created the output folder:
+#>   /tmp/RtmpvHxscM/Tables
+#> 
+joptions(output.dir = NULL)                       # back to the working directory
+#> Options Settings
+#> Output folder: Working directory
 #> Run joptions() to see all settings.
 #> 
 joptions(message.width = 60)                      # wrap message prose at 60
@@ -345,6 +377,7 @@ joptions(NULL)                                    # reset all to defaults
 #> Missing-value convention: None selected
 #> SPSS-style missing value codes: -99, -98, -97
 #> Data folder: Working directory
+#> Output folder: Working directory
 #> Correlation layout: wide
 #> Missing-value detail: per_code
 #> Message width: Auto (currently 79)

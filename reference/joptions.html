@@ -27,7 +27,7 @@ explicit transform path for data already in the workspace."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.269</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.270</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,6 +73,7 @@ explicit transform path for data already in the workspace.</p>
 <span>  missing.convention <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  missing.convention.codes <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  data.dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  output.dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  corr.layout <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  missing.detail <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  message.width <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -97,6 +98,10 @@ read instead as a status query on that slot (see Call patterns).</p></dd>
 
 
 <dt id="arg-data-dir">data.dir<a class="anchor" aria-label="anchor" href="#arg-data-dir"></a></dt>
+<dd><p>Character string (length 1), or <code>NULL</code>. See Slots.</p></dd>
+
+
+<dt id="arg-output-dir">output.dir<a class="anchor" aria-label="anchor" href="#arg-output-dir"></a></dt>
 <dd><p>Character string (length 1), or <code>NULL</code>. See Slots.</p></dd>
 
 
@@ -192,6 +197,19 @@ setting and are taken literally. Write the folder with forward
 slashes: a folder typed with single backslashes, which R reads as
 special characters, stops the call with nothing set.</p></dd>
 
+<dt>output.dir</dt>
+<dd><p>Character string (length 1), or <code>NULL</code>. Default:
+<code>NULL</code>. The folder a file of output is written into: when
+<code>NULL</code>, a table written with a bare file name goes in the
+working directory; when set, names the folder (relative to the
+working directory, or a full path) such a file goes in. Created when
+the setting is made, as <code>data.dir</code> is, and created again at the
+first write if it has been removed since; cleared with
+<code>output.dir = NULL</code> or <code>output.dir = ""</code>. A file name with
+a folder in it bypasses the setting. Distinct from <code>data.dir</code>
+on purpose: data come in from one folder, and output goes out to
+another.</p></dd>
+
 <dt>corr.layout</dt>
 <dd><p>Character, length 1. One of <code>"wide"</code> or
 <code>"stacked"</code>. Default: <code>"wide"</code>. The default cell layout for
@@ -239,7 +257,7 @@ matrix mid-row would destroy the alignment that makes it readable.</p></dd>
 
 
 <dl><dt><code>joptions()</code></dt>
-<dd><p>Print the full settings panel: all six
+<dd><p>Print the full settings panel: all seven
 slots, whatever the convention. The
 <code>missing.convention.codes</code> row is labeled as SPSS-style;
 <code><a href="jconvert.html">jconvert</a></code> to SPSS-style missing values uses those
@@ -251,7 +269,7 @@ codes under any setting.</p></dd>
 <code>joptions(c("data.dir", "corr.layout"))</code> – closed by a
 pointer to <code>joptions()</code> for the full panel. A slot name given
 WITHOUT an argument name is read as a query rather than a setting;
-the six slot names and the four <code>missing.convention</code> values
+the seven slot names and the four <code>missing.convention</code> values
 share no string, so the two readings cannot collide. A named
 argument is always a setting, which leaves
 <code>joptions(missing.convention = "data.dir")</code> an error. Only
@@ -315,6 +333,7 @@ their standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value convention: SPSS-style</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> SPSS-style missing value codes: -99, -98, -97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Output folder: Working directory</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Message width: Auto (currently 79)</span>
@@ -353,16 +372,29 @@ their standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Data"</span><span class="op">)</span><span class="op">)</span> <span class="co"># set save/load folder</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Options Settings</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: /tmp/RtmpeUftOz/Data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: /tmp/RtmpvHxscM/Data</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Created the data folder:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   /tmp/RtmpeUftOz/Data</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   /tmp/RtmpvHxscM/Data</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span>                                                  <span class="co"># (created if absent)</span></span></span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>                         <span class="co"># back to the working directory</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Options Settings</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>output.dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Tables"</span><span class="op">)</span><span class="op">)</span> <span class="co"># where tables are written</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Options Settings</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Output folder: /tmp/RtmpvHxscM/Tables</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Created the output folder:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   /tmp/RtmpvHxscM/Tables</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>output.dir <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>                       <span class="co"># back to the working directory</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Options Settings</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Output folder: Working directory</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>message.width <span class="op">=</span> <span class="fl">60</span><span class="op">)</span>                      <span class="co"># wrap message prose at 60</span></span></span>
@@ -399,6 +431,7 @@ their standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value convention: None selected</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> SPSS-style missing value codes: -99, -98, -97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Output folder: Working directory</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Message width: Auto (currently 79)</span>
