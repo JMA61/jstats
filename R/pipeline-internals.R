@@ -1551,6 +1551,7 @@
   missing.convention   = "none",
   missing.convention.codes = c(-99, -98, -97),
   data.dir             = NULL,
+  output.dir           = NULL,
   corr.layout          = "wide",
   missing.detail       = "per_code",
   message.width        = "auto"

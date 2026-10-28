@@ -4,7 +4,7 @@
 \alias{.jst_create_data_dir}
 \title{Internal: create the configured data folder, or stop}
 \usage{
-.jst_create_data_dir(dir, fn, tail = "")
+.jst_create_data_dir(dir, fn, tail = "", what = "data")
 }
 \arguments{
 \item{dir}{Character(1). The folder to create.}

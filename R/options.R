@@ -691,7 +691,7 @@ joutput <- function(level, effect.size = NULL,
 # and prints the Options Settings panel. Called at the end of every
 # joptions() call (including reset).
 #
-# slots = NULL (the default) prints the FULL six-slot panel: the shape a
+# slots = NULL (the default) prints the FULL seven-slot panel: the shape a
 # bare joptions() status query wants, and the shape the joptions(NULL) reset
 # wants because everything changed. A character vector of slot names instead
 # prints a PARTIAL panel -- the same red title, only the named lines, then
@@ -708,6 +708,8 @@ joutput <- function(level, effect.size = NULL,
                   .jst_options_defaults$missing.convention.codes)
   dd <- getOption(".jst_options_data_dir",
                   .jst_options_defaults$data.dir)
+  od <- getOption(".jst_options_output_dir",
+                  .jst_options_defaults$output.dir)
   cl <- getOption(".jst_options_corr_layout",
                   .jst_options_defaults$corr.layout)
   md <- getOption(".jst_options_missing_detail",
@@ -741,6 +743,16 @@ joutput <- function(level, effect.size = NULL,
   } else {
     dd
   }
+  # output.dir (Session 400): the folder jtable() writes into, shown as
+  # data.dir is; one removed after it was set is created again at the
+  # first write.
+  od_label <- if (is.null(od)) {
+    "Working directory"
+  } else if (!dir.exists(od)) {
+    paste0(od, " (will be created at the first write)")
+  } else {
+    od
+  }
 
   # message.width: unlike corr.layout and missing.detail, whose tokens name
   # a SHAPE and print raw, a width token names a NUMBER the user cannot
@@ -772,12 +784,13 @@ joutput <- function(level, effect.size = NULL,
       "SPSS-style missing value codes: ", paste(cc, collapse = ", "),
       "\n"),
     data.dir             = paste0("Data folder: ", dd_label, "\n"),
+    output.dir           = paste0("Output folder: ", od_label, "\n"),
     corr.layout          = paste0("Correlation layout: ", cl, "\n"),
     missing.detail       = paste0("Missing-value detail: ", md, "\n"),
     message.width        = paste0("Message width: ", mw_label, "\n")
   )
 
-  # The FULL panel shows all six slots under every convention (S332,
+  # The FULL panel shows all seven slots under every convention (S332,
   # reversing S267, which hid the codes row unless the setting was
   # "spss"). The codes are not dormant off "spss": jconvert(to = "spss")
   # and a per-call convention = "spss" use them whatever the setting, and
@@ -1041,6 +1054,17 @@ joutput <- function(level, effect.size = NULL,
 #'     setting and are taken literally. Write the folder with forward
 #'     slashes: a folder typed with single backslashes, which R reads as
 #'     special characters, stops the call with nothing set.}
+#'   \item{output.dir}{Character string (length 1), or \code{NULL}. Default:
+#'     \code{NULL}. The folder a file of output is written into: when
+#'     \code{NULL}, a table written with a bare file name goes in the
+#'     working directory; when set, names the folder (relative to the
+#'     working directory, or a full path) such a file goes in. Created when
+#'     the setting is made, as \code{data.dir} is, and created again at the
+#'     first write if it has been removed since; cleared with
+#'     \code{output.dir = NULL} or \code{output.dir = ""}. A file name with
+#'     a folder in it bypasses the setting. Distinct from \code{data.dir}
+#'     on purpose: data come in from one folder, and output goes out to
+#'     another.}
 #'   \item{corr.layout}{Character, length 1. One of \code{"wide"} or
 #'     \code{"stacked"}. Default: \code{"wide"}. The default cell layout for
 #'     \code{\link{jcorr}} when three or more variables are correlated:
@@ -1079,7 +1103,7 @@ joutput <- function(level, effect.size = NULL,
 #'
 #' @section Call patterns:
 #' \describe{
-#'   \item{\code{joptions()}}{Print the full settings panel: all six
+#'   \item{\code{joptions()}}{Print the full settings panel: all seven
 #'     slots, whatever the convention. The
 #'     \code{missing.convention.codes} row is labeled as SPSS-style;
 #'     \code{\link{jconvert}} to SPSS-style missing values uses those
@@ -1089,7 +1113,7 @@ joutput <- function(level, effect.size = NULL,
 #'     \code{joptions(c("data.dir", "corr.layout"))} -- closed by a
 #'     pointer to \code{joptions()} for the full panel. A slot name given
 #'     WITHOUT an argument name is read as a query rather than a setting;
-#'     the six slot names and the four \code{missing.convention} values
+#'     the seven slot names and the four \code{missing.convention} values
 #'     share no string, so the two readings cannot collide. A named
 #'     argument is always a setting, which leaves
 #'     \code{joptions(missing.convention = "data.dir")} an error. Only
@@ -1138,6 +1162,7 @@ joutput <- function(level, effect.size = NULL,
 #'   read instead as a status query on that slot (see Call patterns).
 #' @param missing.convention.codes Numeric vector, length 1 to 3. See Slots.
 #' @param data.dir Character string (length 1), or \code{NULL}. See Slots.
+#' @param output.dir Character string (length 1), or \code{NULL}. See Slots.
 #' @param corr.layout One of \code{"wide"} or \code{"stacked"}, or
 #'   \code{NULL}. See Slots.
 #' @param missing.detail One of \code{"totals"}, \code{"per_code"}, or
@@ -1166,6 +1191,8 @@ joutput <- function(level, effect.size = NULL,
 #' joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #'                                                   # (created if absent)
 #' joptions(data.dir = NULL)                         # back to the working directory
+#' joptions(output.dir = file.path(tempdir(), "Tables")) # where tables are written
+#' joptions(output.dir = NULL)                       # back to the working directory
 #' joptions(message.width = 60)                      # wrap message prose at 60
 #' joptions(message.width = "narrow")                # preset width (50 columns)
 #' joptions(message.width = "auto")                  # follow the console pane
@@ -1189,7 +1216,7 @@ joutput <- function(level, effect.size = NULL,
 #'   misspelled argument -- stops with "unused input" and the name as
 #'   typed, in place of R's own "unused argument".
 joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
-                     data.dir = NULL, corr.layout = NULL,
+                     data.dir = NULL, output.dir = NULL, corr.layout = NULL,
                      missing.detail = NULL, message.width = NULL,
                      quiet = FALSE, ...) {
   # An input joptions() does not take -- a misspelled argument, or a value in
@@ -1210,22 +1237,25 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
                       missing.detail = .jst_word_spec(c("totals", "per_code",
                                                         "all"), "a detail level")),
                  "joptions")
-  # A folder typed bare in data.dir = (the same ruling).
+  # A folder typed bare in data.dir = or output.dir = (the same ruling).
   .jst_free_text_arg(substitute(data.dir), parent.frame(), sys.call(),
                      match.call(), "data.dir", "a folder name", "joptions")
+  .jst_free_text_arg(substitute(output.dir), parent.frame(), sys.call(),
+                     match.call(), "output.dir", "a folder name", "joptions")
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(quiet, "quiet")
 
   mc_supplied <- !missing(missing.convention)
   cc_supplied <- !missing(missing.convention.codes)
   dd_supplied <- !missing(data.dir)
+  od_supplied <- !missing(output.dir)
   cl_supplied <- !missing(corr.layout)
   md_supplied <- !missing(missing.detail)
   mw_supplied <- !missing(message.width)
 
   # joptions() -- no args, status only
-  if (!mc_supplied && !cc_supplied && !dd_supplied && !cl_supplied &&
-      !md_supplied && !mw_supplied) {
+  if (!mc_supplied && !cc_supplied && !dd_supplied && !od_supplied &&
+      !cl_supplied && !md_supplied && !mw_supplied) {
     .jst_options_status()
     return(invisible(NULL))
   }
@@ -1256,7 +1286,7 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
   positional_null_reset <- lone_positional && is.null(call_args[[1L]])
 
   # A slot NAME in the first position asks to SEE that slot. Safe because
-  # the six slot names and the four missing.convention values are
+  # the seven slot names and the four missing.convention values are
   # disjoint sets: no string can be read both ways. The value is taken
   # from missing.convention, where positional matching has already put
   # it, and the canonical name vector is .jst_options_defaults's own, so
@@ -1275,6 +1305,7 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     options(.jst_options_missing_convention   = NULL)
     options(.jst_options_missing_convention_codes = NULL)
     options(.jst_options_data_dir             = NULL)
+    options(.jst_options_output_dir           = NULL)
     options(.jst_options_corr_layout          = NULL)
     options(.jst_options_missing_detail       = NULL)
     options(.jst_options_message_width        = NULL)
@@ -1305,7 +1336,7 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     # S281: a lone positional string that is neither a slot name nor a
     # convention value is most likely a mistyped slot query -- that is the
     # only positional form that takes a bare string. Test it as a near
-    # miss against the six slot names BEFORE the lowercasing below, so the
+    # miss against the seven slot names BEFORE the lowercasing below, so the
     # error quotes what the user typed (Rule AB), not a normalized copy.
     # Levenshtein distance, case-insensitive, at most 2. A case-only
     # variant is distance 0 and gets the suggestion rather than silently
@@ -1392,6 +1423,22 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     # before anything is set or created, as jload() and jsave() stop it.
     .jst_check_path_chars(data.dir, what = "folder")
   }
+  # output.dir (Session 400, Capability Slate T's build 1; the (S355)
+  # item): the folder jtable() writes into, checked as data.dir is.
+  if (od_supplied && !is.null(output.dir)) {
+    if (!is.character(output.dir) ||
+        length(output.dir) != 1L ||
+        is.na(output.dir)) {
+      .jst_stop('output.dir must be a single character string, NULL, or "".\n',
+           '(NULL or "" clears the folder.)')
+    }
+    if (identical(trimws(output.dir), "NULL")) {
+      .jst_stop('output.dir = "NULL" looks like a typo.\nTo clear the output ',
+           'folder back to the working directory, use output.dir = NULL ',
+           '(no quotes) or output.dir = "" (empty quotes).')
+    }
+    .jst_check_path_chars(output.dir, what = "folder")
+  }
   if (cl_supplied && !is.null(corr.layout)) {
     if (!is.character(corr.layout) ||
         length(corr.layout) != 1L ||
@@ -1435,6 +1482,17 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     dd_created <- .jst_create_data_dir(
       data.dir, fn = "joptions", tail = "\nNo setting was changed.")
   }
+  # output.dir the same way (Session 400): created when set, so a folder
+  # that cannot be created stops the call with nothing changed.
+  od_clear   <- od_supplied &&
+                (is.null(output.dir) || nchar(trimws(output.dir)) == 0L)
+  od_created <- FALSE
+  if (od_supplied && !od_clear) {
+    .jst_data_dir_case_warning(output.dir, slot = "output.dir")
+    od_created <- .jst_create_data_dir(
+      output.dir, fn = "joptions", tail = "\nNo setting was changed.",
+      what = "output")
+  }
 
   # Write -- only supplied non-NULL args; NULL means "leave alone" (except
   # data.dir, above)
@@ -1462,6 +1520,14 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
       options(.jst_options_data_dir = data.dir)
     }
     written <- c(written, "data.dir")
+  }
+  if (od_supplied) {
+    if (od_clear) {
+      options(.jst_options_output_dir = NULL)
+    } else {
+      options(.jst_options_output_dir = output.dir)
+    }
+    written <- c(written, "output.dir")
   }
   if (cl_supplied && !is.null(corr.layout)) {
     options(.jst_options_corr_layout = corr.layout)
@@ -1495,6 +1561,7 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     supplied <- c(if (mc_supplied) "missing.convention",
                   if (cc_supplied) "missing.convention.codes",
                   if (dd_supplied) "data.dir",
+                  if (od_supplied) "output.dir",
                   if (cl_supplied) "corr.layout",
                   if (md_supplied) "missing.detail",
                   if (mw_supplied) "message.width")
@@ -1526,6 +1593,10 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
   # not display a blank line on the message stream.
   if (dd_created && !quiet) {
     .jst_msg(.jst_data_dir_created_note(data.dir))
+    cat("\n")
+  }
+  if (od_created && !quiet) {
+    .jst_msg(.jst_output_dir_created_note(output.dir))
     cat("\n")
   }
   if (!quiet && trigger_nudge && .jst_options_nudge(missing.convention)) {
@@ -1600,7 +1671,7 @@ jdata_dir <- function(default = ".", ...) {
 #'   (\code{.jst_data_dir_created_note()}) where it belongs in its output.
 #'
 #' @keywords internal
-.jst_create_data_dir <- function(dir, fn, tail = "") {
+.jst_create_data_dir <- function(dir, fn, tail = "", what = "data") {
   # Some platforms do not resolve a folder name written with a trailing
   # separator ("Data/"), so existence is read on the bare name as well.
   bare    <- sub("[/\\\\]+$", "", dir)
@@ -1624,7 +1695,7 @@ jdata_dir <- function(default = ".", ...) {
     r_msg <- if (is.null(reason)) NULL else
       gsub("[[:space:]]+", " ",
            trimws(gsub("\033\\[[0-9;]*[A-Za-z]", "", reason)))
-    .jst_stop("the data folder could not be created:\n",
+    .jst_stop("the ", what, " folder could not be created:\n",
               "  ", dir,
               if (!is.null(r_msg) && nzchar(r_msg))
                 paste0("\nR reported:\n  ", r_msg),
@@ -1669,7 +1740,7 @@ jdata_dir <- function(default = ".", ...) {
 #' @return Invisibly \code{NULL}; called for the message side effect.
 #'
 #' @keywords internal
-.jst_data_dir_case_warning <- function(dir) {
+.jst_data_dir_case_warning <- function(dir, slot = "data.dir") {
   # Only a folder that already resolves on disk can collide. On a
   # case-sensitive filesystem a differently-cased name does not exist, so
   # dir.exists() is FALSE and nothing is warned.
@@ -1690,9 +1761,11 @@ jdata_dir <- function(default = ".", ...) {
     hit <- entries[tolower(entries) == tolower(want)]
     if (length(hit) > 0) {
       .jst_msg(
-        "Note: data.dir was set to '", want, "', but a folder named '",
+        "Note: ", slot, " was set to '", want, "', but a folder named '",
         hit[1], "' already exists and your filesystem treats the two as the ",
-        "same folder.\nSaves and loads will use the existing '", hit[1],
+        "same folder.\n",
+        if (identical(slot, "data.dir")) "Saves and loads" else "Files written",
+        " will use the existing '", hit[1],
         "'.\nTo keep a separate folder, choose a name that differs by more ",
         "than letter case."
       )

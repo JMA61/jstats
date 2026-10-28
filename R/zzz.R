@@ -451,6 +451,7 @@
   ".jst_options_missing_convention",
   ".jst_options_missing_convention_codes",
   ".jst_options_data_dir",
+  ".jst_options_output_dir",
   ".jst_options_corr_layout",
   ".jst_options_missing_detail",
   ".jst_options_message_width",

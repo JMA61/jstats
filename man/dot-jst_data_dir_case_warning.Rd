@@ -5,7 +5,7 @@
 \title{Internal: warn on a case-only collision between data.dir and an existing
 folder}
 \usage{
-.jst_data_dir_case_warning(dir)
+.jst_data_dir_case_warning(dir, slot = "data.dir")
 }
 \arguments{
 \item{dir}{Character(1). The data.dir value just set.}
