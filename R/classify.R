@@ -635,6 +635,90 @@
   sort(unique(.jst_as_numeric(x)))
 }
 
+#' Internal helper: a label, or NA where there is none
+#'
+#' A stored label is \code{NA} when the value has no label, and an empty
+#' label counts as none, as \code{.jst_format_value_labels()} and
+#' \code{.jst_udm_row_label()} count it. Session 399 (Capability Slate T's
+#' build 0): the Label columns of jfreq()'s Missing rows.
+#'
+#' @param x A character vector of labels (or NA).
+#' @return Character, \code{NA} for each missing or empty label.
+#' @keywords internal
+.jst_label_or_na <- function(x) {
+  out <- as.character(x)
+  out[is.na(out) | !nzchar(out)] <- NA_character_
+  out
+}
+
+#' Internal helper: the full value label of each code
+#'
+#' The label a value carries in \code{val_labels}, whole -- never cut to
+#' the 40-column cap the console's tables use -- or \code{NA} where the
+#' value has none (an empty label counts as none). Codes are matched as
+#' \code{.jst_format_value_labels()} matches them, through
+#' \code{as.character()}, so a code and its label pair here exactly as they
+#' pair in the printed table. Session 399 (Capability Slate T's build 0):
+#' the raw label the table layer writes, where the stored display string
+#' carries the call's value.id form and the cap.
+#'
+#' @param codes A vector of codes, numeric or character.
+#' @param val_labels A named vector, as \code{labelled::val_labels()}
+#'   returns it, or NULL.
+#' @return Character, one element per code.
+#' @keywords internal
+.jst_value_label_of <- function(codes, val_labels) {
+  out <- rep(NA_character_, length(codes))
+  if (is.null(val_labels) || length(val_labels) == 0L || length(codes) == 0L) {
+    return(out)
+  }
+  hit <- match(as.character(codes), as.character(unname(val_labels)))
+  lab <- names(val_labels)[hit]
+  ok  <- !is.na(lab) & nzchar(lab)
+  out[ok] <- lab[ok]
+  out
+}
+
+#' Internal helper: the code and the label behind each category of a factor
+#'
+#' An analysis turns a grouping or crosstab variable into a factor of its
+#' categories, and stores what it printed: the factor's levels, or each
+#' category formatted under the call's value.id mode. Neither is the
+#' category's code. This reads the code off the cells: for each level, the
+#' value the variable holds in the first case of that category -- a
+#' labelled variable's code, a numeric variable's number, a text
+#' variable's text (its blank cells the one \code{<blank>} category) --
+#' and the level itself for a factor, whose levels are its categories, and
+#' for any other type (a date, TRUE/FALSE), whose printed level is its
+#' value. The label is the value label of that code, whole, or \code{NA}
+#' (\code{.jst_value_label_of()}). Read off the cells, so it needs no
+#' agreement between the factor's level order and a separately sorted
+#' list of codes. Session 399 (Capability Slate T's build 0).
+#'
+#' @param f The factor the analysis made, every level held by a case
+#'   (after \code{droplevels()}).
+#' @param src The variable the factor was made from, case for case: the
+#'   same length and order.
+#' @param val_labels The variable's value labels, or NULL.
+#' @return A data frame, one row per level in level order: \code{level},
+#'   \code{code} (numeric or character), \code{label} (character).
+#' @keywords internal
+.jst_level_codes <- function(f, src, val_labels = NULL) {
+  lv <- levels(f)
+  plain <- is.null(oldClass(src)) && (is.numeric(src) || is.character(src))
+  if (haven::is.labelled(src) || plain) {
+    raw <- unclass(src)
+    attributes(raw) <- NULL
+    first <- match(lv, as.character(f))
+    code  <- raw[first]
+  } else {
+    code <- lv
+  }
+  data.frame(level = lv, code = code,
+             label = .jst_value_label_of(code, val_labels),
+             stringsAsFactors = FALSE, row.names = NULL)
+}
+
 
 # -- Blank text cells ---------------------------------------------------------
 #

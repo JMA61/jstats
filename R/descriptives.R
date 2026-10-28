@@ -399,6 +399,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     data[[by_name]] <- droplevels(data[[by_name]])
 
     group_levels <- levels(data[[by_name]])
+    # Each group's code and label (Session 399, Capability Slate T's build
+    # 0), for descriptives_raw below.
+    by_map <- .jst_level_codes(data[[by_name]], by_var,
+                               if (is_labelled_by) by_val_labels else NULL)
 
     # No groups at all (Session 316): every case is missing on the grouping
     # variable, in the data or after a pipeline step. Stopped here, before
@@ -479,6 +483,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
       data          = data[!is.na(data[[by_name]]), , drop = FALSE],
       analysis_vars = good_vars)
 
+    raw_rows <- list()
     for (v in good_vars) {
       v_disp <- .jst_combine_id(v, lab_disp(v, original_dv_info[[v]]$label), vlmode)
       cat(v_disp, "\n", sep = "")
@@ -493,6 +498,27 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
       dv_data <- .jst_classify_desc_var(data[[v]], v)$num
 
       group_var_chr <- as.character(data[[by_name]])
+
+      # The groups' statistics unrounded, for descriptives_raw (Session
+      # 399): the rows the table below prints, from the same cases.
+      raw_rows[[v]] <- data.frame(
+        variable    = v,
+        group_code  = by_map$code,
+        group_label = by_map$label,
+        do.call(rbind, lapply(group_levels, function(lvl) {
+          x <- dv_data[group_var_chr == lvl]
+          x <- x[!is.na(x)]
+          n <- length(x)
+          data.frame(
+            total     = sum(group_var_chr == lvl, na.rm = TRUE),
+            n_valid   = n,
+            n_missing = sum(group_var_chr == lvl, na.rm = TRUE) - n,
+            min       = if (n > 0) min(x)       else NA_real_,
+            max       = if (n > 0) max(x)       else NA_real_,
+            mean      = if (n > 0) mean(x)      else NA_real_,
+            sd        = if (n > 1) stats::sd(x) else NA_real_)
+        })),
+        stringsAsFactors = FALSE, row.names = NULL)
 
       group_rows <- lapply(seq_along(group_levels), function(i) {
         lvl         <- group_levels[i]
@@ -582,13 +608,30 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     # already end with one, so the grouped output closes on one blank line
     # like the ungrouped output; a further cat("\n") here made it two.
 
+    # descriptives_raw for the grouped call (Session 399, Capability Slate
+    # T's build 0; NULL until then): one row per variable and group, in the
+    # order printed, each group's code and label beside its statistics,
+    # unrounded. The variables' labels ride as the ungrouped frame's do,
+    # the grouping variable's name and label as the "by" attribute.
+    descriptives_raw <- if (length(raw_rows)) do.call(rbind, unname(raw_rows))
+    if (!is.null(descriptives_raw)) {
+      attr(descriptives_raw, "labels") <- stats::setNames(
+        vapply(good_vars, function(v) .jst_label_or_name(data, v),
+               character(1)),
+        good_vars)
+      attr(descriptives_raw, "by") <- c(name  = by_name,
+                                        label = lab_disp(by_name,
+                                                         original_by_label))
+    }
+
     ret <- list(
       descriptives = NULL,
-      descriptives_raw = NULL,
+      descriptives_raw = descriptives_raw,
       by           = by_name,
       sample_info  = sample_info
     )
     class(ret) <- "jst_desc"
+    ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
     return(invisible(ret))
   }
 
@@ -753,6 +796,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     sample_info  = sample_info
   )
   class(ret) <- "jst_desc"
+  ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
   invisible(ret)
   })
 }
@@ -828,6 +872,70 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     }
   }
   v
+}
+
+#' Internal helper: the code and the label behind each of jfreq()'s Valid rows
+#'
+#' jfreq() tabulates a factor of display strings: a labelled variable's
+#' values formatted under the call's value.id mode ("1: Male", "Male" or
+#' "1") and capped at 40 columns, a numeric variable's numbers as text.
+#' The stored Value column is that string. This returns, for each row,
+#' the value itself and its label whole (Session 399, Capability Slate
+#' T's build 0), from the map the tabulating branch kept: each display
+#' string beside the code it was made from, zero rows (a labelled value no
+#' case holds) included. A text variable, a factor and any other type
+#' have no map: the row's text is its own code, and it has no label.
+#'
+#' @param value Character; the Valid rows' Value column.
+#' @param lvl_map NULL, or a list: \code{level} (the display strings),
+#'   \code{code} (the code each was made from, the same length) and
+#'   \code{labels} (the variable's value labels, or NULL).
+#' @return A list: \code{code} (numeric or character) and \code{label}
+#'   (character, \code{NA} where there is none), one element per row.
+#' @keywords internal
+.jst_freq_codes <- function(value, lvl_map) {
+  if (is.null(lvl_map)) {
+    return(list(code = as.character(value),
+                label = rep(NA_character_, length(value))))
+  }
+  code <- lvl_map$code[match(value, lvl_map$level)]
+  list(code = code, label = .jst_value_label_of(code, lvl_map$labels))
+}
+
+#' Internal helper: per-variable statistics, unrounded, in jdesc()'s raw shape
+#'
+#' One row per variable -- variable, total, n_valid, n_missing, min, max,
+#' mean, sd, every number unrounded -- with the variables' labels as a
+#' keyed \code{labels} attribute: the shape of jdesc()'s descriptives_raw
+#' (the return-shape audit, Session 71), so a table reads M and SD the
+#' same way whichever result they come from. Session 399 (Capability Slate
+#' T's build 0): jcorr()'s M and SD, on the numeric values its correlations
+#' read, each variable on its own cases.
+#'
+#' @param cols A data frame or list of numeric vectors, one per variable.
+#' @param vars Character; the variables, in order.
+#' @param label_src The data frame the labels are read from.
+#' @return A data frame, as described.
+#' @keywords internal
+.jst_desc_raw_rows <- function(cols, vars, label_src) {
+  out <- do.call(rbind, lapply(vars, function(v) {
+    x <- cols[[v]]
+    n <- sum(!is.na(x))
+    data.frame(
+      variable  = v,
+      total     = length(x),
+      n_valid   = n,
+      n_missing = length(x) - n,
+      min       = if (n > 0) min(x, na.rm = TRUE)        else NA_real_,
+      max       = if (n > 0) max(x, na.rm = TRUE)        else NA_real_,
+      mean      = if (n > 0) mean(x, na.rm = TRUE)       else NA_real_,
+      sd        = if (n > 0) stats::sd(x, na.rm = TRUE)  else NA_real_,
+      stringsAsFactors = FALSE, row.names = NULL)
+  }))
+  attr(out, "labels") <- stats::setNames(
+    vapply(vars, function(v) .jst_label_or_name(label_src, v), character(1)),
+    vars)
+  out
 }
 
 #' SPSS-like frequency tables for categorical variables
@@ -1175,6 +1283,10 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     # "1" and "2".
     sort_codes <- NULL
     sort_levels <- NULL
+    # Each level's code and the variable's value labels, where the level is
+    # a display string rather than the value itself (Session 399; read by
+    # .jst_freq_codes() below). NULL leaves the level as its own code.
+    lvl_map <- NULL
 
     # Character-backed haven_labelled (e.g. "US"/"UK" carrying value labels):
     # the stored "codes" are strings, so the numeric-labelled path below would
@@ -1206,6 +1318,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       sort_levels <- all_disp[order(all_codes != .jst_blank_label,
                                     all_codes)]
       temp_var    <- factor(display_str, levels = sort_levels)
+      lvl_map     <- list(level = all_disp, code = all_codes,
+                          labels = val_labs)
 
     # Haven-labelled (numeric-backed): combine numeric codes with value labels.
     } else if (haven::is.labelled(temp_var)) {
@@ -1229,12 +1343,16 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       all_codes   <- all_codes[keep]; all_disp <- all_disp[keep]
       sort_levels <- all_disp[order(all_codes)]
       temp_var    <- factor(display_str, levels = sort_levels)
+      lvl_map     <- list(level = all_disp, code = all_codes,
+                          labels = val_labs)
 
     } else if (is.numeric(temp_var)) {
       # Plain numeric: numeric-ordered factor levels.
       uniq_vals   <- sort(unique(temp_var[!is.na(temp_var)]))
       sort_levels <- as.character(uniq_vals)
       temp_var    <- factor(as.character(temp_var), levels = sort_levels)
+      lvl_map     <- list(level = sort_levels, code = uniq_vals,
+                          labels = NULL)
 
     } else if (is.character(temp_var)) {
       # Plain text: the levels table() would build, the blank category
@@ -1288,7 +1406,11 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     # row, pool_col is pre_col, and nothing here changes. (pre_col,
     # pool_col and mi are read above, before the Valid rows, since
     # Session 348.)
+    # Each row also carries the declared value and its label as Code and
+    # Label (Session 399, Capability Slate T's build 0): Value is the row
+    # as printed, '-99 ["Refused"]', which a table cannot use.
     udm_rows  <- data.frame(Value = character(0), Freq = integer(0),
+                            Code = character(0), Label = character(0),
                             stringsAsFactors = FALSE)
     udm_total <- 0L
 
@@ -1313,6 +1435,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
           udm_rows  <- rbind(udm_rows, data.frame(
             Value = .jst_udm_row_label(r$code, r$label),
             Freq  = row_count,
+            Code  = as.character(r$code),
+            Label = .jst_label_or_na(r$label),
             stringsAsFactors = FALSE))
         }
       } else {
@@ -1336,6 +1460,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
         # (1) Declared discrete codes. These are the user's own explicit
         # declaration, so they are never capped and never dropped.
         code_rows <- data.frame(Value = character(0), Freq = integer(0),
+                                Code = if (text_codes) character(0)
+                                       else numeric(0),
+                                Label = character(0),
                                 Sort = numeric(0), stringsAsFactors = FALSE)
         if (!is.null(mi$codes) && nrow(mi$codes) > 0L) {
           for (i in seq_len(nrow(mi$codes))) {
@@ -1347,6 +1474,13 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                         as.integer(sum(.jst_text_codes_mask(x_pool_chr,
                                                             r$code)))
                       } else pool_count(as.numeric(r$numeric)),
+              # A declared blank is the one <blank> category, as in the
+              # Valid rows and the printed row (Session 399).
+              Code  = if (text_codes) {
+                        if (.jst_is_blank(r$code)) .jst_blank_label
+                        else as.character(r$code)
+                      } else as.numeric(r$numeric),
+              Label = .jst_label_or_na(r$label),
               Sort  = if (text_codes) as.numeric(i) else as.numeric(r$numeric),
               stringsAsFactors = FALSE))
           }
@@ -1354,6 +1488,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 
         # (2) Range rows.
         range_rows   <- data.frame(Value = character(0), Freq = integer(0),
+                                   Code = numeric(0), Label = character(0),
                                    Sort = numeric(0), stringsAsFactors = FALSE)
         overflow_row <- NULL
 
@@ -1398,6 +1533,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
               Value = sprintf("range %s to %s", rg[1], rg[2]),
               Freq  = if (is.null(in_band) || nrow(in_band) == 0L) 0L
                       else as.integer(sum(in_band$count)),
+              # A band, not one value: no code and no label.
+              Code  = NA_real_,
+              Label = NA_character_,
               Sort  = as.numeric(min(rg)),
               stringsAsFactors = FALSE)
 
@@ -1427,6 +1565,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                 Value = sprintf("%s more %s in range", .jst_fmt_n(nrow(dropped)),
                                 if (nrow(dropped) == 1L) "value" else "values"),
                 Freq  = as.integer(sum(dropped$count)),
+                Code  = NA_real_,
+                Label = NA_character_,
                 Sort  = Inf,
                 stringsAsFactors = FALSE)
             }
@@ -1436,6 +1576,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                         .jst_udm_row_label(in_band$code_display[i],
                                            in_band$label[i]), character(1)),
               Freq  = as.integer(in_band$count),
+              Code  = as.numeric(in_band$numeric),
+              Label = .jst_label_or_na(in_band$label),
               Sort  = as.numeric(in_band$numeric),
               stringsAsFactors = FALSE)
 
@@ -1463,6 +1605,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                             .jst_udm_row_label(format(rl_num[i]),
                                                names(rl)[i]), character(1)),
                   Freq  = 0L,
+                  Code  = rl_num[z_i],
+                  Label = .jst_label_or_na(names(rl)[z_i]),
                   Sort  = rl_num[z_i],
                   stringsAsFactors = FALSE)
                 n_empty <- n_empty + nrow(range_zero)
@@ -1500,6 +1644,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 
         if (nrow(combined) > 0L) {
           udm_rows <- data.frame(Value = combined$Value, Freq = combined$Freq,
+                                 Code = combined$Code, Label = combined$Label,
                                  stringsAsFactors = FALSE)
         }
       }
@@ -1557,6 +1702,18 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     # Valid % and Cum. % apply only to Valid rows
     valid_df$ValidPct <- (valid_df$Freq / valid_count) * 100
     valid_df$CumPct   <- cumsum(valid_df$ValidPct)
+
+    # The code and the label behind each Valid row (Session 399, Capability
+    # Slate T's build 0). Value is the row as printed -- under the call's
+    # value.id mode and the 40-column cap -- which a table cannot use: a
+    # result made under value.id = "both" would put "1: Male" in a Word
+    # table. The Missing rows carry theirs from where they are made. Both
+    # go last, after the columns the printed table reads.
+    valid_cl       <- .jst_freq_codes(valid_df$Value, lvl_map)
+    valid_df$Code  <- valid_cl$code
+    valid_df$Label <- valid_cl$label
+    udm_rows <- udm_rows[c(setdiff(names(udm_rows), c("Code", "Label")),
+                           "Code", "Label")]
 
     results[[variable_name]] <- list(valid = valid_df,
                                      udm   = udm_rows,
@@ -1723,6 +1880,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     sample_info = sample_info
   )
   class(ret) <- "jst_freq"
+  ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
   invisible(ret)
   })
 }
@@ -2544,7 +2702,8 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   # screening results.
   screen_table$Star <- NULL
   screen_table$Plausibility <- NULL
-  invisible(screen_table)
+  # The version that made it (Session 399), as every analysis result.
+  invisible(.jst_stamp_result(screen_table))
   })
 }
 

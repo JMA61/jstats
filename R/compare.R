@@ -52,7 +52,9 @@
 #'   outcome before the groups are counted.
 #' @return A list: data, formula, terms, dv_name, group_name, lab_src, mf,
 #'   sample_info, n_groups_data, is_labelled, original_codes,
-#'   group_val_labels (the last two NULL when the group is not labelled).
+#'   group_val_labels (these two NULL when the group is not labelled), and
+#'   group_map (Session 399): each group's level, code and label, from
+#'   \code{.jst_level_codes()}.
 #' @keywords internal
 .jst_group_front <- function(formula, data, .jst_data_name, .jst_default_used,
                              subset_expr, envir, case.processing.detail, fn,
@@ -163,11 +165,99 @@
   # Drop empty factor levels (pipeline filtering may leave empty levels)
   data[[group_name]] <- droplevels(data[[group_name]])
 
+  # Each group's code and label (Session 399, Capability Slate T's build
+  # 0): the results store the group as printed, under the call's value.id
+  # mode, which a table cannot use.
+  group_map <- .jst_level_codes(data[[group_name]], group_var,
+                                group_val_labels)
+
   list(data = data, formula = formula, terms = terms, dv_name = dv_name,
        group_name = group_name, lab_src = lab_src, mf = mf,
        sample_info = sample_info, n_groups_data = n_groups_data,
        is_labelled = is_labelled, original_codes = original_codes,
-       group_val_labels = group_val_labels)
+       group_val_labels = group_val_labels, group_map = group_map)
+}
+
+#' Internal: a group comparison's descriptives, unrounded, for the table layer
+#'
+#' jt() and jaov() store their Group Descriptives as printed: each group as
+#' its display string and Mean and SD rounded to the digits setting. A
+#' table rounds again to its own style's places (2.4449 printed 2.445, then
+#' 2.45 at two places, where the value gives 2.44), and under digits = 1
+#' it would pad a one-place value. This frame keeps what the table layer
+#' reads (Session 399, Capability Slate T's build 0): each group's code
+#' and label and its N, mean and SD unrounded, with the 95 percent
+#' interval of the mean in jaov()'s (a one-case group's blank, as in the
+#' printed table). The outcome's and the grouping variable's names and
+#' labels ride as attributes, in the regression results' form.
+#'
+#' @param gm The groups' rows of the group front's group_map, in the
+#'   printed table's order.
+#' @param groups A list of numeric vectors, one per group in the same
+#'   order: the outcome's values the table describes, missing values out.
+#' @param dv_name,group_name Character(1); the outcome and the grouping
+#'   variable.
+#' @param lab_src The data frame the labels are read from.
+#' @param ci Logical(1); add ci_lower and ci_upper (jaov()).
+#' @return A data frame: group_code, group_label, n, mean, sd (and
+#'   ci_lower, ci_upper), with attributes outcome and group, each
+#'   \code{c(name = , label = )}.
+#' @keywords internal
+.jst_group_desc_raw <- function(gm, groups, dv_name, group_name, lab_src,
+                                ci = FALSE) {
+  n <- vapply(groups, length, integer(1))
+  m <- vapply(groups, function(g) if (length(g)) mean(g) else NA_real_,
+              numeric(1))
+  s <- vapply(groups, function(g) if (length(g) > 1L) stats::sd(g)
+                                  else NA_real_, numeric(1))
+  out <- data.frame(group_code = gm$code, group_label = gm$label,
+                    n = n, mean = m, sd = s,
+                    stringsAsFactors = FALSE, row.names = NULL)
+  if (ci) {
+    half <- ifelse(n > 1L, stats::qt(0.975, df = pmax(n - 1L, 1L)) *
+                             s / sqrt(n), NA_real_)
+    out$ci_lower <- m - half
+    out$ci_upper <- m + half
+  }
+  attr(out, "outcome") <- c(name  = dv_name,
+                            label = .jst_label_or_name(lab_src, dv_name))
+  attr(out, "group")   <- c(name  = group_name,
+                            label = .jst_label_or_name(lab_src, group_name))
+  out
+}
+
+#' Internal: each post-hoc pair's two groups, by code and label
+#'
+#' jaov()'s post-hoc table (Tukey HSD, or Games-Howell under Welch) names
+#' each pair in its comparison column as two factor levels joined by a
+#' hyphen, "later-earlier", which a label holding a hyphen makes
+#' impossible to split. Both tests list the pairs in one order, that of
+#' \code{stats::TukeyHSD()}: the lower triangle of the groups' matrix
+#' column by column, (2, 1), (3, 1), ..., (3, 2), the difference taken
+#' as the first group minus the second. This adds group1_code,
+#' group1_label, group2_code and group2_label in that order (Session 399,
+#' Capability Slate T's build 0), after checking that the comparison
+#' column reads exactly as that order would write it; where it does not,
+#' the four columns are NA rather than a guess.
+#'
+#' @param tbl The post-hoc table (comparison, diff, lower, upper, df, p,
+#'   test).
+#' @param gm The groups' rows of the group front's group_map, in level
+#'   order.
+#' @return \code{tbl} with the four columns added.
+#' @keywords internal
+.jst_posthoc_codes <- function(tbl, gm) {
+  k  <- nrow(gm)
+  ij <- which(lower.tri(matrix(0, k, k)), arr.ind = TRUE)
+  ok <- nrow(tbl) == nrow(ij) &&
+        identical(as.character(tbl$comparison),
+                  paste0(gm$level[ij[, 1L]], "-", gm$level[ij[, 2L]]))
+  pick <- function(col, idx) if (ok) col[idx] else rep(col[NA_integer_], nrow(tbl))
+  tbl$group1_code  <- pick(gm$code,  ij[, 1L])
+  tbl$group1_label <- pick(gm$label, ij[, 1L])
+  tbl$group2_code  <- pick(gm$code,  ij[, 2L])
+  tbl$group2_label <- pick(gm$label, ij[, 2L])
+  tbl
 }
 
 #' Internal: jt()'s stop for a grouping variable of more than 2 categories
@@ -605,6 +695,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   is_labelled      <- .jst_gf$is_labelled
   original_codes   <- .jst_gf$original_codes
   group_val_labels <- .jst_gf$group_val_labels
+  group_map        <- .jst_gf$group_map
 
   n_levels <- nlevels(data[[group_name]])
   # Said under a group count that missing data lowered, so the count can be
@@ -800,6 +891,19 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                    digits = c(Mean = digits_n, SD = digits_n))
   cat("\n")
 
+  # For the table layer (Session 399, Capability Slate T's build 0), after
+  # the table has printed: each group's code and label beside the Group
+  # column, which holds the group as printed (under the call's value.id
+  # mode), and the statistics unrounded in descriptives_raw -- the printed
+  # frame's Mean and SD are rounded to the digits setting, and a table
+  # rounds them again to its style's places.
+  desc_gm          <- group_map[match(levels, group_map$level), , drop = FALSE]
+  desc_table$Code  <- desc_gm$code
+  desc_table$Label <- desc_gm$label
+  descriptives_raw <- .jst_group_desc_raw(desc_gm,
+                                          list(group1_data, group2_data),
+                                          dv_name, group_name, lab_src)
+
   # Run t-test
   if (paired) {
     # Degenerate-differences guard (AUDIT-001): with zero variation in the
@@ -941,6 +1045,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     test_type       = if (paired) "paired" else if (welch) "welch" else "student",
     formula         = formula,
     descriptives    = desc_table,
+    descriptives_raw = descriptives_raw,
     t               = unname(result$statistic),
     df              = unname(result$parameter),
     p               = result$p.value,
@@ -954,6 +1059,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     residuals       = t_resid
   )
   class(ret) <- "jst_ttest"
+  ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
   invisible(ret)
   })
 }
@@ -1278,6 +1384,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   is_labelled      <- .jst_gf$is_labelled
   original_codes   <- .jst_gf$original_codes
   group_val_labels <- .jst_gf$group_val_labels
+  group_map        <- .jst_gf$group_map
 
   # Check minimum group levels
   n_levels <- nlevels(data[[group_name]])
@@ -1465,6 +1572,20 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                      digits = c(Mean = digits_n, SD = digits_n))
   }
   cat("\n")
+
+  # For the table layer (Session 399, Capability Slate T's build 0), after
+  # the table has printed: each group's code and label beside the Group
+  # column, and the statistics unrounded in descriptives_raw, as in jt().
+  desc_gm          <- group_map[match(levels, group_map$level), , drop = FALSE]
+  desc_table$Code  <- desc_gm$code
+  desc_table$Label <- desc_gm$label
+  descriptives_raw <- .jst_group_desc_raw(
+    desc_gm,
+    lapply(levels, function(lvl) {
+      g <- data[[dv_name]][data[[group_name]] == lvl]
+      g[!is.na(g)]
+    }),
+    dv_name, group_name, lab_src, ci = TRUE)
 
   if (welch) {
     model <- oneway.test(formula, data = data, var.equal = FALSE)
@@ -1681,12 +1802,19 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 
   # One closing blank line (Session 328): a legend block ends on its own.
   if (!leg) cat("\n")
+  # Each post-hoc pair's two groups by code and label (Session 399): the
+  # comparison column names them as the factor's levels joined by a
+  # hyphen, which a label holding a hyphen makes unreadable.
+  if (!is.null(posthoc_tbl)) {
+    posthoc_tbl <- .jst_posthoc_codes(posthoc_tbl, desc_gm)
+  }
   ret <- list(
     model        = model,
     model_frame  = mf,
     test_type    = if (welch) "welch" else "traditional",
     formula      = formula,
     descriptives = desc_table,
+    descriptives_raw = descriptives_raw,
     f            = f_value,
     df1          = df1,
     df2          = df2,
@@ -1699,6 +1827,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     residuals    = aov_resid
   )
   class(ret) <- "jst_anova"
+  ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
   invisible(ret)
   })
 }
@@ -2280,6 +2409,12 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   row_labelled <- haven::is.labelled(row_var)
   col_labelled <- haven::is.labelled(col_var)
+  # The variables as they hold their codes, case for case beside the
+  # factors made below (Session 399; read by .jst_level_codes()).
+  row_src <- row_var
+  col_src <- col_var
+  row_vl  <- NULL
+  col_vl  <- NULL
 
   if (row_labelled) {
     row_codes <- .jst_group_codes(row_var)
@@ -2312,6 +2447,18 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   row_levels <- levels(row_var)
   col_levels <- levels(col_var)
+
+  # Each row and column category's code and label (Session 399, Capability
+  # Slate T's build 0), in the stored tables' order: their dimnames are the
+  # factor's levels, value labels where there are any, and the codes are
+  # nowhere in the result. The variable's name and label ride as an
+  # attribute.
+  row_categories <- .jst_level_codes(row_var, row_src, row_vl)
+  col_categories <- .jst_level_codes(col_var, col_src, col_vl)
+  attr(row_categories, "variable") <- c(
+    name = row_name, label = .jst_label_or_name(lab_src, row_name))
+  attr(col_categories, "variable") <- c(
+    name = col_name, label = .jst_label_or_name(lab_src, col_name))
 
   # Check minimum levels
   for (check_info in list(list(name = row_name, lvls = row_levels),
@@ -2637,7 +2784,9 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     adjusted_residuals = chi_result$stdres,
     n                  = grand_total,
     model_frame        = mf,
-    sample_info        = sample_info
+    sample_info        = sample_info,
+    row_categories     = row_categories,
+    col_categories     = col_categories
   )
   if (chisq) {
     ret$chi_square <- chi_result$statistic
@@ -2651,6 +2800,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     }
   }
   class(ret) <- "jst_crosstab"
+  ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
   invisible(ret)
   })
 }

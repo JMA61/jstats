@@ -311,8 +311,9 @@
   # UseMethod() to find them under namespace semantics -- a bare definition in
   # the namespace is not enough. Registering here keeps both the generics and
   # the methods internal (no NAMESPACE export). (return-shape audit, Session 71)
-  for (cls in c("jst_lm", "jst_logistic", "jst_freq", "jst_desc", "jst_corr",
-                "default")) {
+  # The classes are listed beside the methods, in broom-apa.R's
+  # .jst_apa_classes (Session 399), so a class added there needs no edit here.
+  for (cls in .jst_apa_classes) {
     registerS3method(".jst_apa_terms", cls,
                      get(paste0(".jst_apa_terms.", cls), envir = ns), envir = ns)
     registerS3method(".jst_apa_model", cls,

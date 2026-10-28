@@ -342,6 +342,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     }
   }
 
+  # Each variable's statistics on the values the correlations read
+  # (Session 399, Capability Slate T's build 0): a correlation table prints
+  # M and SD beside r, each variable on its own cases, as the matrix takes
+  # each pair on its own. jdesc()'s descriptives_raw shape.
+  descriptives_raw <- .jst_desc_raw_rows(cor_data, variable_names, data)
+
   # --- Resolve display options -----------------------------------------------
   layout <- .jst_resolve_corr_layout(layout)
   vlmode <- .jst_resolve_variable_id(variable.id)
@@ -400,10 +406,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     ret <- list(r = r_matrix, p = p_matrix, n = n_matrix, method = method,
                 model_frame = mf, sample_info = sample_info,
                 data_name = .jst_data_name,
+                descriptives_raw = descriptives_raw,
                 labels = stats::setNames(
                   vapply(variable_names, function(v) .jst_label_or_name(data, v),
                          character(1)), variable_names))
     class(ret) <- "jst_corr"
+    ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
     return(invisible(ret))
   }
 
@@ -487,9 +495,11 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     data_name   = .jst_data_name,
     labels      = stats::setNames(
       vapply(variable_names, function(v) .jst_label_or_name(data, v),
-             character(1)), variable_names)
+             character(1)), variable_names),
+    descriptives_raw = descriptives_raw
   )
   class(ret) <- "jst_corr"
+  ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
   invisible(ret)
   })
 }
@@ -4422,6 +4432,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     sample_info     = sample_info
   )
   class(ret) <- "jst_lm"
+  ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
   if (!leg_bottom) cat("\n")
   invisible(ret)
   })
@@ -5860,6 +5871,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     sample_info     = sample_info
   )
   class(ret) <- "jst_logistic"
+  ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
   invisible(ret)
   })
 }
@@ -6102,7 +6114,8 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   k             <- ncol(items_complete)
   item_vars     <- sapply(items_complete, stats::var)
   total_var     <- stats::var(rowSums(items_complete))
-  alpha_overall <- round((k / (k - 1)) * (1 - sum(item_vars) / total_var), digits_n)
+  alpha_raw     <- (k / (k - 1)) * (1 - sum(item_vars) / total_var)
+  alpha_overall <- round(alpha_raw, digits_n)
 
   alpha_table <- data.frame(
     Alpha   = alpha_overall,
@@ -6159,29 +6172,35 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   # Item-Total Statistics
   total_scores    <- rowSums(items_complete)
 
-  item_total_rows <- lapply(seq_along(variable_names), function(i) {
+  # Each item's printed row, and its two statistics unrounded for
+  # items_raw (Session 399).
+  item_total_parts <- lapply(seq_along(variable_names), function(i) {
     item_name   <- variable_names[i]
     item_col    <- items_complete[[i]]
     rest_total  <- total_scores - item_col
-    r_corrected <- round(stats::cor(item_col, rest_total), digits_n)
+    r_raw       <- stats::cor(item_col, rest_total)
+    r_corrected <- round(r_raw, digits_n)
 
     remaining <- items_complete[, -i, drop = FALSE]
     k_r <- ncol(remaining)
-    alpha_deleted <- if (k_r < 2) {
-      NA
+    alpha_deleted_raw <- if (k_r < 2) {
+      NA_real_
     } else {
       item_vars_r <- sapply(remaining, stats::var)
       total_var_r <- stats::var(rowSums(remaining))
-      round((k_r / (k_r - 1)) * (1 - sum(item_vars_r) / total_var_r), digits_n)
+      (k_r / (k_r - 1)) * (1 - sum(item_vars_r) / total_var_r)
     }
+    alpha_deleted <- if (k_r < 2) NA else round(alpha_deleted_raw, digits_n)
 
-    data.frame(
-      Item                   = item_name,
-      Corrected_Item_Total_r = r_corrected,
-      Alpha_If_Deleted       = alpha_deleted,
-      stringsAsFactors       = FALSE
-    )
+    list(row = data.frame(
+           Item                   = item_name,
+           Corrected_Item_Total_r = r_corrected,
+           Alpha_If_Deleted       = alpha_deleted,
+           stringsAsFactors       = FALSE
+         ),
+         r = r_raw, alpha = alpha_deleted_raw)
   })
+  item_total_rows <- lapply(item_total_parts, `[[`, "row")
 
   item_total_table <- do.call(rbind, item_total_rows)
 
@@ -6235,6 +6254,25 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
     .print_var_labels(data, variable_names)
   }
 
+  # For the table layer (Session 399, Capability Slate T's build 0): alpha
+  # and every item statistic unrounded. The printed values above, and the
+  # alpha, item_statistics and item_total_statistics returned beside them,
+  # are rounded to the digits setting, and a table rounds again to its
+  # style's places. One row per item, its label whole.
+  items_raw <- data.frame(
+    item             = variable_names,
+    label            = vapply(variable_names,
+                              function(v) .jst_label_or_name(data, v),
+                              character(1), USE.NAMES = FALSE),
+    n                = n_used,
+    mean             = unname(colMeans(items_complete)),
+    sd               = unname(vapply(items_complete, stats::sd, numeric(1))),
+    item_total_r     = vapply(item_total_parts, function(p) as.numeric(p$r),
+                              numeric(1)),
+    alpha_if_deleted = vapply(item_total_parts,
+                              function(p) as.numeric(p$alpha), numeric(1)),
+    stringsAsFactors = FALSE, row.names = NULL)
+
   ret <- list(
     alpha                 = alpha_overall,
     n_items               = k,
@@ -6242,9 +6280,12 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
     n_excluded            = n_excluded,
     item_statistics       = item_stats,
     item_total_statistics = item_total_table,
-    sample_info           = sample_info
+    sample_info           = sample_info,
+    alpha_raw             = alpha_raw,
+    items_raw             = items_raw
   )
   class(ret) <- "jst_alpha"
+  ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
   invisible(ret)
   })
 }

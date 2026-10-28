@@ -39,7 +39,9 @@ outcome before the groups are counted.}
 \value{
 A list: data, formula, terms, dv_name, group_name, lab_src, mf,
 sample_info, n_groups_data, is_labelled, original_codes,
-group_val_labels (the last two NULL when the group is not labelled).
+group_val_labels (these two NULL when the group is not labelled), and
+group_map (Session 399): each group's level, code and label, from
+\code{.jst_level_codes()}.
 }
 \description{
 jt() and jaov() each held this block (Session 386, the twin build): the
