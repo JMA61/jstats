@@ -25,8 +25,10 @@
 #        .jdev_backup_R()) -> split on sentinels and write the R/
 #        files -> reassemble-and-diff self-check (restores the backup and
 #        aborts on any mismatch) -> devtools::load_all() -> document() ->
-#        check(), reporting the error/warning/note tally (the known benign
-#        quarto/TMPDIR quirk on Windows is filtered out of the tally).
+#        load_all() again, so the session holds the regenerated NAMESPACE
+#        (S400) -> check(), reporting the error/warning/note tally (the
+#        known benign quarto/TMPDIR quirk on Windows is filtered out of
+#        the tally).
 #
 #    receive_all("jstats_source.R", version = "0.9.217")
 #        The whole routine after a build, in one call (S342): sets the
@@ -469,11 +471,20 @@ receive_package <- function(file = "jstats_source.R") {
         "\n")
   }
 
-  ## -- 9. load, document, check ------------------------------------------------
+  ## -- 9. load, document, reload, check ----------------------------------------
   cat("\n--- devtools::load_all() ---\n")
   devtools::load_all()
   cat("\n--- devtools::document() ---\n")
   devtools::document()
+  # Loaded AGAIN after document() (Session 400): document() regenerates
+  # NAMESPACE after the load above, so an S3 method a build adds
+  # (S3method(print, jst_table) at v0.9.270) is in the file and not yet
+  # registered in this session, and a battery that dispatches on it runs
+  # the default method -- tables_check.R K03 was red on the workstation and
+  # green in the sandbox, which had reloaded before its batteries. The
+  # check below runs in its own process and never saw the difference.
+  cat("\n--- devtools::load_all() again, with the regenerated NAMESPACE ---\n")
+  devtools::load_all()
   cat("\n--- devtools::check() ---\n")
   res <- devtools::check(error_on = "never")
 
@@ -545,10 +556,13 @@ receive_package <- function(file = "jstats_source.R") {
 }
 
 # The batteries and the walks call the package's internals bare, so they
-# need the development load, not an installed copy.
+# need the development load, not an installed copy. Since Session 400 the
+# load is made every time, not only when no development copy is loaded: a
+# copy loaded before document() regenerated NAMESPACE lacks an S3 method
+# the build added (receive_package(), step 9), and the batteries then
+# dispatch on the default method -- tables_check.R K03 at v0.9.270.
 .jdev_ensure_loaded <- function() {
-  dev <- tryCatch(pkgload::is_dev_package("jstats"), error = function(e) FALSE)
-  if (!isTRUE(dev)) devtools::load_all()
+  devtools::load_all()
   invisible(TRUE)
 }
 
