@@ -64,4 +64,6 @@ groups. A group is counted on the cases the test can use
 
 A list: data, formula, terms, dv_name, group_name, lab_src, mf,
 sample_info, n_groups_data, is_labelled, original_codes,
-group_val_labels (the last two NULL when the group is not labelled).
+group_val_labels (these two NULL when the group is not labelled), and
+group_map (Session 399): each group's level, code and label, from
+[`.jst_level_codes()`](https://jma61.github.io/jstats/reference/dot-jst_level_codes.md).
