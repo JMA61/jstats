@@ -9,7 +9,7 @@ its own so that no wrap can break it.
 ## Usage
 
 ``` r
-.jst_data_dir_created_note(dir)
+.jst_data_dir_created_note(dir, what = "data")
 ```
 
 ## Arguments
@@ -17,6 +17,11 @@ its own so that no wrap can break it.
 - dir:
 
   Character(1). The folder just created.
+
+- what:
+
+  The folder's kind, for the absolute-path form: "data", "output"
+  (Session 400) or "style" (Session 401).
 
 ## Value
 

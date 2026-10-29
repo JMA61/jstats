@@ -25,6 +25,8 @@ joptions(
   missing.convention.codes = NULL,
   data.dir = NULL,
   output.dir = NULL,
+  style = NULL,
+  style.dir = NULL,
   corr.layout = NULL,
   missing.detail = NULL,
   message.width = NULL,
@@ -51,6 +53,14 @@ joptions(
   Character string (length 1), or `NULL`. See Slots.
 
 - output.dir:
+
+  Character string (length 1), or `NULL`. See Slots.
+
+- style:
+
+  Character, length 1: a style's name, or `NULL` to leave it. See Slots.
+
+- style.dir:
 
   Character string (length 1), or `NULL`. See Slots.
 
@@ -157,6 +167,24 @@ query, or as an echo of the slots a setting call touched.
   folder in it bypasses the setting. Distinct from `data.dir` on
   purpose: data come in from one folder, and output goes out to another.
 
+- style:
+
+  Character, length 1. Default: `"apa"`. The style a publication table
+  is made in when its call names none: the built-in `"apa"` style, or
+  the name of a style file (`"myjournal"` for myjournal.jstyle) found in
+  the style folder, the working directory or your jstats folder, or a
+  path to one. Checked when it is set: a style that cannot be found or
+  read stops the call with nothing changed. Set back with
+  `style = "apa"`.
+
+- style.dir:
+
+  Character string (length 1), or `NULL`. Default: `NULL`. A folder of
+  style files, searched before the working directory and your jstats
+  folder (`tools::R_user_dir("jstats")`), and the folder a copied style
+  is saved in. Created when the setting is made; cleared with
+  `style.dir = NULL` or `style.dir = ""`.
+
 - corr.layout:
 
   Character, length 1. One of `"wide"` or `"stacked"`. Default:
@@ -207,7 +235,7 @@ query, or as an echo of the slots a setting call touched.
 
 - `joptions()`:
 
-  Print the full settings panel: all seven slots, whatever the
+  Print the full settings panel: all nine slots, whatever the
   convention. The `missing.convention.codes` row is labeled as
   SPSS-style;
   [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md) to
@@ -218,7 +246,7 @@ query, or as an echo of the slots a setting call touched.
   Print one slot and nothing else – `joptions("data.dir")`, or several
   at once with `joptions(c("data.dir", "corr.layout"))` – closed by a
   pointer to `joptions()` for the full panel. A slot name given WITHOUT
-  an argument name is read as a query rather than a setting; the seven
+  an argument name is read as a query rather than a setting; the nine
   slot names and the four `missing.convention` values share no string,
   so the two readings cannot collide. A named argument is always a
   setting, which leaves `joptions(missing.convention = "data.dir")` an
@@ -280,6 +308,8 @@ joptions()                                        # show current settings
 #> SPSS-style missing value codes: -99, -98, -97
 #> Data folder: Working directory
 #> Output folder: Working directory
+#> Style: apa
+#> Style folder: Not set
 #> Correlation layout: wide
 #> Missing-value detail: per_code
 #> Message width: Auto (currently 79)
@@ -318,11 +348,11 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> 
 joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: /tmp/RtmpvHxscM/Data
+#> Data folder: /tmp/RtmpMNZa3u/Data
 #> Run joptions() to see all settings.
 #> 
 #> Created the data folder:
-#>   /tmp/RtmpvHxscM/Data
+#>   /tmp/RtmpMNZa3u/Data
 #> 
                                                   # (created if absent)
 joptions(data.dir = NULL)                         # back to the working directory
@@ -332,11 +362,11 @@ joptions(data.dir = NULL)                         # back to the working director
 #> 
 joptions(output.dir = file.path(tempdir(), "Tables")) # where tables are written
 #> Options Settings
-#> Output folder: /tmp/RtmpvHxscM/Tables
+#> Output folder: /tmp/RtmpMNZa3u/Tables
 #> Run joptions() to see all settings.
 #> 
 #> Created the output folder:
-#>   /tmp/RtmpvHxscM/Tables
+#>   /tmp/RtmpMNZa3u/Tables
 #> 
 joptions(output.dir = NULL)                       # back to the working directory
 #> Options Settings
@@ -378,6 +408,8 @@ joptions(NULL)                                    # reset all to defaults
 #> SPSS-style missing value codes: -99, -98, -97
 #> Data folder: Working directory
 #> Output folder: Working directory
+#> Style: apa
+#> Style folder: Not set
 #> Correlation layout: wide
 #> Missing-value detail: per_code
 #> Message width: Auto (currently 79)

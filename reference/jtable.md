@@ -3,9 +3,11 @@
 `jtable()` turns a saved analysis result into a publication table: it
 prints a preview in the console and, when `file` is given, writes the
 table to a Word file (.docx) that opens in Word, LibreOffice and Google
-Docs. The table's look and conventions come from a style (the built-in
-`"apa"` style in this version); the preview is a facsimile of the Word
-table, so what prints is what the file holds.
+Docs. The table's look and conventions come from a style – the built-in
+`"apa"` style, or a style file of your own (see
+[`jstyle()`](https://jma61.github.io/jstats/reference/jstyle.md)); the
+preview is a facsimile of the Word table, so what prints is what the
+file holds.
 
 ## Usage
 
@@ -17,8 +19,9 @@ jtable(
   title = NULL,
   note = NULL,
   file = NULL,
-  style = "apa",
+  style = NULL,
   overwrite = FALSE,
+  open = FALSE,
   print = NULL,
   ...
 )
@@ -33,11 +36,13 @@ print(x, ...)
 
   A saved result – what an analysis function returns, kept with `<-` –
   or a list of them. A list of
-  [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md) results
-  stacks into one table, each result's variables under its name in the
-  list when the list is named. A table `jtable()` has already built, or
-  a list of them, goes to the file as it is, the tables in the order
-  given and numbered so.
+  [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md)
+  results, or of
+  [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md)
+  results, stacks into one table, each result's variables under its name
+  in the list when the list is named. A table `jtable()` has already
+  built, or a list of them, goes to the file as it is, the tables in the
+  order given and numbered so.
 
 - headings:
 
@@ -56,7 +61,7 @@ print(x, ...)
 
 - title:
 
-  The table's title; the style's template title when NULL.
+  The table's title; the style's title when NULL.
 
 - note:
 
@@ -71,12 +76,22 @@ print(x, ...)
 
 - style:
 
-  The style's name; `"apa"` in this version.
+  The style's name in quotes: `"apa"`, or the name of a style file
+  (`"myjournal"` for myjournal.jstyle), looked for in the style folder
+  (`joptions(style.dir = )`), the working directory and your jstats
+  folder; or a path to one. NULL (the default) uses
+  `joptions(style = )`, apa when it is not set.
 
 - overwrite:
 
   Logical. Replace a file that exists? With FALSE (the default) an
   interactive session asks, and one that cannot ask stops.
+
+- open:
+
+  Logical. TRUE opens the file once it is written, in the program your
+  computer opens .docx files with; only in an interactive session, so a
+  script or a rendered page opens nothing. Needs `file`.
 
 - print:
 
@@ -87,7 +102,12 @@ print(x, ...)
 
 - ...:
 
-  Not used. An input `jtable()` does not take stops with "unused input".
+  A setting of the table type's section of the style, for this table
+  only, e.g. `columns = c("mean", "sd")` for a descriptives table or
+  `missing.rows = "none"` for a frequency table: the call outranks the
+  style file. The general settings (the font, the caption's form, the
+  decimals) are the style file's. Any other input stops with "unused
+  input".
 
 ## Value
 
@@ -96,8 +116,11 @@ preview when typed.
 
 ## Details
 
-This version makes one table type: a descriptives table from one or more
-[`jdesc`](https://jma61.github.io/jstats/reference/jdesc.md) results,
-the variables under role headings when `headings` names them, each
-specific note's variables marked when `markers` names them. Further
-table types follow.
+This version makes two table types: a descriptives table from one or
+more [`jdesc`](https://jma61.github.io/jstats/reference/jdesc.md)
+results, and a frequency table from one or more
+[`jfreq`](https://jma61.github.io/jstats/reference/jfreq.md) results –
+each variable's label on a row of its own, its categories indented under
+it. The variables go under role headings when `headings` names them, and
+each specific note's variables are marked when `markers` names them.
+Further table types follow.

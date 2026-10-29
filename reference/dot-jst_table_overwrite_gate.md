@@ -8,7 +8,13 @@ folder R cannot write to stops first.
 ## Usage
 
 ``` r
-.jst_table_overwrite_gate(out_path, overwrite, ask = interactive())
+.jst_table_overwrite_gate(
+  out_path,
+  overwrite,
+  ask = interactive(),
+  fn = "jtable",
+  noun = "table"
+)
 ```
 
 ## Arguments
@@ -24,6 +30,14 @@ folder R cannot write to stops first.
 - ask:
 
   Logical; whether the session can ask (interactive()).
+
+- fn:
+
+  The user-facing function's name (jtable, jstyle).
+
+- noun:
+
+  What the call writes, for the kept-file note.
 
 ## Value
 

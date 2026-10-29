@@ -1,0 +1,15 @@
+# Internal: what each style setting takes
+
+One entry per setting of the built-in apa list, by part: its kind (text,
+choice, number, integer, color, columns, stars), what the kind needs
+(the choices; the range; the columns a table type has; whether "none" or
+an empty text is allowed), and what the setting does, which
+jstyle(save.as =) writes as the setting's comment. The reader checks a
+file's values against it, jtable() a call's, and tables_check.R that it
+and .jst_style_apa name the same settings.
+
+## Usage
+
+``` r
+.jst_style_spec
+```
