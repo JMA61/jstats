@@ -691,7 +691,7 @@ joutput <- function(level, effect.size = NULL,
 # and prints the Options Settings panel. Called at the end of every
 # joptions() call (including reset).
 #
-# slots = NULL (the default) prints the FULL seven-slot panel: the shape a
+# slots = NULL (the default) prints the FULL nine-slot panel: the shape a
 # bare joptions() status query wants, and the shape the joptions(NULL) reset
 # wants because everything changed. A character vector of slot names instead
 # prints a PARTIAL panel -- the same red title, only the named lines, then
@@ -710,6 +710,9 @@ joutput <- function(level, effect.size = NULL,
                   .jst_options_defaults$data.dir)
   od <- getOption(".jst_options_output_dir",
                   .jst_options_defaults$output.dir)
+  st <- getOption(".jst_options_style", .jst_options_defaults$style)
+  sd <- getOption(".jst_options_style_dir",
+                  .jst_options_defaults$style.dir)
   cl <- getOption(".jst_options_corr_layout",
                   .jst_options_defaults$corr.layout)
   md <- getOption(".jst_options_missing_detail",
@@ -753,6 +756,15 @@ joutput <- function(level, effect.size = NULL,
   } else {
     od
   }
+  # style.dir (Session 401): not a replacement for the working directory,
+  # which is searched as well, so an unset folder reads "Not set".
+  sd_label <- if (is.null(sd)) {
+    "Not set"
+  } else if (!dir.exists(sd)) {
+    paste0(sd, " (will be created at the first save)")
+  } else {
+    sd
+  }
 
   # message.width: unlike corr.layout and missing.detail, whose tokens name
   # a SHAPE and print raw, a width token names a NUMBER the user cannot
@@ -785,12 +797,14 @@ joutput <- function(level, effect.size = NULL,
       "\n"),
     data.dir             = paste0("Data folder: ", dd_label, "\n"),
     output.dir           = paste0("Output folder: ", od_label, "\n"),
+    style                = paste0("Style: ", st, "\n"),
+    style.dir            = paste0("Style folder: ", sd_label, "\n"),
     corr.layout          = paste0("Correlation layout: ", cl, "\n"),
     missing.detail       = paste0("Missing-value detail: ", md, "\n"),
     message.width        = paste0("Message width: ", mw_label, "\n")
   )
 
-  # The FULL panel shows all seven slots under every convention (S332,
+  # The FULL panel shows all nine slots under every convention (S332,
   # reversing S267, which hid the codes row unless the setting was
   # "spss"). The codes are not dormant off "spss": jconvert(to = "spss")
   # and a per-call convention = "spss" use them whatever the setting, and
@@ -1065,6 +1079,19 @@ joutput <- function(level, effect.size = NULL,
 #'     a folder in it bypasses the setting. Distinct from \code{data.dir}
 #'     on purpose: data come in from one folder, and output goes out to
 #'     another.}
+#'   \item{style}{Character, length 1. Default: \code{"apa"}. The style a
+#'     publication table is made in when its call names none: the built-in
+#'     \code{"apa"} style, or the name of a style file (\code{"myjournal"}
+#'     for myjournal.jstyle) found in the style folder, the working
+#'     directory or your jstats folder, or a path to one. Checked when it is
+#'     set: a style that cannot be found or read stops the call with nothing
+#'     changed. Set back with \code{style = "apa"}.}
+#'   \item{style.dir}{Character string (length 1), or \code{NULL}. Default:
+#'     \code{NULL}. A folder of style files, searched before the working
+#'     directory and your jstats folder (\code{tools::R_user_dir("jstats")}),
+#'     and the folder a copied style is saved in. Created when the setting
+#'     is made; cleared with \code{style.dir = NULL} or
+#'     \code{style.dir = ""}.}
 #'   \item{corr.layout}{Character, length 1. One of \code{"wide"} or
 #'     \code{"stacked"}. Default: \code{"wide"}. The default cell layout for
 #'     \code{\link{jcorr}} when three or more variables are correlated:
@@ -1103,7 +1130,7 @@ joutput <- function(level, effect.size = NULL,
 #'
 #' @section Call patterns:
 #' \describe{
-#'   \item{\code{joptions()}}{Print the full settings panel: all seven
+#'   \item{\code{joptions()}}{Print the full settings panel: all nine
 #'     slots, whatever the convention. The
 #'     \code{missing.convention.codes} row is labeled as SPSS-style;
 #'     \code{\link{jconvert}} to SPSS-style missing values uses those
@@ -1113,7 +1140,7 @@ joutput <- function(level, effect.size = NULL,
 #'     \code{joptions(c("data.dir", "corr.layout"))} -- closed by a
 #'     pointer to \code{joptions()} for the full panel. A slot name given
 #'     WITHOUT an argument name is read as a query rather than a setting;
-#'     the seven slot names and the four \code{missing.convention} values
+#'     the nine slot names and the four \code{missing.convention} values
 #'     share no string, so the two readings cannot collide. A named
 #'     argument is always a setting, which leaves
 #'     \code{joptions(missing.convention = "data.dir")} an error. Only
@@ -1163,6 +1190,9 @@ joutput <- function(level, effect.size = NULL,
 #' @param missing.convention.codes Numeric vector, length 1 to 3. See Slots.
 #' @param data.dir Character string (length 1), or \code{NULL}. See Slots.
 #' @param output.dir Character string (length 1), or \code{NULL}. See Slots.
+#' @param style Character, length 1: a style's name, or \code{NULL} to leave
+#'   it. See Slots.
+#' @param style.dir Character string (length 1), or \code{NULL}. See Slots.
 #' @param corr.layout One of \code{"wide"} or \code{"stacked"}, or
 #'   \code{NULL}. See Slots.
 #' @param missing.detail One of \code{"totals"}, \code{"per_code"}, or
@@ -1216,7 +1246,8 @@ joutput <- function(level, effect.size = NULL,
 #'   misspelled argument -- stops with "unused input" and the name as
 #'   typed, in place of R's own "unused argument".
 joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
-                     data.dir = NULL, output.dir = NULL, corr.layout = NULL,
+                     data.dir = NULL, output.dir = NULL, style = NULL,
+                     style.dir = NULL, corr.layout = NULL,
                      missing.detail = NULL, message.width = NULL,
                      quiet = FALSE, ...) {
   # An input joptions() does not take -- a misspelled argument, or a value in
@@ -1242,6 +1273,11 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
                      match.call(), "data.dir", "a folder name", "joptions")
   .jst_free_text_arg(substitute(output.dir), parent.frame(), sys.call(),
                      match.call(), "output.dir", "a folder name", "joptions")
+  # A style's name and its folder the same (Session 401).
+  .jst_free_text_arg(substitute(style), parent.frame(), sys.call(),
+                     match.call(), "style", "a style name", "joptions")
+  .jst_free_text_arg(substitute(style.dir), parent.frame(), sys.call(),
+                     match.call(), "style.dir", "a folder name", "joptions")
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(quiet, "quiet")
 
@@ -1249,12 +1285,15 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
   cc_supplied <- !missing(missing.convention.codes)
   dd_supplied <- !missing(data.dir)
   od_supplied <- !missing(output.dir)
+  st_supplied <- !missing(style)
+  sd_supplied <- !missing(style.dir)
   cl_supplied <- !missing(corr.layout)
   md_supplied <- !missing(missing.detail)
   mw_supplied <- !missing(message.width)
 
   # joptions() -- no args, status only
   if (!mc_supplied && !cc_supplied && !dd_supplied && !od_supplied &&
+      !st_supplied && !sd_supplied &&
       !cl_supplied && !md_supplied && !mw_supplied) {
     .jst_options_status()
     return(invisible(NULL))
@@ -1286,7 +1325,7 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
   positional_null_reset <- lone_positional && is.null(call_args[[1L]])
 
   # A slot NAME in the first position asks to SEE that slot. Safe because
-  # the seven slot names and the four missing.convention values are
+  # the nine slot names and the four missing.convention values are
   # disjoint sets: no string can be read both ways. The value is taken
   # from missing.convention, where positional matching has already put
   # it, and the canonical name vector is .jst_options_defaults's own, so
@@ -1306,6 +1345,8 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     options(.jst_options_missing_convention_codes = NULL)
     options(.jst_options_data_dir             = NULL)
     options(.jst_options_output_dir           = NULL)
+    options(.jst_options_style                = NULL)
+    options(.jst_options_style_dir            = NULL)
     options(.jst_options_corr_layout          = NULL)
     options(.jst_options_missing_detail       = NULL)
     options(.jst_options_message_width        = NULL)
@@ -1336,7 +1377,7 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     # S281: a lone positional string that is neither a slot name nor a
     # convention value is most likely a mistyped slot query -- that is the
     # only positional form that takes a bare string. Test it as a near
-    # miss against the seven slot names BEFORE the lowercasing below, so the
+    # miss against the nine slot names BEFORE the lowercasing below, so the
     # error quotes what the user typed (Rule AB), not a normalized copy.
     # Levenshtein distance, case-insensitive, at most 2. A case-only
     # variant is distance 0 and gets the suggestion rather than silently
@@ -1439,6 +1480,22 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     }
     .jst_check_path_chars(output.dir, what = "folder")
   }
+  # style.dir (Session 401, Capability Slate T's build 2): a folder of
+  # style files, checked as output.dir is.
+  if (sd_supplied && !is.null(style.dir)) {
+    if (!is.character(style.dir) ||
+        length(style.dir) != 1L ||
+        is.na(style.dir)) {
+      .jst_stop('style.dir must be a single character string, NULL, or "".\n',
+           '(NULL or "" clears the folder.)')
+    }
+    if (identical(trimws(style.dir), "NULL")) {
+      .jst_stop('style.dir = "NULL" looks like a typo.\nTo clear the style ',
+           'folder, use style.dir = NULL (no quotes) or style.dir = "" ',
+           '(empty quotes).')
+    }
+    .jst_check_path_chars(style.dir, what = "folder")
+  }
   if (cl_supplied && !is.null(corr.layout)) {
     if (!is.character(corr.layout) ||
         length(corr.layout) != 1L ||
@@ -1461,6 +1518,24 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     # "auto" stays live and re-reads the pane on every message.
     invisible(.jst_resolve_width(per_call = message.width,
                                  arg = "message.width", fn = "joptions"))
+  }
+
+  # style (S401), read and checked as jtable() would read it, with this
+  # call's style folder in effect, BEFORE any folder below is created: a
+  # style that cannot be found or read stops the call with nothing changed
+  # (the S338 rule). A style folder not yet created holds no file, and the
+  # lookup passes over it.
+  sd_clear <- sd_supplied &&
+              (is.null(style.dir) || nchar(trimws(style.dir)) == 0L)
+  if (st_supplied && !is.null(style)) {
+    old_sd <- getOption(".jst_options_style_dir")
+    if (sd_supplied) {
+      options(.jst_options_style_dir = if (sd_clear) NULL else style.dir)
+    }
+    st_obj <- tryCatch(.jst_style_resolve(style, fn = "joptions",
+                                          cl = sys.call(), mc = match.call()),
+                       finally = options(.jst_options_style_dir = old_sd))
+    style  <- if (is.na(st_obj$path)) st_obj$name else trimws(style)
   }
 
   # data.dir (S332). Two things set it apart from the other slots.
@@ -1492,6 +1567,14 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     od_created <- .jst_create_data_dir(
       output.dir, fn = "joptions", tail = "\nNo setting was changed.",
       what = "output")
+  }
+  # style.dir the same way.
+  sd_created <- FALSE
+  if (sd_supplied && !sd_clear) {
+    .jst_data_dir_case_warning(style.dir, slot = "style.dir")
+    sd_created <- .jst_create_data_dir(
+      style.dir, fn = "joptions", tail = "\nNo setting was changed.",
+      what = "style")
   }
 
   # Write -- only supplied non-NULL args; NULL means "leave alone" (except
@@ -1529,6 +1612,14 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     }
     written <- c(written, "output.dir")
   }
+  if (sd_supplied) {
+    options(.jst_options_style_dir = if (sd_clear) NULL else style.dir)
+    written <- c(written, "style.dir")
+  }
+  if (st_supplied && !is.null(style)) {
+    options(.jst_options_style = style)
+    written <- c(written, "style")
+  }
   if (cl_supplied && !is.null(corr.layout)) {
     options(.jst_options_corr_layout = corr.layout)
     written <- c(written, "corr.layout")
@@ -1562,6 +1653,8 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
                   if (cc_supplied) "missing.convention.codes",
                   if (dd_supplied) "data.dir",
                   if (od_supplied) "output.dir",
+                  if (st_supplied) "style",
+                  if (sd_supplied) "style.dir",
                   if (cl_supplied) "corr.layout",
                   if (md_supplied) "missing.detail",
                   if (mw_supplied) "message.width")
@@ -1597,6 +1690,10 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
   }
   if (od_created && !quiet) {
     .jst_msg(.jst_output_dir_created_note(output.dir))
+    cat("\n")
+  }
+  if (sd_created && !quiet) {
+    .jst_msg(.jst_data_dir_created_note(style.dir, what = "style"))
     cat("\n")
   }
   if (!quiet && trigger_nudge && .jst_options_nudge(missing.convention)) {
@@ -1712,11 +1809,13 @@ jdata_dir <- function(default = ".", ...) {
 #' and goes on a line of its own so that no wrap can break it.
 #'
 #' @param dir Character(1). The folder just created.
+#' @param what The folder's kind, for the absolute-path form: "data",
+#'   "output" (Session 400) or "style" (Session 401).
 #' @return Character(1), the note text.
 #' @keywords internal
-.jst_data_dir_created_note <- function(dir) {
+.jst_data_dir_created_note <- function(dir, what = "data") {
   if (grepl("^([A-Za-z]:|[/\\\\~])", dir)) {
-    paste0("Created the data folder:\n  ", dir)
+    paste0("Created the ", what, " folder:\n  ", dir)
   } else {
     paste0("Created '", dir, "' folder in working directory.")
   }
@@ -1764,7 +1863,8 @@ jdata_dir <- function(default = ".", ...) {
         "Note: ", slot, " was set to '", want, "', but a folder named '",
         hit[1], "' already exists and your filesystem treats the two as the ",
         "same folder.\n",
-        if (identical(slot, "data.dir")) "Saves and loads" else "Files written",
+        switch(slot, data.dir = "Saves and loads", style.dir = "Style files",
+               "Files written"),
         " will use the existing '", hit[1],
         "'.\nTo keep a separate folder, choose a name that differs by more ",
         "than letter case."

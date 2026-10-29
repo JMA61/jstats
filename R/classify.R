@@ -1200,19 +1200,33 @@
   if (!is.null(choices)) {
     # Choice-error house form (Rule A): backtick the name, drop "one of:",
     # natural list with Oxford comma on 3+ choices and none on exactly 2.
-    quoted <- paste0("\"", choices, "\"")
-    n <- length(quoted)
-    if (n >= 3L) {
-      lst <- paste0(paste(quoted[-n], collapse = ", "), ", or ", quoted[n])
-    } else if (n == 2L) {
-      lst <- paste0(quoted[1L], " or ", quoted[2L])
-    } else {
-      lst <- quoted
-    }
-    requirement <- paste0(lst, ".")
+    requirement <- .jst_choice_list(choices)
     arg <- paste0("`", arg, "`")
   }
   .jst_stop(arg, " must be ", requirement, hint, fn = fn)
+}
+
+#' Internal helper: the choices of a Rule A choice error
+#'
+#' Each in double quotes, "or" before the last, an Oxford comma at three
+#' or more and none at two, a full stop after: \code{.jst_stop_arg()}'s
+#' list, in one home since Session 401 so the style settings' errors give
+#' it too.
+#'
+#' @param choices Character vector.
+#' @return Character(1).
+#' @keywords internal
+.jst_choice_list <- function(choices) {
+  quoted <- paste0("\"", choices, "\"")
+  n <- length(quoted)
+  lst <- if (n >= 3L) {
+    paste0(paste(quoted[-n], collapse = ", "), ", or ", quoted[n])
+  } else if (n == 2L) {
+    paste0(quoted[1L], " or ", quoted[2L])
+  } else {
+    quoted
+  }
+  paste0(lst, ".")
 }
 
 

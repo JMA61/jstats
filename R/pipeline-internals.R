@@ -1552,6 +1552,8 @@
   missing.convention.codes = c(-99, -98, -97),
   data.dir             = NULL,
   output.dir           = NULL,
+  style                = "apa",
+  style.dir            = NULL,
   corr.layout          = "wide",
   missing.detail       = "per_code",
   message.width        = "auto"

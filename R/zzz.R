@@ -435,7 +435,7 @@
 #
 # .jst_session_option_keys is the complete inventory of options() keys the
 # package writes: the pipeline state (juse, jsubset, jcomplete, jdummy),
-# the joutput level and toggles, the six joptions() settings, the
+# the joutput level and toggles, the nine joptions() settings, the
 # classification registry, and the show-once flag for the
 # declared-missing-values narrative. Session 277 completed the inventory
 # (it had stopped at the first six). Any new options() key the package
@@ -452,6 +452,8 @@
   ".jst_options_missing_convention_codes",
   ".jst_options_data_dir",
   ".jst_options_output_dir",
+  ".jst_options_style",
+  ".jst_options_style_dir",
   ".jst_options_corr_layout",
   ".jst_options_missing_detail",
   ".jst_options_message_width",

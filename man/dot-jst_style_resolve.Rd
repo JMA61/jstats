@@ -4,21 +4,36 @@
 \alias{.jst_style_resolve}
 \title{Internal helper: the style a jtable() call uses}
 \usage{
-.jst_style_resolve(style, fn = "jtable")
+.jst_style_resolve(style = NULL, fn = "jtable", cl = NULL, mc = NULL)
 }
 \arguments{
-\item{style}{Character(1); the style's name.}
+\item{style}{A style's name or path, a resolved style, or NULL.}
 
-\item{fn}{The user-facing function's name, for the stop.}
+\item{fn}{The user-facing function's name, for the stops.}
+
+\item{cl, mc}{The call as typed and the matched call, for the line a
+near miss offers; NULL gives the sentence alone.}
 }
 \value{
-The style: a list with a general part and one list per table
-type.
+An object of class "jst_style": name, path (NA for a built-in),
+layers (each a list: source, general and one list per table type) and
+skipped (settings a newer jstats wrote, passed over with a note).
 }
 \description{
-Build 1 knows one style, the built-in apa list; \code{style =} names it.
-Build 2 adds the style files, \code{jstyle()} and the lookup through
-\code{based.on}; this is where that lookup will go, so every caller
-already reads the style through one helper.
+Resolves \code{style =} into a STYLE (class "jst_style"): its layers,
+read first to last for each setting -- the file named, the style its
+based.on names, and so on, the built-in apa list last. A resolved style
+passes through unchanged, and a bare list of parts (the built-in apa
+list) is made one. NULL takes the session's default,
+\code{joptions(style = )}, apa when none is set.
+}
+\details{
+A NAME is looked for as \code{<name>.jstyle} in the style folder
+(\code{joptions(style.dir = )}) when one is set, then the working
+directory, then the per-user folder \code{tools::R_user_dir("jstats")}
+gives (the reference, Part 1, R46), the letters' case aside; "apa" is
+the built-in style's name and always means it. A name given with its
+.jstyle is the name. A PATH -- a name holding a slash -- is read as
+given, .jstyle added when it has no extension.
 }
 \keyword{internal}

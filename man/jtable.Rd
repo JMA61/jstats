@@ -12,8 +12,9 @@ jtable(
   title = NULL,
   note = NULL,
   file = NULL,
-  style = "apa",
+  style = NULL,
   overwrite = FALSE,
+  open = FALSE,
   print = NULL,
   ...
 )
@@ -22,11 +23,11 @@ jtable(
 }
 \arguments{
 \item{x}{A saved result -- what an analysis function returns, kept with
-\code{<-} -- or a list of them. A list of \code{jdesc()} results
-stacks into one table, each result's variables under its name in the
-list when the list is named. A table \code{jtable()} has already
-built, or a list of them, goes to the file as it is, the tables in
-the order given and numbered so.}
+\code{<-} -- or a list of them. A list of \code{jdesc()} results, or
+of \code{jfreq()} results, stacks into one table, each result's
+variables under its name in the list when the list is named. A table
+\code{jtable()} has already built, or a list of them, goes to the file
+as it is, the tables in the order given and numbered so.}
 
 \item{headings}{A named list: each heading and the variables under it,
 bare or in quotes, e.g. \code{list("Dependent variable" = Wellbeing,
@@ -38,7 +39,7 @@ variables it marks, e.g. \code{list("Mean-centered" = c(Income,
 Age))}. The style assigns the marks (superscript letters under APA),
 sets each on its rows' labels, and writes the note under the table.}
 
-\item{title}{The table's title; the style's template title when NULL.}
+\item{title}{The table's title; the style's title when NULL.}
 
 \item{note}{The general note's text, after the N the style writes;
 \code{*text*} sets a word in italics. NULL for none.}
@@ -48,17 +49,30 @@ name goes in the output folder (\code{joptions(output.dir = )}) or the
 working directory; a path with a folder goes there. NULL writes
 nothing.}
 
-\item{style}{The style's name; \code{"apa"} in this version.}
+\item{style}{The style's name in quotes: \code{"apa"}, or the name of a
+style file (\code{"myjournal"} for myjournal.jstyle), looked for in
+the style folder (\code{joptions(style.dir = )}), the working
+directory and your jstats folder; or a path to one. NULL (the
+default) uses \code{joptions(style = )}, apa when it is not set.}
 
 \item{overwrite}{Logical. Replace a file that exists? With FALSE (the
 default) an interactive session asks, and one that cannot ask stops.}
+
+\item{open}{Logical. TRUE opens the file once it is written, in the
+program your computer opens .docx files with; only in an interactive
+session, so a script or a rendered page opens nothing. Needs
+\code{file}.}
 
 \item{print}{Print the preview? NULL (the default) follows the
 \code{\link{joutput}} level: the preview prints unless the level is
 \code{"silent"}. TRUE prints it under any level; FALSE prints nothing
 and writes the file alone.}
 
-\item{...}{Not used. An input \code{jtable()} does not take stops with
+\item{...}{A setting of the table type's section of the style, for this
+table only, e.g. \code{columns = c("mean", "sd")} for a descriptives
+table or \code{missing.rows = "none"} for a frequency table: the call
+outranks the style file. The general settings (the font, the caption's
+form, the decimals) are the style file's. Any other input stops with
 "unused input".}
 }
 \value{
@@ -69,14 +83,18 @@ which prints its preview when typed.
 \code{jtable()} turns a saved analysis result into a publication table:
 it prints a preview in the console and, when \code{file} is given,
 writes the table to a Word file (.docx) that opens in Word, LibreOffice
-and Google Docs. The table's look and conventions come from a style
-(the built-in \code{"apa"} style in this version); the preview is a
-facsimile of the Word table, so what prints is what the file holds.
+and Google Docs. The table's look and conventions come from a style --
+the built-in \code{"apa"} style, or a style file of your own (see
+\code{jstyle()}); the preview is a facsimile of the Word table, so what
+prints is what the file holds.
 }
 \details{
-This version makes one table type: a descriptives table from one or
-more \code{\link{jdesc}} results, the variables under role headings
-when \code{headings} names them, each specific note's variables marked
-when \code{markers} names them. Further table types follow.
+This version makes two table types: a descriptives table from one or
+more \code{\link{jdesc}} results, and a frequency table from one or
+more \code{\link{jfreq}} results -- each variable's label on a row of
+its own, its categories indented under it. The variables go under role
+headings when \code{headings} names them, and each specific note's
+variables are marked when \code{markers} names them. Further table
+types follow.
 }
 \keyword{internal}

@@ -4,10 +4,13 @@
 \alias{.jst_data_dir_created_note}
 \title{Internal: the note for a data folder just created}
 \usage{
-.jst_data_dir_created_note(dir)
+.jst_data_dir_created_note(dir, what = "data")
 }
 \arguments{
 \item{dir}{Character(1). The folder just created.}
+
+\item{what}{The folder's kind, for the absolute-path form: "data",
+"output" (Session 400) or "style" (Session 401).}
 }
 \value{
 Character(1), the note text.

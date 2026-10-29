@@ -9,6 +9,8 @@ joptions(
   missing.convention.codes = NULL,
   data.dir = NULL,
   output.dir = NULL,
+  style = NULL,
+  style.dir = NULL,
   corr.layout = NULL,
   missing.detail = NULL,
   message.width = NULL,
@@ -27,6 +29,11 @@ read instead as a status query on that slot (see Call patterns).}
 \item{data.dir}{Character string (length 1), or \code{NULL}. See Slots.}
 
 \item{output.dir}{Character string (length 1), or \code{NULL}. See Slots.}
+
+\item{style}{Character, length 1: a style's name, or \code{NULL} to leave
+it. See Slots.}
+
+\item{style.dir}{Character string (length 1), or \code{NULL}. See Slots.}
 
 \item{corr.layout}{One of \code{"wide"} or \code{"stacked"}, or
 \code{NULL}. See Slots.}
@@ -126,6 +133,19 @@ first write if it has been removed since; cleared with
 a folder in it bypasses the setting. Distinct from \code{data.dir}
 on purpose: data come in from one folder, and output goes out to
 another.}
+\item{style}{Character, length 1. Default: \code{"apa"}. The style a
+publication table is made in when its call names none: the built-in
+\code{"apa"} style, or the name of a style file (\code{"myjournal"}
+for myjournal.jstyle) found in the style folder, the working
+directory or your jstats folder, or a path to one. Checked when it is
+set: a style that cannot be found or read stops the call with nothing
+changed. Set back with \code{style = "apa"}.}
+\item{style.dir}{Character string (length 1), or \code{NULL}. Default:
+\code{NULL}. A folder of style files, searched before the working
+directory and your jstats folder (\code{tools::R_user_dir("jstats")}),
+and the folder a copied style is saved in. Created when the setting
+is made; cleared with \code{style.dir = NULL} or
+\code{style.dir = ""}.}
 \item{corr.layout}{Character, length 1. One of \code{"wide"} or
 \code{"stacked"}. Default: \code{"wide"}. The default cell layout for
 \code{\link{jcorr}} when three or more variables are correlated:
@@ -166,7 +186,7 @@ matrix mid-row would destroy the alignment that makes it readable.}
 \section{Call patterns}{
 
 \describe{
-\item{\code{joptions()}}{Print the full settings panel: all seven
+\item{\code{joptions()}}{Print the full settings panel: all nine
 slots, whatever the convention. The
 \code{missing.convention.codes} row is labeled as SPSS-style;
 \code{\link{jconvert}} to SPSS-style missing values uses those
@@ -176,7 +196,7 @@ codes under any setting.}
 \code{joptions(c("data.dir", "corr.layout"))} -- closed by a
 pointer to \code{joptions()} for the full panel. A slot name given
 WITHOUT an argument name is read as a query rather than a setting;
-the seven slot names and the four \code{missing.convention} values
+the nine slot names and the four \code{missing.convention} values
 share no string, so the two readings cannot collide. A named
 argument is always a setting, which leaves
 \code{joptions(missing.convention = "data.dir")} an error. Only

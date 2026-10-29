@@ -4,7 +4,13 @@
 \alias{.jst_table_overwrite_gate}
 \title{Internal helper: the overwrite question before jtable() writes}
 \usage{
-.jst_table_overwrite_gate(out_path, overwrite, ask = interactive())
+.jst_table_overwrite_gate(
+  out_path,
+  overwrite,
+  ask = interactive(),
+  fn = "jtable",
+  noun = "table"
+)
 }
 \arguments{
 \item{out_path}{The path.}
@@ -12,6 +18,10 @@
 \item{overwrite}{Logical.}
 
 \item{ask}{Logical; whether the session can ask (interactive()).}
+
+\item{fn}{The user-facing function's name (jtable, jstyle).}
+
+\item{noun}{What the call writes, for the kept-file note.}
 }
 \value{
 TRUE when the write may go ahead, FALSE when the question was
