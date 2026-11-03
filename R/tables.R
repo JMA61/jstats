@@ -32,9 +32,11 @@
 #     the Word writer as XML parts packed by zip::zip(). Two writers from
 #     the first build is what proves the structure carries no Word XML.
 #
-# Build 1 makes the DESCRIPTIVES table (Jeff's Table 1: variables under
-# role headings) from jdesc() results. The other table types are later
-# builds; a result of another class stops with a sentence saying so.
+# Build 1 made the DESCRIPTIVES table (Jeff's Table 1: variables under
+# role headings) from jdesc() results; build 2 the frequency table, build 3
+# the regression and logistic tables, and build 4 (Session 405) the
+# correlation, t-test, ANOVA, crosstab and reliability tables. Every result
+# class an analysis function returns has its table type.
 #
 # jtable() is UNEXPORTED until the layer's last build (ruling R48): the
 # batteries call it bare.
@@ -100,7 +102,9 @@
     thousands        = "comma",       # comma | none, in counts and statistics
     landscape        = "auto",        # auto | yes | no
     line.spacing     = "single",      # single | double
-    percent.decimals = 1              # a percentage's decimal places (build 2)
+    percent.decimals = 1,             # a percentage's decimal places (build 2)
+    filter.note      = "yes"          # yes: the general note says which cases
+                                      # a filter kept (build 4) | no
   ),
   descriptives = list(
     title          = "Descriptive Statistics",
@@ -171,17 +175,95 @@
     reference.label   = "reference",
     variable.headings = "plain",
     group.headings    = "italic"
+  ),
+  correlation = list(                  # a jcorr() result (build 4, S405)
+    title          = "Descriptive Statistics and Correlations for Study Variables",
+    columns        = c("n", "mean", "sd"),  # before the matrix, or none
+    stub.label     = "Variable",
+    n.label        = "n",
+    mean.label     = "M",
+    sd.label       = "SD",
+    lower.triangle = "yes",            # yes: r below the diagonal | no: both
+    r.stars        = "yes",            # yes: asterisks on r for its p-value
+    method.note    = "yes"             # the sentence naming a Spearman or
+                                       # Kendall table's correlations
+  ),
+  ttest = list(                        # jt() results (build 4)
+    title          = "Means, Standard Deviations, and t Tests by {group}",
+    columns        = c("mean", "sd", "t", "p", "d"),  # n, diff, ci
+    stub.label     = "Variable",
+    n.label        = "n",
+    mean.label     = "M",
+    sd.label       = "SD",
+    t.label        = "t",
+    df.label       = "df",
+    p.label        = "p",
+    d.label        = "d",
+    diff.label     = "Mean difference",
+    ci.label       = "95% CI",
+    ci.style       = "one",            # one: "[LL, UL]" | two: LL and UL
+    group.spanner  = "yes",            # the grouping variable's label over
+                                       # the groups
+    test.note      = "yes"             # the sentence on a Welch or a paired
+                                       # test
+  ),
+  anova = list(                        # jaov() results (build 4)
+    title          = "Means, Standard Deviations, and One-Way Analyses of Variance by {group}",
+    columns        = c("mean", "sd", "f", "p", "eta2"),  # n
+    stub.label     = "Variable",
+    n.label        = "n",
+    mean.label     = "M",
+    sd.label       = "SD",
+    f.label        = "F",
+    df.label       = "df",
+    p.label        = "p",
+    eta2.label     = "\u03b7\u00b2",
+    group.spanner  = "yes",
+    test.note      = "yes"
+  ),
+  crosstab = list(                     # jcrosstab() results (build 4)
+    title             = "Frequencies and Percentages by {group}",
+    columns           = c("n", "percent"),  # each group's, and the total's
+    total             = "yes",         # the Total column: yes | no
+    percent.base      = "column",      # column (within each group) | row |
+                                       # total
+    test.columns      = c("chisq", "df", "p", "v"),  # on each variable's
+                                                     # row, or none
+    stub.label        = "Variable",
+    n.label           = "n",
+    percent.label     = "%",
+    total.label       = "Total",
+    chisq.label       = "\u03c7\u00b2",
+    df.label          = "df",
+    p.label           = "p",
+    v.label           = "V",
+    group.spanner     = "yes",
+    variable.headings = "plain"        # a variable's label row
+  ),
+  reliability = list(                  # jalpha() results (build 4)
+    title                  = "Item Statistics and Reliability",
+    columns                = c("mean", "sd", "item.total", "alpha.if.deleted"),
+    stub.label             = "Item",
+    mean.label             = "M",
+    sd.label               = "SD",
+    item.total.label       = "Item-total *r*",
+    alpha.if.deleted.label = "\u03b1 if item deleted",
+    alpha                  = "yes",    # Cronbach's alpha in the note, or after
+                                       # each scale's name
+    item.total.note        = "yes",    # the sentence defining item-total r
+    group.headings         = "italic"  # a scale's name row
   )
 )
 
 # The column heads a style may italicize: APA sets a statistic's symbol in
-# italics (n, M, SD, p, r, t, F, b, SE, R2, OR), and a word (Min, Max,
-# Variable, Wald) and a Greek letter (beta, eta2, alpha) upright (APA's
-# list of statistical abbreviations; Session 402). Keyed by the column key,
-# read by the builders.
+# italics (n, M, SD, p, r, t, F, b, SE, R2, OR, V), and a word (Min, Max,
+# Variable, Wald) and a Greek letter (beta, eta2, alpha, chi2) upright
+# (APA's list of statistical abbreviations; Session 402). Keyed by the
+# column key, read by the builders. A head whose label carries the light
+# markup -- "Item-total *r*", "*t*(101)" -- is set by its markup instead
+# (Session 405).
 .jst_tbl_italic_heads <- c("n", "mean", "sd", "p", "r", "t", "f", "b", "se",
-                           "df", "r2", "adj.r2", "or", "d", "item.total",
-                           "alpha.if.deleted")
+                           "df", "r2", "adj.r2", "or", "d", "v")
 
 #' Internal helper: which of a table's column heads are set in italics
 #'
@@ -293,7 +375,10 @@
     line.spacing     = list(kind = "choice", choices = c("single", "double"),
                             about = "single | double"),
     percent.decimals = list(kind = "integer", min = 0, max = 4,
-                            about = "the decimal places of a percentage")
+                            about = "the decimal places of a percentage"),
+    filter.note      = list(kind = "choice", choices = c("yes", "no"),
+                            about = c("yes: the general note says which cases a filter kept (jsubset(),",
+                                      "subset =) | no"))
   ),
   descriptives = list(
     title          = list(kind = "text", about = "the title when the call gives none"),
@@ -408,6 +493,120 @@
                              about = "how a dummy-coded variable's label row is set: plain | italic | bold"),
     group.headings    = list(kind = "choice", choices = c("italic", "bold", "plain"),
                              about = "how a heading row is set: italic | bold | plain")
+  ),
+  correlation = list(
+    title          = list(kind = "text", about = "the title when the call gives none"),
+    columns        = list(kind = "columns", none = TRUE, cols = c("n", "mean", "sd"),
+                          about = "the columns before the correlations, in order: n, mean, sd, or none"),
+    stub.label     = list(kind = "text", empty = TRUE, about = "the first column's head"),
+    n.label        = list(kind = "text", empty = TRUE, about = "the head of the n column"),
+    mean.label     = list(kind = "text", empty = TRUE, about = "the head of the mean column"),
+    sd.label       = list(kind = "text", empty = TRUE, about = "the head of the sd column"),
+    lower.triangle = list(kind = "choice", choices = c("yes", "no"),
+                          about = "yes: each correlation once, below the diagonal | no: both triangles"),
+    r.stars        = list(kind = "choice", choices = c("yes", "no"),
+                          about = c("yes: asterisks on each correlation for its p-value, explained under",
+                                    "the table | no")),
+    method.note    = list(kind = "choice", choices = c("yes", "no"),
+                          about = "yes: the note names a Spearman or Kendall table's correlations | no")
+  ),
+  ttest = list(
+    title          = list(kind = "text",
+                          about = c("the title when the call gives none; {group} is the grouping",
+                                    "variable's label")),
+    columns        = list(kind = "columns",
+                          cols = c("n", "mean", "sd", "t", "p", "d", "diff", "ci"),
+                          about = c("the columns, in order: each group's n, mean and sd, then t (with",
+                                    "its df), p, d (Cohen's d), diff (the mean difference) and ci (its",
+                                    "confidence interval)")),
+    stub.label     = list(kind = "text", empty = TRUE, about = "the first column's head"),
+    n.label        = list(kind = "text", empty = TRUE, about = "the head of the n column"),
+    mean.label     = list(kind = "text", empty = TRUE, about = "the head of the mean column"),
+    sd.label       = list(kind = "text", empty = TRUE, about = "the head of the sd column"),
+    t.label        = list(kind = "text", empty = TRUE, about = "the head of the t column"),
+    df.label       = list(kind = "text", empty = TRUE,
+                          about = "the head of the df column, when the tests' df differ"),
+    p.label        = list(kind = "text", empty = TRUE, about = "the head of the p column"),
+    d.label        = list(kind = "text", empty = TRUE, about = "the head of the d column"),
+    diff.label     = list(kind = "text", empty = TRUE, about = "the head of the diff column"),
+    ci.label       = list(kind = "text", empty = TRUE, about = "the head of the ci column"),
+    ci.style       = list(kind = "choice", choices = c("one", "two"),
+                          about = "one: the interval in one column, [LL, UL] | two: LL and UL"),
+    group.spanner  = list(kind = "choice", choices = c("yes", "no"),
+                          about = "yes: the grouping variable's label over the groups' columns | no"),
+    test.note      = list(kind = "choice", choices = c("yes", "no"),
+                          about = "yes: the note says when a test is Welch's or a paired test | no")
+  ),
+  anova = list(
+    title          = list(kind = "text",
+                          about = c("the title when the call gives none; {group} is the grouping",
+                                    "variable's label")),
+    columns        = list(kind = "columns", cols = c("n", "mean", "sd", "f", "p", "eta2"),
+                          about = c("the columns, in order: each group's n, mean and sd, then f (with",
+                                    "its df), p, eta2")),
+    stub.label     = list(kind = "text", empty = TRUE, about = "the first column's head"),
+    n.label        = list(kind = "text", empty = TRUE, about = "the head of the n column"),
+    mean.label     = list(kind = "text", empty = TRUE, about = "the head of the mean column"),
+    sd.label       = list(kind = "text", empty = TRUE, about = "the head of the sd column"),
+    f.label        = list(kind = "text", empty = TRUE, about = "the head of the f column"),
+    df.label       = list(kind = "text", empty = TRUE,
+                          about = "the head of the df column, when the tests' df differ"),
+    p.label        = list(kind = "text", empty = TRUE, about = "the head of the p column"),
+    eta2.label     = list(kind = "text", empty = TRUE, about = "the head of the eta2 column"),
+    group.spanner  = list(kind = "choice", choices = c("yes", "no"),
+                          about = "yes: the grouping variable's label over the groups' columns | no"),
+    test.note      = list(kind = "choice", choices = c("yes", "no"),
+                          about = "yes: the note says when a test is Welch's | no")
+  ),
+  crosstab = list(
+    title             = list(kind = "text",
+                             about = c("the title when the call gives none; {group} is the column",
+                                       "variable's label")),
+    columns           = list(kind = "columns", cols = c("n", "percent"),
+                             about = "each group's columns, in order: n, percent"),
+    total             = list(kind = "choice", choices = c("yes", "no"),
+                             about = "yes: a Total column after the groups | no"),
+    percent.base      = list(kind = "choice", choices = c("column", "row", "total"),
+                             about = c("what a percentage is of: column (each group's cases) | row (each",
+                                       "category's) | total (all cases)")),
+    test.columns      = list(kind = "columns", none = TRUE, cols = c("chisq", "df", "p", "v"),
+                             about = c("the chi-square test's columns on each variable's row, in order:",
+                                       "chisq, df, p, v (Cramer's V), or none")),
+    stub.label        = list(kind = "text", empty = TRUE, about = "the first column's head"),
+    n.label           = list(kind = "text", empty = TRUE, about = "the head of the n column"),
+    percent.label     = list(kind = "text", empty = TRUE,
+                             about = "the head of the percent column"),
+    total.label       = list(kind = "text", about = "the head over the Total column"),
+    chisq.label       = list(kind = "text", empty = TRUE, about = "the head of the chisq column"),
+    df.label          = list(kind = "text", empty = TRUE, about = "the head of the df column"),
+    p.label           = list(kind = "text", empty = TRUE, about = "the head of the p column"),
+    v.label           = list(kind = "text", empty = TRUE, about = "the head of the v column"),
+    group.spanner     = list(kind = "choice", choices = c("yes", "no"),
+                             about = "yes: the column variable's label over the groups' columns | no"),
+    variable.headings = list(kind = "choice", choices = c("plain", "italic", "bold"),
+                             about = "how each variable's label row is set: plain | italic | bold")
+  ),
+  reliability = list(
+    title                  = list(kind = "text", about = "the title when the call gives none"),
+    columns                = list(kind = "columns",
+                                  cols = c("mean", "sd", "item.total", "alpha.if.deleted"),
+                                  about = c("the columns, in order: mean, sd, item.total (the corrected",
+                                            "item-total correlation), alpha.if.deleted")),
+    stub.label             = list(kind = "text", empty = TRUE, about = "the first column's head"),
+    mean.label             = list(kind = "text", empty = TRUE,
+                                  about = "the head of the mean column"),
+    sd.label               = list(kind = "text", empty = TRUE, about = "the head of the sd column"),
+    item.total.label       = list(kind = "text", empty = TRUE,
+                                  about = "the head of the item.total column; *r* sets r in italics"),
+    alpha.if.deleted.label = list(kind = "text", empty = TRUE,
+                                  about = "the head of the alpha.if.deleted column"),
+    alpha                  = list(kind = "choice", choices = c("yes", "no"),
+                                  about = c("yes: Cronbach's alpha in the note, or after each scale's name",
+                                            "when the table holds several | no")),
+    item.total.note        = list(kind = "choice", choices = c("yes", "no"),
+                                  about = "yes: the note says what the item.total column is | no"),
+    group.headings         = list(kind = "choice", choices = c("italic", "bold", "plain"),
+                                  about = "how a scale's name row is set: italic | bold | plain")
   )
 )
 
@@ -415,7 +614,19 @@
 .jst_style_type_nouns <- c(descriptives = "a descriptives table",
                            frequencies  = "a frequency table",
                            regression   = "a regression table",
-                           logistic     = "a logistic regression table")
+                           logistic     = "a logistic regression table",
+                           correlation  = "a correlation table",
+                           ttest        = "a t-test table",
+                           anova        = "an ANOVA table",
+                           crosstab     = "a crosstab",
+                           reliability  = "a reliability table")
+
+# The table type of each result class (Session 405: every class has one).
+.jst_table_types <- c(jst_desc = "descriptives", jst_freq = "frequencies",
+                      jst_lm = "regression", jst_logistic = "logistic",
+                      jst_corr = "correlation", jst_ttest = "ttest",
+                      jst_anova = "anova", jst_crosstab = "crosstab",
+                      jst_alpha = "reliability")
 
 #' Internal helper: the built-in styles
 #'
@@ -1228,13 +1439,16 @@
   UseMethod(".jst_table_build")
 }
 
-# The classes with no builder yet stop in jtable()'s words.
+# A class with no builder stops in jtable()'s words (Session 405: every
+# class an analysis function returns has one, so only an object of some
+# other class reaches this).
 .jst_table_build.default <- function(x, style, ...) {
   fn <- .jst_table_result_fn(x)
-  .jst_stop("jtable() does not yet make a table from ",
+  .jst_stop("no table is made from ",
             if (is.na(fn)) "this kind of result" else paste0("a ", fn, " result"),
-            ".\nIt makes a table from a jdesc(), jfreq(), jlm(), or jlogistic() ",
-            "result.", fn = "jtable")
+            " yet.\nTables are made from jdesc(), jfreq(), jcorr(), jt(), ",
+            "jaov(), jcrosstab(), jalpha(), jlm(), and jlogistic() results.",
+            fn = "jtable")
 }
 
 #' Internal helper: the analysis function that made a result
@@ -1289,16 +1503,10 @@
   frames <- lapply(seq_along(results), function(i) {
     r  <- results[[i]]
     tf <- .jst_apa_terms(r)
-    if (is.null(tf)) {
-      .jst_stop("this jdesc() result was made by ",
-                .jst_table_result_version(r),
-                ", before the fields a table needs were stored.\n",
-                "Run the analysis again, then jtable() on the new result.",
-                fn = "jtable")
-    }
+    if (is.null(tf)) .jst_table_old_stop(r, "jdesc()")
     if (!is.null(attr(tf, "by"))) {
-      .jst_stop("jtable() does not yet make a table from a grouped ",
-                "jdesc() result (one made with by =).", fn = "jtable")
+      .jst_stop("no table is made from a grouped jdesc() result (one made ",
+                "with by =) yet.", fn = "jtable")
     }
     tf$heading <- if (!is.null(names(results)) && nzchar(names(results)[i]))
                     names(results)[i] else NA_character_
@@ -1356,14 +1564,16 @@
       cells = cells[col_keys], raw = raw[col_keys])
   }
 
-  # The notes: general (N where the style puts it, then the user's text),
-  # specific, probability (none in a descriptives table). N is written only
-  # when every variable comes from one pool of cases.
+  # The notes: general (N where the style puts it, the filter, then the
+  # user's text), specific, probability (none in a descriptives table). N
+  # is written only when every variable comes from one pool of cases.
   pools <- unique(tf$n_pool)
   np <- .jst_table_n_parts(key("n.position"),
                            if (length(pools) == 1L && !is.na(pools))
                              paste0("*N* = ", .jst_tbl_count(pools, thou)))
-  general <- np$note
+  general <- c(np$note, .jst_table_filter_note(
+    results, vapply(frames, function(f) .jst_and_list(f$var_label), character(1)),
+    style, type))
   if (!is.null(note)) general <- c(general, note)
 
   .jst_table_new(
@@ -1525,11 +1735,7 @@
     tf <- .jst_apa_terms(r); md <- .jst_apa_model(r)
     if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(tf) ||
         is.null(md)) {
-      .jst_stop("this jfreq() result was made by ",
-                .jst_table_result_version(r),
-                ", before the fields a table needs were stored.\n",
-                "Run the analysis again, then jtable() on the new result.",
-                fn = "jtable")
+      .jst_table_old_stop(r, "jfreq()")
     }
     h <- if (!is.null(names(results)) && nzchar(names(results)[i]))
            names(results)[i] else NA_character_
@@ -1622,12 +1828,16 @@
   }
 
   # The notes: general (N when the variables share one pool, where the
-  # style puts it, then the user's text), specific; no probability note.
+  # style puts it, the filter, then the user's text), specific; no
+  # probability note.
   pools <- unique(vapply(blocks, function(b) as.numeric(b$n_total), numeric(1)))
   np <- .jst_table_n_parts(key("n.position"),
                            if (length(pools) == 1L && !is.na(pools))
                              paste0("*N* = ", .jst_tbl_count(pools, thou)))
-  general <- np$note
+  general <- c(np$note, .jst_table_filter_note(
+    results, vapply(results, function(r) {
+      .jst_and_list(.jst_apa_model(r)$var_label)
+    }, character(1)), style, type))
   if (!is.null(note)) general <- c(general, note)
 
   .jst_table_new(
@@ -1720,11 +1930,7 @@
   star  <- function(p) if (use_stars) .jst_tbl_stars(p, stars) else ""
   whole <- function(x) formatC(round(x), format = "d")
 
-  if (!is.null(headings)) {
-    .jst_stop("headings = puts the variables of a descriptives or frequency ",
-              "table under role headings; ", .jst_style_type_nouns[[type]],
-              " lists the predictors in the models' order.", fn = "jtable")
-  }
+  .jst_table_no_headings(headings, type, "the predictors in the models' order")
 
   # Each result's fields, as this build stores them: a result made before
   # them stops with its version (as the other builders stop).
@@ -1737,13 +1943,7 @@
     ok <- !is.null(attr(r, "jstats_version", exact = TRUE)) &&
       !is.null(tf) && !is.null(md) && !is.null(r$formula_used) &&
       all(vapply(gr, function(g) !is.null(g$codes), logical(1)))
-    if (!ok) {
-      .jst_stop("this ", fn, " result was made by ",
-                .jst_table_result_version(r),
-                ", before the fields a table needs were stored.\n",
-                "Run the analysis again, then jtable() on the new result.",
-                fn = "jtable")
-    }
+    if (!ok) .jst_table_old_stop(r, fn)
     terms[[i]] <- tf; mods[[i]] <- md; groups[[i]] <- gr
   }
 
@@ -1752,9 +1952,9 @@
     unname(attr(r$coefficients_raw, "outcome")["name"])
   }, character(1))
   if (length(unique(outs)) > 1L) {
-    .jst_stop("jtable() does not yet put models of different outcomes (",
-              .jst_and_list(unique(outs)), ") in one table.\n",
-              "Give it the models of one outcome at a time.", fn = "jtable")
+    .jst_stop("models of different outcomes (", .jst_and_list(unique(outs)),
+              ") cannot share a table yet.\n",
+              "Give the models of one outcome at a time.", fn = "jtable")
   }
   out_label <- unname(attr(results[[1L]]$coefficients_raw, "outcome")["label"])
   if (is.na(out_label) || !nzchar(out_label)) out_label <- outs[1L]
@@ -2038,7 +2238,9 @@
   }
   np <- .jst_table_n_parts(key("n.position"), n_text,
                            if (ns_differ) "*N* differs by model" else n_text)
-  general <- c(np$note, ref_notes)
+  general <- c(np$note, .jst_table_filter_note(results, heads, style, type,
+                                               .jst_table_model_list),
+               ref_notes)
   if ("beta.gelman" %in% unlist(keys_of)) {
     general <- c(general, paste0(
       "\u03b2* = Gelman's (2008) standardized coefficient: each continuous ",
@@ -2114,14 +2316,27 @@
 #'
 #' A descriptives or frequency result's variables; a model's predictors --
 #' each term as the coefficient table keys it, a dummy-coded variable by
-#' its own name (the intercept aside).
+#' its own name (the intercept aside); a correlation's variables; a t test's
+#' or an ANOVA's outcome; a crosstab's row variable; a scale's items.
 #'
 #' @param r A result.
 #' @return Character, possibly empty.
 #' @keywords internal
 .jst_table_result_vars <- function(r) {
+  if (inherits(r, "jst_corr")) {
+    return(if (is.null(r$r)) character(0) else rownames(r$r))
+  }
+  if (inherits(r, c("jst_ttest", "jst_anova"))) {
+    v <- .jst_apa_name(r, "outcome")
+    return(if (is.na(v)) character(0) else v)
+  }
+  if (inherits(r, "jst_crosstab")) {
+    a <- attr(r$row_categories, "variable")
+    return(if (is.null(a)) character(0) else unname(a["name"]))
+  }
   tf <- .jst_apa_terms(r)
   if (is.null(tf)) return(character(0))
+  if (inherits(r, "jst_alpha")) return(as.character(tf$item))
   if (!inherits(r, c("jst_lm", "jst_logistic"))) return(tf$variable)
   dummies <- unlist(lapply(r$dummy_groups, function(g) g$dummy))
   c(setdiff(tf$term, c("(Intercept)", dummies)), names(r$dummy_groups))
@@ -2160,6 +2375,1008 @@
               fn = "jtable")
   }
   invisible(NULL)
+}
+
+# -----------------------------------------------------------------------------
+# 4d. What every builder shares: the stops, the names, the filter sentence
+#     (build 4, Session 405)
+# -----------------------------------------------------------------------------
+
+#' Internal helper: the stop for a result made before its table's fields
+#'
+#' One home for the stop every builder gives a result whose fields predate
+#' its table: the version that made it, from the stamp, and the way out.
+#'
+#' @param r The result.
+#' @param fn The analysis function that made it, as messages name it
+#'   ("jdesc()").
+#' @keywords internal
+.jst_table_old_stop <- function(r, fn) {
+  .jst_stop("this ", fn, " result was made by ", .jst_table_result_version(r),
+            ", before the fields a table needs were stored.\n",
+            "Run the analysis again, then jtable() on the new result.",
+            fn = "jtable")
+}
+
+#' Internal helper: the stop for headings = on a table that takes none
+#'
+#' headings = puts a descriptives or frequency table's variables under role
+#' headings; every other table type lists its rows in an order of its own.
+#'
+#' @param headings The headings jtable() read, or NULL.
+#' @param type The table type.
+#' @param lists What the table lists, and in what order.
+#' @keywords internal
+.jst_table_no_headings <- function(headings, type, lists) {
+  if (is.null(headings)) return(invisible(NULL))
+  .jst_stop("headings = puts the variables of a descriptives or frequency ",
+            "table under role headings; ", .jst_style_type_nouns[[type]],
+            " lists ", lists, ".", fn = "jtable")
+}
+
+#' Internal helper: categories named by their value labels
+#'
+#' A category's name in a table is its value label, or its code where it
+#' has none -- never the string a result printed (the reference, 4.3).
+#'
+#' @param code The codes.
+#' @param label The value labels (NA where there is none).
+#' @return Character.
+#' @keywords internal
+.jst_table_cat_names <- function(code, label) {
+  ifelse(!is.na(label) & nzchar(as.character(label)), as.character(label),
+         as.character(code))
+}
+
+#' Internal helper: a variable's label, from a c(name = , label = ) pair
+#'
+#' @param a The pair (a result's "outcome", "group" or "variable"
+#'   attribute), or NULL.
+#' @param fallback The name to use when there is no label.
+#' @return Character(1).
+#' @keywords internal
+.jst_table_var_label <- function(a, fallback) {
+  lab <- if (is.null(a)) NA_character_ else unname(a["label"])
+  if (is.na(lab) || !nzchar(lab)) fallback else lab
+}
+
+#' Internal helper: the general note's filter sentence
+#'
+#' "Only cases with Age (years) >= 30 are included." (the reference, Part
+#' 1, lean 8): the filter a stored jsubset() applied and the call's
+#' subset =, joined by "and", each put into words. Written once when every
+#' result has the same filter; otherwise once per filter, naming the
+#' results it covers. A jcomplete() setting adds nothing: N says it.
+#' filter.note = no leaves the sentence out (ruling R53).
+#'
+#' @param results The results, in the table's order.
+#' @param names Character, one per result: how a sentence names it when the
+#'   results' filters differ.
+#' @param style The style.
+#' @param type The table type.
+#' @param list_fn The function that joins the names (the models'
+#'   \code{.jst_table_model_list()} writes "Models 2 and 3").
+#' @return Character(0), or the sentences.
+#' @keywords internal
+.jst_table_filter_note <- function(results, names, style, type,
+                                   list_fn = .jst_and_list) {
+  key <- function(k) .jst_style_key(style, type, k)
+  if (!identical(key("filter.note"), "yes")) return(character(0))
+  minus <- key("minus")
+  txt <- vapply(results, .jst_table_filter_text, character(1), minus = minus)
+  if (all(is.na(txt))) return(character(0))
+  u <- unique(txt)
+  if (length(u) == 1L) return(paste0("Only cases with ", u, " are included."))
+  vapply(u[!is.na(u)], function(t) {
+    paste0("Only cases with ", t, " are included for ",
+           list_fn(names[!is.na(txt) & txt == t]), ".")
+  }, character(1), USE.NAMES = FALSE)
+}
+
+#' Internal helper: a result's filters, in words
+#'
+#' @param r A result.
+#' @param minus The style's minus setting.
+#' @return Character(1): the stored jsubset() filter, then the call's
+#'   subset =, joined by "and" (an or-condition in parentheses beside the
+#'   other); NA when the result had none.
+#' @keywords internal
+.jst_table_filter_text <- function(r, minus = "true") {
+  si <- r$sample_info
+  if (!is.list(si)) return(NA_character_)
+  conds <- character(0)
+  if (isTRUE(si$filter_active) && is.character(si$filter_expr) &&
+      length(si$filter_expr)) {
+    conds <- c(conds, paste(trimws(si$filter_expr), collapse = " "))
+  }
+  if (is.character(si$subset_expr) && length(si$subset_expr)) {
+    conds <- c(conds, paste(trimws(si$subset_expr), collapse = " "))
+  }
+  if (!length(conds)) return(NA_character_)
+  data  <- if (is.data.frame(si$pre_pipeline_data)) si$pre_pipeline_data
+  parts <- lapply(conds, .jst_table_filter_words, data = data, minus = minus)
+  txt <- vapply(parts, function(p) {
+    if (length(parts) > 1L && isTRUE(p$or)) paste0("(", p$text, ")") else p$text
+  }, character(1))
+  paste(txt, collapse = " and ")
+}
+
+#' Internal helper: one filter condition, in words
+#'
+#' A comparison of a variable with a value is written with the variable's
+#' label and the mathematical sign -- "Age (years) >= 30", the sign the
+#' character itself -- and a code compared by ==, != or %in% as its value
+#' label ("Current smoker = No", "Region of residence = North or East");
+#' & and | are "and" and "or", with parentheses where the two mix. A
+#' condition it cannot put into words -- a function of a variable, a
+#' workspace object, a name that is not a variable of the data -- is
+#' written as typed.
+#'
+#' @param cond Character(1); the condition as the result stores it.
+#' @param data The data frame it was applied to, for the labels; NULL
+#'   writes the condition as typed.
+#' @param minus The style's minus setting, for a negative value.
+#' @return A list: text, and or (logical: the condition's top level is an
+#'   or, which takes parentheses beside another condition).
+#' @keywords internal
+.jst_table_filter_words <- function(cond, data = NULL, minus = "true") {
+  ex <- tryCatch(str2lang(cond), error = function(e) NULL)
+  if (is.null(ex)) return(list(text = cond, or = FALSE))
+  is_or <- is.call(ex) && as.character(ex[[1L]])[1L] %in% c("|", "||")
+  w <- if (is.data.frame(data)) .jst_table_cond_words(ex, data, minus) else NULL
+  list(text = if (is.null(w)) cond else w, or = is_or)
+}
+
+#' Internal helper: a parsed condition in words, or NULL
+#'
+#' The walk \code{.jst_table_filter_words()} runs: NULL as soon as any part
+#' cannot be put into words, so a condition is written wholly in words or
+#' wholly as typed. A value is read only from what was typed -- a number,
+#' a string, TRUE or FALSE, c() and : of them -- never evaluated.
+#'
+#' @param ex The parsed condition.
+#' @param data The data frame.
+#' @param minus The style's minus setting.
+#' @return Character(1), or NULL.
+#' @keywords internal
+.jst_table_cond_words <- function(ex, data, minus = "true") {
+  signs <- c("==" = "=", "!=" = "\u2260", ">=" = "\u2265", "<=" = "\u2264",
+             ">" = ">", "<" = "<")
+  flip  <- c("==" = "==", "!=" = "!=", ">=" = "<=", "<=" = ">=", ">" = "<",
+             "<" = ">")
+  is_var <- function(e) is.symbol(e) && as.character(e) %in% names(data)
+  one <- function(e) {
+    if ((is.numeric(e) || is.character(e) || is.logical(e)) && length(e) == 1L &&
+        !is.na(e)) return(e)
+    if (is.call(e) && identical(e[[1L]], as.name("-")) && length(e) == 2L &&
+        is.numeric(e[[2L]]) && length(e[[2L]]) == 1L) return(-e[[2L]])
+    NULL
+  }
+  many <- function(e) {
+    x <- one(e)
+    if (!is.null(x)) return(x)
+    if (is.call(e) && identical(e[[1L]], as.name("c")) && length(e) > 1L) {
+      parts <- lapply(as.list(e)[-1L], one)
+      if (any(vapply(parts, is.null, logical(1)))) return(NULL)
+      return(unlist(parts))
+    }
+    if (is.call(e) && identical(e[[1L]], as.name(":")) && length(e) == 3L) {
+      a <- one(e[[2L]]); b <- one(e[[3L]])
+      if (is.numeric(a) && is.numeric(b) && abs(b - a) < 100) return(seq(a, b))
+    }
+    NULL
+  }
+  vlab <- function(v) {
+    l <- attr(data[[v]], "label", exact = TRUE)
+    if (is.character(l) && length(l) == 1L && !is.na(l) && nzchar(l)) l else v
+  }
+  value <- function(v, x, by_label) {
+    if (by_label) {
+      labs <- attr(data[[v]], "labels", exact = TRUE)
+      if (!is.null(labs)) {
+        i <- match(x, unname(labs))
+        if (!is.na(i) && nzchar(names(labs)[i])) return(names(labs)[i])
+      }
+    }
+    if (is.character(x)) return(x)
+    if (is.logical(x)) return(as.character(x))
+    s <- format(x, scientific = FALSE, trim = TRUE)
+    if (identical(minus, "true")) s <- sub("^-", "\u2212", s)
+    s
+  }
+  walk <- function(e) {
+    if (!is.call(e)) return(NULL)
+    f <- as.character(e[[1L]])[1L]
+    if (identical(f, "(") && length(e) == 2L) {
+      a <- walk(e[[2L]])
+      return(if (is.null(a)) NULL else paste0("(", a, ")"))
+    }
+    if (f %in% c("&", "&&", "|", "||") && length(e) == 3L) {
+      a <- walk(e[[2L]]); b <- walk(e[[3L]])
+      if (is.null(a) || is.null(b)) return(NULL)
+      and   <- f %in% c("&", "&&")
+      other <- if (and) c("|", "||") else c("&", "&&")
+      wrap  <- function(sub, txt) {
+        if (is.call(sub) && as.character(sub[[1L]])[1L] %in% other) {
+          paste0("(", txt, ")")
+        } else txt
+      }
+      return(paste(wrap(e[[2L]], a), if (and) "and" else "or", wrap(e[[3L]], b)))
+    }
+    if (f %in% names(signs) && length(e) == 3L) {
+      l <- e[[2L]]; r <- e[[3L]]; op <- f
+      if (!is_var(l) && is_var(r)) { t <- l; l <- r; r <- t; op <- flip[[op]] }
+      if (!is_var(l)) return(NULL)
+      x <- one(r)
+      if (is.null(x)) return(NULL)
+      v <- as.character(l)
+      return(paste(vlab(v), signs[[op]], value(v, x, op %in% c("==", "!="))))
+    }
+    if (identical(f, "%in%") && length(e) == 3L && is_var(e[[2L]])) {
+      x <- many(e[[3L]])
+      if (is.null(x) || !length(x)) return(NULL)
+      v <- as.character(e[[2L]])
+      return(paste(vlab(v), "=",
+                   .jst_or_list(vapply(x, function(z) value(v, z, TRUE), character(1)))))
+    }
+    NULL
+  }
+  walk(ex)
+}
+
+#' Internal helper: N in a table that stacks results, when the Ns differ
+#'
+#' "*N* differs by variable: 98 (Current smoker), 103 (Owns home and
+#' Region of residence)" -- equal Ns grouped, as the models' sentence
+#' groups them (Session 403).
+#'
+#' @param ns Numeric, one per result.
+#' @param names Character, one per result.
+#' @param by The word after "by": "variable", "scale".
+#' @param thou The style's thousands setting.
+#' @return A list: note (the sentence's body, or the one N's) and title (the
+#'   title's parenthesis body).
+#' @keywords internal
+.jst_table_n_by <- function(ns, names, by, thou) {
+  if (length(unique(ns)) == 1L) {
+    t <- paste0("*N* = ", .jst_tbl_count(ns[1L], thou))
+    return(list(note = t, title = t))
+  }
+  parts <- vapply(unique(ns), function(u) {
+    paste0(.jst_tbl_count(u, thou), " (", .jst_and_list(names[ns == u]), ")")
+  }, character(1))
+  list(note  = paste0("*N* differs by ", by, ": ", paste(parts, collapse = ", ")),
+       title = paste0("*N* differs by ", by))
+}
+
+
+# -----------------------------------------------------------------------------
+# 4e. The correlation table (a jcorr() result; build 4, Session 405)
+# -----------------------------------------------------------------------------
+#
+# APA's sample form (the reference, Part 1, lean 1): the variables
+# numbered, each variable's n, M and SD on its own cases, then one column
+# per variable headed 1 to k, each correlation once below the diagonal and
+# an em dash on the diagonal; r without its zero (bounded by 1), with stars
+# for its p-value -- an exact p cannot share a matrix cell -- and their
+# legend under the table. Each jcorr() result is a table of its own
+# (ruling R54): more variables go in the one call.
+
+# A jcorr() result: one result, built as a list of one.
+.jst_table_build.jst_corr <- function(x, style, headings = NULL,
+                                      markers = NULL, title = NULL,
+                                      note = NULL, ...) {
+  .jst_table_build_corr(list(x), style, headings, markers, title, note)
+}
+
+#' Internal helper: the correlation table from a jcorr() result
+#'
+#' @param results A list holding one jst_corr result.
+#' @inheritParams .jst_table_build
+#' @return A jst_table.
+#' @keywords internal
+.jst_table_build_corr <- function(results, style, headings = NULL,
+                                  markers = NULL, title = NULL, note = NULL) {
+  type <- "correlation"
+  key  <- function(k) .jst_style_key(style, type, k)
+  dec  <- key("decimals"); thou <- key("thousands"); minus <- key("minus")
+  lzs  <- key("leading.zero")
+  num  <- function(x, bounded = FALSE) {
+    .jst_tbl_num(x, dec, thou, .jst_tbl_lz(lzs, bounded), minus)
+  }
+  count <- function(n) .jst_tbl_count(n, thou)
+  .jst_table_no_headings(headings, type, "its variables in the result's order")
+  if (length(results) > 1L) {
+    .jst_stop("each jcorr() result is a table of its own, and one call makes ",
+              "one table.\n",
+              "Give one jcorr() result at a time; to correlate more variables, ",
+              "name them in one jcorr() call.", fn = "jtable")
+  }
+  r  <- results[[1L]]
+  tf <- .jst_apa_terms(r)
+  vt <- if (is.null(tf)) NULL else attr(tf, "variables")
+  if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(vt) ||
+      is.null(r$r)) {
+    .jst_table_old_stop(r, "jcorr()")
+  }
+  vars <- rownames(r$r); k <- length(vars)
+  vt   <- vt[match(vars, vt$variable), , drop = FALSE]
+  labs <- ifelse(is.na(vt$label) | !nzchar(vt$label), vars, vt$label)
+
+  # The columns: the stub, the descriptive columns, then 1 to k.
+  dcols <- key("columns")
+  if (identical(dcols, "none")) dcols <- character(0)
+  dlabs <- vapply(dcols, function(cc) key(paste0(cc, ".label")), character(1),
+                  USE.NAMES = FALSE)
+  rkeys <- paste0("r", seq_len(k))
+  columns <- data.frame(
+    key    = c("stub", dcols, rkeys),
+    label  = c(key("stub.label"), dlabs, as.character(seq_len(k))),
+    kind   = c("text", rep("number", length(dcols) + k)),
+    italic = c(FALSE, .jst_tbl_head_italic(type, dcols, dlabs), rep(FALSE, k)),
+    stringsAsFactors = FALSE, row.names = NULL)
+
+  # The rows: each variable numbered; the matrix below the diagonal (both
+  # triangles under lower.triangle = no), an em dash on it.
+  lower <- identical(key("lower.triangle"), "yes")
+  st_on <- identical(key("r.stars"), "yes"); thr <- key("stars")
+  roles <- .jst_table_roles(vars, rep(NA_character_, k), NULL, markers,
+                            key("marks"))
+  rows <- lapply(seq_len(k), function(i) {
+    raw   <- list(n = vt$n[i], mean = vt$mean[i], sd = vt$sd[i])
+    cells <- list(n = count(vt$n[i]), mean = num(vt$mean[i]), sd = num(vt$sd[i]))
+    for (j in seq_len(k)) {
+      cells[[rkeys[j]]] <- if (i == j) {
+        "\u2014"
+      } else if (j < i || !lower) {
+        paste0(num(r$r[i, j], TRUE), if (st_on) .jst_tbl_stars(r$p[i, j], thr))
+      } else ""
+      raw[[rkeys[j]]] <- if (i == j) NA_real_ else r$r[i, j]
+    }
+    list(kind = "data", label = paste0(i, ". ", labs[i]), indent = 0L,
+         marks = if (is.null(roles$marks[[vars[i]]])) character(0)
+                 else roles$marks[[vars[i]]],
+         cells = cells[c(dcols, rkeys)], raw = raw[c(dcols, rkeys)])
+  })
+
+  # The notes: N, or the range of the pairwise ns, where n.position puts
+  # it; the filter; the method of a Spearman or Kendall table; the user's
+  # text; the stars' legend.
+  pn <- r$n[lower.tri(r$n)]
+  one_n <- length(unique(pn)) == 1L
+  n_text <- if (one_n) paste0("*N* = ", count(pn[1L])) else {
+    paste0("Pairwise *n*s range from ", count(min(pn)), " to ", count(max(pn)))
+  }
+  np <- .jst_table_n_parts(key("n.position"), n_text,
+                           if (one_n) n_text else
+                             paste0("pairwise *n*s ", count(min(pn)), " to ",
+                                    count(max(pn))))
+  general <- c(np$note, .jst_table_filter_note(results, "the correlations",
+                                               style, type))
+  meth <- if (is.character(r$method) && length(r$method) == 1L) r$method else "pearson"
+  if (meth %in% c("spearman", "kendall") && identical(key("method.note"), "yes")) {
+    general <- c(general, paste0("Correlations are ",
+                                 c(spearman = "Spearman", kendall = "Kendall")[[meth]],
+                                 " rank correlations."))
+  }
+  if (!is.null(note)) general <- c(general, note)
+
+  .jst_table_new(
+    type     = type,
+    columns  = columns,
+    rows     = rows,
+    caption  = list(number = NA_integer_,
+                    title  = paste0(if (is.null(title)) key("title") else title,
+                                    np$title)),
+    notes    = list(general = general, specific = roles$specific,
+                    probability = if (st_on) .jst_tbl_stars_legend(thr)
+                                  else character(0)),
+    style    = style)
+}
+
+
+# -----------------------------------------------------------------------------
+# 4f. The t-test and ANOVA tables (jt() and jaov() results; build 4)
+# -----------------------------------------------------------------------------
+#
+# APA's samples (the reference, Part 1, leans 2 and 3): one row per outcome
+# -- the tests of one grouping variable stacked (ruling R54) -- each
+# group's M and SD under its value label, the grouping variable's label
+# over the groups, then t, p and Cohen's d, or F, p and eta2. The df go in
+# the statistic's head when every row shares them ("t(101)", "F(3, 99)"),
+# else in a df column. The groups' ns go in the general note. One builder
+# serves both classes.
+
+# A jt() or jaov() result: one result, built as a list of one.
+.jst_table_build.jst_ttest <- function(x, style, headings = NULL,
+                                       markers = NULL, title = NULL,
+                                       note = NULL, ...) {
+  .jst_table_build_groups(list(x), style, headings, markers, title, note)
+}
+.jst_table_build.jst_anova <- function(x, style, headings = NULL,
+                                       markers = NULL, title = NULL,
+                                       note = NULL, ...) {
+  .jst_table_build_groups(list(x), style, headings, markers, title, note)
+}
+
+#' Internal helper: the t-test or ANOVA table from one or more results
+#'
+#' The results of one grouping variable, one row per outcome in the order
+#' given; the columns are the style's: each group's columns (n, mean, sd)
+#' under the group's value label (its code where it has none), the
+#' grouping variable's label over them all (group.spanner), then the test's
+#' (t, p, d, diff, ci; or f, p, eta2). Signs as jt() computes them, the
+#' first group's mean minus the second's. The general note: the groups'
+#' ns where n.position puts N (a range per group where they vary), the
+#' filter, a sentence for a Welch or a paired test (test.note), the user's
+#' text; the stars' legend when p.format uses them.
+#'
+#' @param results A list of jst_ttest, or of jst_anova, results.
+#' @inheritParams .jst_table_build
+#' @return A jst_table.
+#' @keywords internal
+.jst_table_build_groups <- function(results, style, headings = NULL,
+                                    markers = NULL, title = NULL, note = NULL) {
+  anova <- inherits(results[[1L]], "jst_anova")
+  type  <- if (anova) "anova" else "ttest"
+  fn    <- if (anova) "jaov()" else "jt()"
+  key   <- function(k) .jst_style_key(style, type, k)
+  dec   <- key("decimals"); thou <- key("thousands"); minus <- key("minus")
+  lzs   <- key("leading.zero"); pfmt <- key("p.format"); pdec <- key("p.decimals")
+  stars <- key("stars")
+  num   <- function(x, bounded = FALSE) {
+    .jst_tbl_num(x, dec, thou, .jst_tbl_lz(lzs, bounded), minus)
+  }
+  pval  <- function(p) .jst_tbl_p(p, pfmt, pdec, stars, .jst_tbl_lz(lzs, TRUE))
+  count <- function(n) .jst_tbl_count(n, thou)
+  use_stars <- !identical(pfmt, "exact")
+  star  <- function(p) if (use_stars) .jst_tbl_stars(p, stars) else ""
+  # df: whole, without a thousands separator (APA); Welch's at the decimals.
+  dfmt  <- function(x) {
+    if (is.null(x) || is.na(x)) return("")
+    if (abs(x - round(x)) < 1e-8) formatC(round(x), format = "d")
+    else .jst_tbl_num(x, dec, "none", TRUE, minus)
+  }
+  .jst_table_no_headings(headings, type, "its outcomes in the order given")
+
+  nr <- length(results)
+  terms <- vector("list", nr); mods <- vector("list", nr)
+  for (i in seq_len(nr)) {
+    r  <- results[[i]]
+    tf <- .jst_apa_terms(r); md <- .jst_apa_model(r)
+    if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(tf) ||
+        is.null(md)) {
+      .jst_table_old_stop(r, fn)
+    }
+    terms[[i]] <- tf; mods[[i]] <- md
+  }
+  # One grouping variable (ruling R54), the same groups in every result,
+  # each outcome once.
+  grps <- vapply(mods, function(m) as.character(m$group), character(1))
+  if (length(unique(grps)) > 1L) {
+    .jst_stop(fn, " results of different grouping variables (",
+              .jst_and_list(unique(grps)), ") cannot share a table yet.\n",
+              "Give the results of one grouping variable at a time.",
+              fn = "jtable")
+  }
+  codes <- lapply(terms, function(tf) as.character(tf$group_code))
+  if (!all(vapply(codes, identical, logical(1), codes[[1L]]))) {
+    sets <- vapply(terms, function(tf) {
+      .jst_and_list(.jst_table_cat_names(tf$group_code, tf$group_label))
+    }, character(1))
+    .jst_stop("the ", fn, " results compare different groups of ", grps[1L],
+              " (", paste(unique(sets), collapse = "; "), ").\n",
+              "Give the results that compare the same groups at a time.",
+              fn = "jtable")
+  }
+  outs <- vapply(mods, function(m) as.character(m$outcome), character(1))
+  .jst_table_once(outs)
+  olabs <- vapply(seq_len(nr), function(i) {
+    .jst_table_var_label(attr(results[[i]]$descriptives_raw, "outcome"), outs[i])
+  }, character(1))
+  glab  <- .jst_table_var_label(attr(results[[1L]]$descriptives_raw, "group"),
+                                grps[1L])
+  gnames <- .jst_table_cat_names(terms[[1L]]$group_code, terms[[1L]]$group_label)
+  ng <- length(gnames)
+
+  # The columns: each group's, then the test's. The df in the statistic's
+  # head when every row shares them, else a column after it.
+  req    <- key("columns")
+  g_keys <- intersect(req, c("n", "mean", "sd"))
+  s_keys <- intersect(req, if (anova) c("f", "p", "eta2")
+                           else c("t", "p", "d", "diff", "ci"))
+  stat   <- if (anova) "f" else "t"
+  df_txt <- vapply(mods, function(m) {
+    if (anova) paste0(dfmt(m$df1), ", ", dfmt(m$df2)) else dfmt(m$df)
+  }, character(1))
+  df_shared <- length(unique(df_txt)) == 1L
+  ci_two <- !anova && identical(key("ci.style"), "two")
+  columns <- data.frame(key = "stub", label = key("stub.label"), kind = "text",
+                        italic = FALSE, stringsAsFactors = FALSE)
+  add_col <- function(k, lab, ital) {
+    columns <<- rbind(columns, data.frame(key = k, label = lab, kind = "number",
+                                          italic = ital, stringsAsFactors = FALSE))
+  }
+  rowB <- list(); pos <- 1L
+  for (g in seq_len(ng)) {
+    from <- pos + 1L
+    for (k in g_keys) {
+      lab <- key(paste0(k, ".label"))
+      add_col(paste0("g", g, ".", k), lab, .jst_tbl_head_italic(type, k, lab))
+      pos <- pos + 1L
+    }
+    if (length(g_keys)) rowB[[length(rowB) + 1L]] <- list(label = gnames[g],
+                                                          from = from, to = pos)
+  }
+  g_end <- pos
+  for (k in s_keys) {
+    lab <- key(paste0(k, ".label"))
+    if (identical(k, stat) && df_shared) {
+      # The head carries its df: "*t*(101)", the symbol in italics (a
+      # head with markup, Session 405).
+      ital <- .jst_tbl_head_italic(type, k, lab)
+      add_col(k, if (ital) paste0("*", lab, "*(", df_txt[1L], ")")
+                 else paste0(lab, " (", df_txt[1L], ")"), FALSE)
+      pos <- pos + 1L
+    } else if (identical(k, "ci") && ci_two) {
+      add_col("ci.lower", "LL", FALSE); add_col("ci.upper", "UL", FALSE)
+      rowB[[length(rowB) + 1L]] <- list(label = lab, from = pos + 1L, to = pos + 2L)
+      pos <- pos + 2L
+    } else {
+      add_col(k, lab, .jst_tbl_head_italic(type, k, lab))
+      pos <- pos + 1L
+    }
+    if (identical(k, stat) && !df_shared) {
+      dl <- key("df.label")
+      add_col("df", dl, .jst_tbl_head_italic(type, "df", dl))
+      # An ANOVA's df are two numbers, "3, 99": text, centered, never on a
+      # decimal tab.
+      if (anova) columns$kind[nrow(columns)] <- "text"
+      pos <- pos + 1L
+    }
+  }
+  rownames(columns) <- NULL
+  spanners <- list()
+  if (length(g_keys) && identical(key("group.spanner"), "yes")) {
+    spanners <- c(spanners, list(list(list(label = glab, from = 2L, to = g_end))))
+  }
+  if (length(rowB)) spanners <- c(spanners, list(rowB))
+  if (!length(spanners)) spanners <- NULL
+
+  # The rows: one per outcome; stars on the statistic when the table has
+  # no p column (as on b, Session 403).
+  roles <- .jst_table_roles(outs, rep(NA_character_, nr), NULL, markers,
+                            key("marks"))
+  p_shown <- "p" %in% s_keys
+  rows <- lapply(seq_len(nr), function(i) {
+    tf <- terms[[i]]; m <- mods[[i]]
+    cells <- list(); raw <- list()
+    for (g in seq_len(ng)) {
+      cells[[paste0("g", g, ".n")]]    <- count(tf$n[g])
+      cells[[paste0("g", g, ".mean")]] <- num(tf$mean[g])
+      cells[[paste0("g", g, ".sd")]]   <- num(tf$sd[g])
+      raw[[paste0("g", g, ".n")]]      <- tf$n[g]
+      raw[[paste0("g", g, ".mean")]]   <- tf$mean[g]
+      raw[[paste0("g", g, ".sd")]]     <- tf$sd[g]
+    }
+    if (anova) {
+      cells$f    <- paste0(num(m$f), if (!p_shown) star(m$p))
+      cells$eta2 <- num(m$eta_squared, TRUE)
+      raw$f <- m$f; raw$eta2 <- m$eta_squared
+    } else {
+      cells$t    <- paste0(num(m$t), if (!p_shown) star(m$p))
+      cells$d    <- num(m$cohens_d)
+      cells$diff <- num(m$mean_difference)
+      cells$ci   <- if (is.na(m$ci_lower) || is.na(m$ci_upper)) "" else
+        paste0("[", num(m$ci_lower), ", ", num(m$ci_upper), "]")
+      cells$ci.lower <- num(m$ci_lower); cells$ci.upper <- num(m$ci_upper)
+      raw$t <- m$t; raw$d <- m$cohens_d; raw$diff <- m$mean_difference
+      raw$ci.lower <- m$ci_lower; raw$ci.upper <- m$ci_upper
+    }
+    cells$df <- df_txt[i]
+    cells$p  <- pval(m$p)
+    raw$p <- m$p
+    list(kind = "data", label = olabs[i], indent = 0L,
+         marks = if (is.null(roles$marks[[outs[i]]])) character(0)
+                 else roles$marks[[outs[i]]],
+         cells = cells[columns$key[-1L]], raw = raw)
+  })
+
+  # The notes: the groups' ns where n.position puts N (none when each
+  # group's n is a column); the filter; a Welch or paired test; the user's
+  # text; the stars' legend.
+  npos <- key("n.position")
+  gn <- do.call(rbind, lapply(terms, function(tf) as.numeric(tf$n)))
+  Ns <- vapply(mods, function(m) as.numeric(m$n), numeric(1))
+  general <- character(0); n_title <- ""
+  if (identical(npos, "note") && !"n" %in% g_keys) {
+    if (all(apply(gn, 2L, function(x) length(unique(x)) == 1L))) {
+      general <- paste0("*n* = ", .jst_and_list(paste0(count(gn[1L, ]), " (",
+                                                       gnames, ")")), ".")
+    } else {
+      # Missing data are the cause only where every row had the same
+      # filter; rows filtered differently vary for that reason too.
+      lo <- apply(gn, 2L, min); hi <- apply(gn, 2L, max)
+      rng <- ifelse(lo == hi, count(lo), paste0(count(lo), " to ", count(hi)))
+      ftxt <- vapply(results, .jst_table_filter_text, character(1))
+      general <- paste0("Group *n*s vary",
+                        if (length(unique(ftxt)) == 1L) " with missing data",
+                        ": ", paste0(gnames, ", ", rng, collapse = "; "), ".")
+    }
+  } else if (identical(npos, "title")) {
+    n_title <- if (length(unique(Ns)) == 1L) paste0(" (*N* = ", count(Ns[1L]), ")")
+               else " (*N* differs by variable)"
+  }
+  general <- c(general, .jst_table_filter_note(results, olabs, style, type))
+  if (identical(key("test.note"), "yes")) {
+    tt <- vapply(mods, function(m) as.character(m$test_type), character(1))
+    one_w <- if (anova) "analysis of variance" else "*t* test"
+    many_w <- if (anova) "analyses of variance" else "*t* tests"
+    subject <- function(hit) {
+      if (all(hit)) {
+        paste("The", if (nr == 1L) one_w else many_w)
+      } else {
+        paste0("The ", if (sum(hit) == 1L) one_w else many_w, " for ",
+               .jst_and_list(olabs[hit]))
+      }
+    }
+    welch <- tt == "welch"
+    if (any(welch)) {
+      general <- c(general, paste0(subject(welch),
+                                   " did not assume equal variances (Welch's ",
+                                   if (anova) "*F*" else "*t*", " test)."))
+    }
+    paired <- tt == "paired"
+    if (any(paired)) {
+      single <- if (all(paired)) nr == 1L else sum(paired) == 1L
+      general <- c(general, paste0(
+        subject(paired), if (single) " is a paired-samples test"
+                         else " are paired-samples tests",
+        if ("d" %in% s_keys) "; *d* is Cohen's *d*z, computed from the differences",
+        "."))
+    }
+  }
+  if (!is.null(note)) general <- c(general, note)
+
+  .jst_table_new(
+    type     = type,
+    columns  = columns,
+    rows     = rows,
+    caption  = list(number = NA_integer_,
+                    title  = paste0(
+                      if (is.null(title)) gsub("{group}", glab, key("title"),
+                                               fixed = TRUE)
+                      else title,
+                      n_title)),
+    notes    = list(general = general, specific = roles$specific,
+                    probability = if (use_stars) .jst_tbl_stars_legend(stars)
+                                  else character(0)),
+    spanners = spanners,
+    style    = style)
+}
+
+
+# -----------------------------------------------------------------------------
+# 4g. The crosstab (jcrosstab() results; build 4)
+# -----------------------------------------------------------------------------
+#
+# The reference, Part 1, lean 4: each row variable's label a row of its
+# own, its categories indented under it (the frequency table's form), the
+# column variable's categories across the top under its label, each with n
+# and the percentage within the group, and a Total; the chi-square test on
+# each variable's label row -- chi2, df, p and Cramer's V -- computed from
+# the stored counts (the Pearson test jcrosstab() reports, so a result made
+# without chisq = TRUE has it too). Crosstabs of one column variable stack
+# (ruling R54).
+
+# A jcrosstab() result: one result, built as a list of one.
+.jst_table_build.jst_crosstab <- function(x, style, headings = NULL,
+                                          markers = NULL, title = NULL,
+                                          note = NULL, ...) {
+  .jst_table_build_crosstab(list(x), style, headings, markers, title, note)
+}
+
+#' Internal helper: the crosstab from one or more jcrosstab() results
+#'
+#' @param results A list of jst_crosstab results, one column variable.
+#' @inheritParams .jst_table_build
+#' @return A jst_table.
+#' @keywords internal
+.jst_table_build_crosstab <- function(results, style, headings = NULL,
+                                      markers = NULL, title = NULL,
+                                      note = NULL) {
+  type  <- "crosstab"
+  key   <- function(k) .jst_style_key(style, type, k)
+  dec   <- key("decimals"); thou <- key("thousands"); minus <- key("minus")
+  lzs   <- key("leading.zero"); pfmt <- key("p.format"); pdec <- key("p.decimals")
+  stars <- key("stars")
+  num   <- function(x, bounded = FALSE) {
+    .jst_tbl_num(x, dec, thou, .jst_tbl_lz(lzs, bounded), minus)
+  }
+  pct   <- function(x) .jst_tbl_num(x, key("percent.decimals"), thou,
+                                    .jst_tbl_lz(lzs, FALSE), minus)
+  pval  <- function(p) .jst_tbl_p(p, pfmt, pdec, stars, .jst_tbl_lz(lzs, TRUE))
+  count <- function(n) .jst_tbl_count(n, thou)
+  use_stars <- !identical(pfmt, "exact")
+  .jst_table_no_headings(headings, type, "its variables in the order given")
+
+  for (r in results) {
+    if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(r$observed) ||
+        is.null(r$row_categories) || is.null(r$col_categories)) {
+      .jst_table_old_stop(r, "jcrosstab()")
+    }
+  }
+  vname <- function(cats) unname(attr(cats, "variable")["name"])
+  cvars <- vapply(results, function(r) vname(r$col_categories), character(1))
+  if (length(unique(cvars)) > 1L) {
+    .jst_stop("jcrosstab() results with different column variables (",
+              .jst_and_list(unique(cvars)), ") cannot share a table yet.\n",
+              "Give the results of one column variable at a time.", fn = "jtable")
+  }
+  cc <- results[[1L]]$col_categories
+  ccodes <- lapply(results, function(r) as.character(r$col_categories$code))
+  if (!all(vapply(ccodes, identical, logical(1), ccodes[[1L]]))) {
+    sets <- vapply(results, function(r) {
+      .jst_and_list(.jst_table_cat_names(r$col_categories$code,
+                                         r$col_categories$label))
+    }, character(1))
+    .jst_stop("the jcrosstab() results hold different categories of ", cvars[1L],
+              " (", paste(unique(sets), collapse = "; "), ").\n",
+              "Give the results whose column variable has the same categories ",
+              "at a time.", fn = "jtable")
+  }
+  rvars <- vapply(results, function(r) vname(r$row_categories), character(1))
+  .jst_table_once(rvars)
+  rlabs <- vapply(seq_along(results), function(i) {
+    .jst_table_var_label(attr(results[[i]]$row_categories, "variable"), rvars[i])
+  }, character(1))
+  glab   <- .jst_table_var_label(attr(cc, "variable"), cvars[1L])
+  gnames <- .jst_table_cat_names(cc$code, cc$label)
+  ng <- length(gnames)
+
+  # The columns: each group's (n, percent), the Total's, then the test's.
+  g_keys <- key("columns")
+  tot    <- identical(key("total"), "yes")
+  tests  <- key("test.columns")
+  if (identical(tests, "none")) tests <- character(0)
+  columns <- data.frame(key = "stub", label = key("stub.label"), kind = "text",
+                        italic = FALSE, stringsAsFactors = FALSE)
+  add_col <- function(k, lab, ital) {
+    columns <<- rbind(columns, data.frame(key = k, label = lab, kind = "number",
+                                          italic = ital, stringsAsFactors = FALSE))
+  }
+  rowB <- list(); pos <- 1L
+  for (g in c(seq_len(ng), if (tot) 0L)) {
+    from <- pos + 1L
+    for (k in g_keys) {
+      lab <- key(paste0(k, ".label"))
+      add_col(paste0(if (g) paste0("g", g) else "tot", ".", k), lab,
+              .jst_tbl_head_italic(type, k, lab))
+      pos <- pos + 1L
+    }
+    rowB[[length(rowB) + 1L]] <- list(label = if (g) gnames[g] else key("total.label"),
+                                      from = from, to = pos)
+    if (g == ng) g_end <- pos
+  }
+  for (k in tests) {
+    lab <- key(paste0(k, ".label"))
+    add_col(k, lab, .jst_tbl_head_italic(type, k, lab))
+    pos <- pos + 1L
+  }
+  rownames(columns) <- NULL
+  spanners <- list()
+  if (identical(key("group.spanner"), "yes")) {
+    spanners <- c(spanners, list(list(list(label = glab, from = 2L, to = g_end))))
+  }
+  spanners <- c(spanners, list(rowB))
+  num_keys <- columns$key[-1L]
+
+  # The rows: each variable's label row, carrying its test; its categories
+  # indented under it. The percentages within each group (percent.base =
+  # column), each category (row) or all cases (total).
+  base  <- key("percent.base")
+  roles <- .jst_table_roles(rvars, rep(NA_character_, length(rvars)), NULL,
+                            markers, key("marks"))
+  rows <- list(); Ns <- numeric(0)
+  blank <- stats::setNames(as.list(rep("", length(num_keys))), num_keys)
+  for (i in seq_along(results)) {
+    r   <- results[[i]]
+    obs <- unclass(r$observed)
+    obs <- obs[, match(as.character(cc$level), colnames(obs)), drop = FALSE]
+    rc  <- r$row_categories[match(rownames(obs), r$row_categories$level), ,
+                            drop = FALSE]
+    N  <- sum(obs); Ns <- c(Ns, N)
+    cs <- colSums(obs); rs <- rowSums(obs)
+    # The Pearson chi-square test from the counts, without Yates's
+    # correction (the test jcrosstab(chisq = TRUE) reports).
+    tcell <- blank[intersect(tests, num_keys)]
+    if (length(tests) && nrow(obs) >= 2L && ncol(obs) >= 2L) {
+      ct <- suppressWarnings(stats::chisq.test(obs, correct = FALSE))
+      x2 <- unname(ct$statistic); df <- unname(ct$parameter); p <- ct$p.value
+      if (is.finite(x2)) {
+        v <- sqrt(x2 / (N * (min(dim(obs)) - 1L)))
+        tcell <- list(chisq = paste0(num(x2), if (use_stars && !"p" %in% tests)
+                                                .jst_tbl_stars(p, stars)),
+                      df = formatC(round(df), format = "d"), p = pval(p),
+                      v = num(v, TRUE))[tests]
+      }
+    }
+    lab_cells <- blank; lab_cells[names(tcell)] <- tcell
+    rows[[length(rows) + 1L]] <- list(
+      kind = "data", level = "variable", label = rlabs[i], indent = 0L,
+      marks = if (is.null(roles$marks[[rvars[i]]])) character(0)
+              else roles$marks[[rvars[i]]],
+      cells = lab_cells, raw = list())
+    cat_names <- .jst_table_cat_names(rc$code, rc$label)
+    for (a in seq_len(nrow(obs))) {
+      cells <- blank
+      for (g in seq_len(ng)) {
+        den <- switch(base, column = cs[g], row = rs[a], total = N)
+        cells[[paste0("g", g, ".n")]]       <- count(obs[a, g])
+        cells[[paste0("g", g, ".percent")]] <- if (den > 0) pct(100 * obs[a, g] / den)
+                                               else ""
+      }
+      if (tot) {
+        den <- if (identical(base, "row")) rs[a] else N
+        cells[["tot.n"]]       <- count(rs[a])
+        cells[["tot.percent"]] <- if (den > 0) pct(100 * rs[a] / den) else ""
+      }
+      rows[[length(rows) + 1L]] <- list(
+        kind = "data", label = cat_names[a], indent = 1L, marks = character(0),
+        cells = cells[num_keys], raw = list(n = as.numeric(obs[a, ])))
+    }
+  }
+
+  # The notes: N where n.position puts it (each variable's when they
+  # differ); the filter; the user's text; the stars' legend when the test's
+  # p-values carry them.
+  nb <- .jst_table_n_by(Ns, rlabs, "variable", thou)
+  np <- .jst_table_n_parts(key("n.position"), nb$note, nb$title)
+  general <- c(np$note, .jst_table_filter_note(results, rlabs, style, type))
+  if (!is.null(note)) general <- c(general, note)
+
+  .jst_table_new(
+    type     = type,
+    columns  = columns,
+    rows     = rows,
+    caption  = list(number = NA_integer_,
+                    title  = paste0(
+                      if (is.null(title)) gsub("{group}", glab, key("title"),
+                                               fixed = TRUE)
+                      else title,
+                      np$title)),
+    notes    = list(general = general, specific = roles$specific,
+                    probability = if (use_stars && any(c("chisq", "p") %in% tests))
+                                    .jst_tbl_stars_legend(stars)
+                                  else character(0)),
+    spanners = spanners,
+    style    = style)
+}
+
+
+# -----------------------------------------------------------------------------
+# 4h. The reliability table (jalpha() results; build 4)
+# -----------------------------------------------------------------------------
+#
+# The reference, Part 1, lean 5: one row per item, named by its label (the
+# item's wording), with M, SD, the corrected item-total correlation and
+# alpha if the item is deleted; N and Cronbach's alpha in the general
+# note. Several scales stack, each under its name -- a named list's names,
+# else "Scale 1", "Scale 2" -- with its alpha after the name.
+
+# A jalpha() result: one result, built as a list of one.
+.jst_table_build.jst_alpha <- function(x, style, headings = NULL,
+                                       markers = NULL, title = NULL,
+                                       note = NULL, ...) {
+  .jst_table_build_alpha(list(x), style, headings, markers, title, note)
+}
+
+#' Internal helper: the reliability table from one or more jalpha() results
+#'
+#' @param results A list of jst_alpha results; names are the scales'.
+#' @inheritParams .jst_table_build
+#' @return A jst_table.
+#' @keywords internal
+.jst_table_build_alpha <- function(results, style, headings = NULL,
+                                   markers = NULL, title = NULL, note = NULL) {
+  type <- "reliability"
+  key  <- function(k) .jst_style_key(style, type, k)
+  dec  <- key("decimals"); thou <- key("thousands"); minus <- key("minus")
+  lzs  <- key("leading.zero")
+  num  <- function(x, bounded = FALSE) {
+    .jst_tbl_num(x, dec, thou, .jst_tbl_lz(lzs, bounded), minus)
+  }
+  .jst_table_no_headings(headings, type, "each scale's items in their order")
+
+  ns <- length(results)
+  terms <- vector("list", ns); mods <- vector("list", ns)
+  for (i in seq_len(ns)) {
+    r  <- results[[i]]
+    tf <- .jst_apa_terms(r); md <- .jst_apa_model(r)
+    if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(tf) ||
+        is.null(md)) {
+      .jst_table_old_stop(r, "jalpha()")
+    }
+    terms[[i]] <- tf; mods[[i]] <- md
+  }
+  items <- unlist(lapply(terms, function(tf) as.character(tf$item)))
+  .jst_table_once(items)
+  # The scales' names: a named list's, else "Scale 1", "Scale 2", ... when
+  # there are several; one scale given alone has none.
+  nms   <- names(results)
+  named <- !is.null(nms) && any(nzchar(nms))
+  heads <- NULL
+  if (ns > 1L || named) {
+    heads <- paste("Scale", seq_len(ns))
+    if (named) heads[nzchar(nms)] <- nms[nzchar(nms)]
+  }
+  alpha_on <- identical(key("alpha"), "yes")
+
+  col_keys <- key("columns")
+  col_labs <- vapply(col_keys, function(k) key(paste0(k, ".label")), character(1),
+                     USE.NAMES = FALSE)
+  columns <- data.frame(
+    key    = c("stub", col_keys),
+    label  = c(key("stub.label"), col_labs),
+    kind   = c("text", rep("number", length(col_keys))),
+    italic = c(FALSE, .jst_tbl_head_italic(type, col_keys, col_labs)),
+    stringsAsFactors = FALSE, row.names = NULL)
+
+  roles <- .jst_table_roles(items, rep(NA_character_, length(items)), NULL,
+                            markers, key("marks"))
+  rows <- list()
+  for (s in seq_len(ns)) {
+    tf <- terms[[s]]; md <- mods[[s]]
+    if (!is.null(heads)) {
+      rows[[length(rows) + 1L]] <- list(
+        kind = "heading", level = "group",
+        label = paste0(heads[s], if (alpha_on) paste0(" (\u03b1 = ",
+                                                      num(md$alpha, TRUE), ")")),
+        indent = 0L, marks = character(0), cells = list(), raw = list())
+    }
+    for (j in seq_len(nrow(tf))) {
+      it  <- as.character(tf$item[j])
+      lab <- if (is.na(tf$label[j]) || !nzchar(tf$label[j])) it else tf$label[j]
+      raw <- list(mean = tf$mean[j], sd = tf$sd[j], item.total = tf$item_total_r[j],
+                  alpha.if.deleted = tf$alpha_if_deleted[j])
+      cells <- list(mean = num(raw$mean), sd = num(raw$sd),
+                    item.total = num(raw$item.total, TRUE),
+                    alpha.if.deleted = num(raw$alpha.if.deleted, TRUE))
+      rows[[length(rows) + 1L]] <- list(
+        kind = "data", label = lab, indent = if (is.null(heads)) 0L else 1L,
+        marks = if (is.null(roles$marks[[it]])) character(0) else roles$marks[[it]],
+        cells = cells[col_keys], raw = raw[col_keys])
+    }
+  }
+
+  # The notes: N where n.position puts it (each scale's when they differ);
+  # the filter; the one scale's alpha; what item-total r is; the user's
+  # text.
+  Ns <- vapply(mods, function(m) as.numeric(m$n_used), numeric(1))
+  snames <- if (is.null(heads)) "the scale" else heads
+  nb <- .jst_table_n_by(Ns, snames, "scale", thou)
+  np <- .jst_table_n_parts(key("n.position"), nb$note, nb$title)
+  general <- c(np$note, .jst_table_filter_note(results, snames, style, type))
+  if (alpha_on && is.null(heads)) {
+    general <- c(general, paste0("Cronbach's \u03b1 = ", num(mods[[1L]]$alpha, TRUE),
+                                 "."))
+  }
+  if (identical(key("item.total.note"), "yes") && "item.total" %in% col_keys) {
+    general <- c(general, paste0(key("item.total.label"), " is each item's ",
+                                 "correlation with the sum of the other items."))
+  }
+  if (!is.null(note)) general <- c(general, note)
+
+  .jst_table_new(
+    type     = type,
+    columns  = columns,
+    rows     = rows,
+    caption  = list(number = NA_integer_,
+                    title  = paste0(if (is.null(title)) key("title") else title,
+                                    np$title)),
+    notes    = list(general = general, specific = roles$specific,
+                    probability = character(0)),
+    style    = style)
 }
 
 
@@ -2210,15 +3427,19 @@
   # A number may open on a sign, a "<" (p's floor) or a "[" (a confidence
   # interval), and may have no digit before the point (".38"): the head
   # is everything before the point, so the points line up as the decimal
-  # tab lines them up in the file, and the "<" hangs to the left.
+  # tab lines them up in the file, and the "<" hangs to the left. A cell
+  # with no point -- a count, an ANOVA's "3, 99", an em dash -- ends where
+  # the point would be, as Word sets text with no decimal point on a
+  # decimal tab (Session 405).
   split_num <- function(s) {
-    is_num <- grepl("^[<>\\[]?[-+]?([0-9]|\\.[0-9])", s)
+    is_num <- grepl("^[<>\\[]?[-+]?([0-9]|\\.[0-9])", s) & grepl(".", s, fixed = TRUE)
     head <- ifelse(is_num, sub("^([<>\\[]?[-+]?[0-9,]*)(.*)$", "\\1", s), s)
     tail <- ifelse(is_num, sub("^([<>\\[]?[-+]?[0-9,]*)(.*)$", "\\2", s), "")
     list(head = head, tail = tail)
   }
   parts  <- lapply(body, split_num)
-  heads  <- cols$label
+  # A head's markup ("*t*(101)") is the file's; the console shows the text.
+  heads  <- .jst_table_strip_markup(cols$label)
   # A spanning cell (a fit row's, across its model's columns): its whole
   # part sets the column's width with the other cells', its tail runs on
   # past the column, so the tail is left out here.
@@ -2230,17 +3451,36 @@
     vapply(tbl$rows, span_from, logical(1), j = j)
   }, logical(length(tbl$rows)))
   spanning <- matrix(spanning, nrow = length(tbl$rows))
+  # A plain cell -- an em dash, an ANOVA's df -- is centered in its column
+  # and does not set where the point falls (Session 405).
+  plain <- lapply(seq_len(nc)[-1L], function(j) {
+    .jst_tbl_plain_cell(body[[j - 1L]], cols$kind[j])
+  })
   widths <- integer(nc)
   widths[1L] <- max(.jst_dw(heads[1L]), .jst_dw(stub), 0L)
   hws <- integer(nc); tws <- integer(nc)
   for (j in seq_len(nc)[-1L]) {
     p  <- parts[[j - 1L]]
-    hw <- max(.jst_dw(p$head), 0L)
-    tw <- max(.jst_dw(p$tail[!spanning[, j]]), 0L)
+    pl <- plain[[j - 1L]]
+    hw <- max(.jst_dw(p$head[!pl]), 0L)
+    tw <- max(.jst_dw(p$tail[!spanning[, j] & !pl]), 0L)
     hws[j] <- hw; tws[j] <- tw
-    widths[j] <- max(.jst_dw(heads[j]), hw + tw)
+    widths[j] <- max(.jst_dw(heads[j]), hw + tw, .jst_dw(body[[j - 1L]][pl]), 0L)
   }
   gap <- "  "
+  # A spanner's label wider than its columns spreads the difference over
+  # them, as the Word writer does (Session 405: the column variable's label
+  # over a crosstab's groups ran past the rule).
+  for (srow in tbl$spanners) for (sp in srow) {
+    need <- .jst_dw(sp$label)
+    have <- sum(widths[sp$from:sp$to]) + 2L * (sp$to - sp$from)
+    if (need > have) {
+      k <- sp$to - sp$from + 1L
+      add <- rep((need - have) %/% k, k)
+      add[seq_len((need - have) %% k)] <- add[seq_len((need - have) %% k)] + 1L
+      widths[sp$from:sp$to] <- widths[sp$from:sp$to] + add
+    }
+  }
   for (i in seq_along(tbl$rows)) {
     for (sp in tbl$rows[[i]]$span) {
       from <- sp[1L]; to <- sp[2L]
@@ -2305,6 +3545,8 @@
         cell <- paste0(strrep(" ", widths[j] - hw - tw), pad_r(p$head[i], hw),
                        p$tail[i])
         cells <- c(cells, pad_l(cell, sum(widths[j:to]) + 2L * (to - j)))
+      } else if (plain[[j - 1L]][i]) {
+        cells <- c(cells, ctr(body[[j - 1L]][i], widths[j]))
       } else {
         cell <- paste0(pad_r(p$head[i], hw), pad_l(p$tail[i], tw))
         cells <- c(cells, pad_r(cell, widths[j]))
@@ -2368,6 +3610,28 @@
   }
   out
 }
+
+#' Internal helper: is a cell set centered rather than on its decimal tab?
+#'
+#' A cell of a text column (an ANOVA's df, "3, 99") or a cell with no digit
+#' (a correlation's em dash): both Word and LibreOffice need a number on a
+#' decimal tab, and LibreOffice sets other text from the tab rightward
+#' (Session 405).
+#'
+#' @param s Character; the cells.
+#' @param kind The column's kind ("number" or "text").
+#' @return Logical, one per cell.
+#' @keywords internal
+.jst_tbl_plain_cell <- function(s, kind = "number") {
+  identical(kind, "text") | (nzchar(s) & !grepl("[0-9]", s))
+}
+
+#' Internal helper: does a text carry the light markup?
+#'
+#' @param x Character.
+#' @return Logical.
+#' @keywords internal
+.jst_tbl_markup <- function(x) grepl("\\*[^*]+\\*|\\^[^^]+\\^", x)
 
 #' Internal helper: strip the light markup for the console
 #'
@@ -2449,26 +3713,30 @@
 #' @param size Points.
 #' @param bold,italic Logical; the base style of the line (Session 403: a
 #'   caption's title, a fit row's label).
+#' @param color A six-digit hex colour, or NULL (Session 405: a column head
+#'   with markup takes the header's colour).
 #' @keywords internal
-.jst_docx_markup_runs <- function(s, size = NULL, bold = FALSE, italic = FALSE) {
+.jst_docx_markup_runs <- function(s, size = NULL, bold = FALSE, italic = FALSE,
+                                  color = NULL) {
   out <- character(0)
   rest <- s
   while (nzchar(rest)) {
     m <- regexpr("\\*[^*]+\\*|\\^[^^]+\\^", rest)
     if (m < 0L) {
-      out <- c(out, .jst_docx_run(rest, bold = bold, italic = italic, size = size))
+      out <- c(out, .jst_docx_run(rest, bold = bold, italic = italic,
+                                  color = color, size = size))
       break
     }
     if (m > 1L) {
       out <- c(out, .jst_docx_run(substr(rest, 1L, m - 1L), bold = bold,
-                                  italic = italic, size = size))
+                                  italic = italic, color = color, size = size))
     }
     tok <- substr(rest, m, m + attr(m, "match.length") - 1L)
     inner <- substr(tok, 2L, nchar(tok) - 1L)
     out <- c(out, if (startsWith(tok, "*"))
-      .jst_docx_run(inner, bold = bold, italic = !italic, size = size)
+      .jst_docx_run(inner, bold = bold, italic = !italic, color = color, size = size)
       else .jst_docx_run(inner, bold = bold, italic = italic, superscript = TRUE,
-                         size = size))
+                         color = color, size = size))
     rest <- substr(rest, m + attr(m, "match.length"), nchar(rest))
   }
   paste(out, collapse = "")
@@ -2605,14 +3873,15 @@
   "(" = 333, ")" = 333, "[" = 333, "]" = 333, "/" = 278, "%" = 833,
   "*" = 500, "=" = 564, "+" = 564, "<" = 564, ">" = 564, "'" = 333,
   "\"" = 408, "&" = 778, "!" = 333, "?" = 444, "_" = 500, "#" = 500)
-# The minus sign, the dagger, the double dagger, the section sign and
-# four Greek letters, named with names<-: a name written in a call is a
-# symbol the parser makes in the session's own encoding (Session 390).
+# The minus sign, the dagger, the double dagger, the section sign, four
+# Greek letters and the em dash (a correlation's diagonal, Session 405),
+# named with names<-: a name written in a call is a symbol the parser
+# makes in the session's own encoding (Session 390).
 .jst_docx_char_widths <- c(
   .jst_docx_char_widths,
-  stats::setNames(c(564, 500, 500, 500, 500, 500, 500, 500),
+  stats::setNames(c(564, 500, 500, 500, 500, 500, 500, 500, 1000),
                   c("\u2212", "\u2020", "\u2021", "\u00a7",
-                    "\u03b2", "\u03b7", "\u03b1", "\u03c7")))
+                    "\u03b2", "\u03b7", "\u03b1", "\u03c7", "\u2014")))
 
 #' Internal helper: a text's width in ems, with a small allowance
 #'
@@ -2763,10 +4032,17 @@
                                    paste(cells, collapse = ""), "</w:tr>"))
   }
 
-  # The header row.
+  # The header row. A head may carry the light markup -- "*t*(101)",
+  # "Item-total *r*" -- read over the column's italic setting (Session 405:
+  # until then a head was wholly italic or wholly upright).
   cells <- vapply(seq_len(nc), function(j) {
-    runs <- .jst_docx_run(cols$label[j], bold = hbold, italic = cols$italic[j],
-                          color = htext, size = size)
+    runs <- if (.jst_tbl_markup(cols$label[j])) {
+      .jst_docx_markup_runs(cols$label[j], size = size, bold = hbold,
+                            italic = cols$italic[j], color = htext)
+    } else {
+      .jst_docx_run(cols$label[j], bold = hbold, italic = cols$italic[j],
+                    color = htext, size = size)
+    }
     .jst_docx_cell(
       .jst_docx_par(runs, jc = if (j == 1L) "left" else "center",
                     keep_next = TRUE, line = line, size = msz),
@@ -2779,7 +4055,6 @@
                                  paste(cells, collapse = ""), "</w:tr>"))
 
   # The data and heading rows.
-  gh  <- key("group.headings")
   band <- 0L
   has_note <- length(.jst_table_note_lines(tbl, style)) > 0L
   for (i in seq_len(n_rows)) {
@@ -2795,7 +4070,8 @@
       # A role heading takes group.headings; a variable's label row (a
       # frequency table's) takes variable.headings, its indent and its
       # marks.
-      emph <- if (identical(r$level, "variable")) key("variable.headings") else gh
+      emph <- if (identical(r$level, "variable")) key("variable.headings")
+              else key("group.headings")
       runs <- paste0(if (isTRUE(r$markup)) {
                        .jst_docx_markup_runs(r$label, size = size,
                                              bold = identical(emph, "bold"),
@@ -2823,13 +4099,19 @@
     if (!is.null(bfill) && band %% 2L == 0L) fill <- bfill
     cells <- character(nc)
     # A fit row's label carries markup (*R*2 -- an italic R); any other
-    # label is text as written.
-    stub_runs <- paste0(if (isTRUE(r$markup)) .jst_docx_markup_runs(r$label, size = size)
-                        else .jst_docx_run(r$label, size = size),
+    # label is text as written. A variable's label row that carries cells
+    # (a crosstab's, with its test: Session 405) takes variable.headings,
+    # as a heading row's does.
+    emph <- if (identical(r$level, "variable")) key("variable.headings") else "plain"
+    eb <- identical(emph, "bold"); ei <- identical(emph, "italic")
+    stub_runs <- paste0(if (isTRUE(r$markup)) {
+                          .jst_docx_markup_runs(r$label, size = size, bold = eb,
+                                                italic = ei)
+                        } else .jst_docx_run(r$label, bold = eb, italic = ei, size = size),
                         if (length(r$marks)) .jst_docx_run(paste(r$marks, collapse = ","),
                                                            superscript = TRUE, size = size),
                         if (!is.null(r$tail) && nzchar(r$tail))
-                          .jst_docx_run(r$tail, size = size))
+                          .jst_docx_run(r$tail, bold = eb, italic = ei, size = size))
     cells[1L] <- .jst_docx_cell(
       .jst_docx_par(stub_runs, ind = if (r$indent > 0L) 180L * r$indent else NULL,
                     keep_next = keep, line = line, size = msz),
@@ -2841,11 +4123,15 @@
       s <- r$cells[[k]]
       runs <- if (is.null(s) || !nzchar(s)) "" else .jst_docx_run(s, size = size)
       # A spanning cell (a fit row's) takes its model's columns, its value
-      # on the first column's tab (Session 403).
+      # on the first column's tab (Session 403). A plain cell -- an em
+      # dash, an ANOVA's df -- is centered, with no tab (Session 405).
       to <- j
       for (sp in r$span) if (sp[1L] == j) to <- sp[2L]
+      plain_j <- .jst_tbl_plain_cell(if (is.null(s)) "" else s, cols$kind[j])
       cells[j] <- .jst_docx_cell(
-        .jst_docx_par(runs, tab = dec_tabs[j], keep_next = keep, line = line, size = msz),
+        .jst_docx_par(runs, tab = if (plain_j) NULL else dec_tabs[j],
+                      jc = if (plain_j) "center", keep_next = keep, line = line,
+                      size = msz),
         sum(widths[j:to]),
         .jst_docx_borders(rules, grid, bottom, grid, grid || (outer && to == nc), rcol),
         span = if (to > j) to - j + 1L else NULL, fill = fill)
@@ -2883,8 +4169,10 @@
 #' Internal helper: the column widths of a table, in dxa
 #'
 #' From the widest text each column holds at the style's size, plus the
-#' cell margins; the stub from its labels and their indents; a spanner's
-#' label spread over its columns when it is wider than they are.
+#' cell margins; a column of numbers at least as wide as its block, the
+#' widest whole part beside the widest tail (Session 405); the stub from
+#' its labels and their indents; a spanner's label spread over its columns
+#' when it is wider than they are.
 #'
 #' @param tbl A jst_table.
 #' @param style The style list.
@@ -2907,7 +4195,8 @@
            paste(r$marks, collapse = ""), if (is.null(r$tail)) "" else r$tail)
   }, character(1))
   w <- integer(nc)
-  w[1L] <- max(.jst_docx_text_width(c(stub_text, cols$label[1L]), size)) + 2L * margin
+  heads <- .jst_table_strip_markup(cols$label)
+  w[1L] <- max(.jst_docx_text_width(c(stub_text, heads[1L]), size)) + 2L * margin
   # A spanning cell (a fit row's, across its model's columns, Session
   # 403): its whole part sets the first column's width with the other
   # cells', and its tail -- the df after an F -- the span's, below.
@@ -2917,8 +4206,21 @@
       s <- r$cells[[k]]; if (is.null(s)) s <- ""
       if (.jst_docx_spans_from(r, j)) .jst_docx_num_parts(s)$head else s
     }, character(1))
-    w[j] <- max(.jst_docx_text_width(cells, size, digits = TRUE),
-                .jst_docx_text_width(cols$label[j], size)) + 2L * margin + pad
+    # A column of numbers holds its block -- the widest whole part beside
+    # the widest tail, each from whichever cell has it -- since the cells
+    # share one decimal stop: a correlation column's ".62***" and "-.07"
+    # need the minus left of the point and the stars right of it (Session
+    # 405; the widest cell alone had left Word no room for the minus,
+    # and it pushed "-.07" off the point).
+    # The two are joined and measured as one text, so a column whose
+    # widest cell holds both is as wide as before.
+    pl    <- .jst_tbl_plain_cell(cells, cols$kind[j])
+    parts <- .jst_docx_num_parts(cells[!pl])
+    widest <- function(x) x[which.max(vapply(x, .jst_docx_em_width, numeric(1)))]
+    block <- .jst_docx_text_width(paste0(widest(parts$head), widest(parts$tail)),
+                                  size, digits = TRUE)
+    w[j] <- max(.jst_docx_text_width(cells, size, digits = TRUE), block,
+                .jst_docx_text_width(heads[j], size)) + 2L * margin + pad
   }
   for (srow in tbl$spanners) for (sp in srow) {
     need <- .jst_docx_text_width(sp$label, size) + 2L * margin
@@ -2957,29 +4259,32 @@
 #' Internal helper: a number cell's whole part and its tail
 #'
 #' The tail is the point and what follows it -- the decimals, any stars,
-#' the df after an F -- or, with no point, whatever follows the digits;
-#' the whole part is the rest. The decimal tab aligns the two.
+#' the df after an F; the whole part is the rest. The decimal tab aligns
+#' the two. A cell with no point is all whole part: Word sets text with no
+#' decimal point to end at a decimal tab (Session 405: an ANOVA's df
+#' column, "3, 99", and a correlation's em dash; until then the text after
+#' the digits counted as tail).
 #'
 #' @param s Character.
 #' @return A list: head and tail, character vectors of s's length.
 #' @keywords internal
 .jst_docx_num_parts <- function(s) {
-  tails <- ifelse(grepl("[.]", s), sub("^[^.]*", "", s),
-                  sub("^[-\u2212+0-9,]*", "", s))
+  tails <- ifelse(grepl("[.]", s), sub("^[^.]*", "", s), "")
   list(head = substr(s, 1L, nchar(s) - nchar(tails)), tail = tails)
 }
 
 #' Internal helper: a table's widths and sizes, fitted to the page
 #'
-#' A table wider than the page loses half its number columns' padding
-#' first, then steps its font down a point at a time (12, 11, 10; APA
-#' allows a smaller size in a table), and only then narrows its columns,
-#' the stub first (a label may wrap, a number never) -- Session 402, item
-#' 11. Until then every column was narrowed in proportion, and a number
-#' wrapped. Two more steps, 9 and 8 pt, come before the stub narrows: at
-#' 10 pt a 17-column table with F tests still wrapped its numbers
-#' (Session 403; APA's floor for a table is 8 pt). The notes step down
-#' with the table; the caption keeps its size.
+#' Ruling R55 (Session 404): a table wider than its page loses half its
+#' number columns' padding; then its labels wrap onto at most two lines,
+#' the stub narrowing as far as \code{.jst_docx_stub_floor()} allows; then
+#' its font steps down a point at a time to 8 pt, the stub at each size
+#' allowed its floor again; then the stub narrows to an inch and a half and
+#' every column in proportion. A number never wraps until that last step.
+#' The notes step down with the table; the caption keeps its size. (Until
+#' Session 405 the font stepped down before any label wrapped -- Session
+#' 402, item 11, settled on a 17-column regression table whose numbers set
+#' its width.)
 #'
 #' @param tbl A jst_table.
 #' @param style The style list.
@@ -2989,33 +4294,90 @@
 .jst_docx_fit <- function(tbl, style, page_text) {
   size0 <- .jst_style_key(style, tbl$type, "size")
   note0 <- .jst_style_key(style, tbl$type, "note.size")
-  steps <- list(list(size = size0, pad = 120L), list(size = size0, pad = 60L))
-  for (d in 1:4) if (size0 - d >= 8) steps <- c(steps, list(list(size = size0 - d, pad = 60L)))
-  fit <- NULL
-  for (st in steps) {
-    w <- .jst_docx_widths(tbl, style, size = st$size, pad = st$pad)
-    fit <- list(widths = w, size = st$size,
-                note_size = max(6, note0 - (size0 - st$size)))
-    if (sum(w) <= page_text) return(fit)
+  mk <- function(w, s) list(widths = as.integer(w), size = s,
+                            note_size = max(6, note0 - (size0 - s)))
+  w <- .jst_docx_widths(tbl, style, size = size0, pad = 120L)
+  if (sum(w) <= page_text) return(mk(w, size0))
+  s <- size0
+  for (s in .jst_docx_fit_sizes(size0)) {
+    w <- .jst_docx_widths(tbl, style, size = s, pad = 60L)
+    room <- page_text - sum(w[-1L])
+    if (room >= .jst_docx_stub_floor(tbl, s, w[1L])) {
+      w[1L] <- min(w[1L], room)
+      return(mk(w, s))
+    }
   }
-  # Still too wide: the stub gives way, down to an inch and a half; then
-  # every column in proportion.
-  w <- fit$widths
-  excess <- sum(w) - page_text
-  give <- min(excess, max(0L, w[1L] - 2160L))
-  w[1L] <- w[1L] - give
-  if (sum(w) > page_text) w <- as.integer(floor(w * page_text / sum(w)))
-  fit$widths <- as.integer(w)
-  fit
+  # Still too wide at the smallest size: the stub to an inch and a half,
+  # then every column in proportion.
+  w[1L] <- min(w[1L], max(2160L, page_text - sum(w[-1L])))
+  if (sum(w) > page_text) w <- floor(w * page_text / sum(w))
+  mk(w, s)
+}
+
+#' Internal helper: the sizes a fitted table steps through
+#'
+#' The style's size, then each whole point below it down to 8 (APA's floor
+#' for a table): 12, 11, 10, 9, 8.
+#'
+#' @param size0 The style's size.
+#' @return Numeric.
+#' @keywords internal
+.jst_docx_fit_sizes <- function(size0) {
+  low <- ceiling(size0) - 1
+  c(size0, if (low >= 8) seq(low, 8, by = -1))
+}
+
+#' Internal helper: how narrow a table's stub may go
+#'
+#' Ruling R55: the labels wrap onto at most two lines, the stub never below
+#' an inch and a half. Half the stub's width is the ruling's measure; a
+#' label whose words cannot split into two lines that narrow sets the floor
+#' wider, the narrowest width at which it takes two lines, so no label
+#' wraps onto a third. A heading row spans the table and sets nothing.
+#'
+#' @param tbl A jst_table.
+#' @param size Points.
+#' @param w1 The stub's width at that size, unwrapped.
+#' @return Integer, dxa; never more than w1.
+#' @keywords internal
+.jst_docx_stub_floor <- function(tbl, size, w1) {
+  em <- size * 20
+  labs <- character(0); ind <- integer(0)
+  for (r in tbl$rows) {
+    if (identical(r$kind, "heading")) next
+    labs <- c(labs, paste0(if (isTRUE(r$markup)) .jst_table_strip_markup(r$label)
+                           else r$label,
+                           paste(r$marks, collapse = ""),
+                           if (is.null(r$tail)) "" else r$tail))
+    ind  <- c(ind, as.integer(r$indent))
+  }
+  labs <- c(labs, .jst_table_strip_markup(tbl$columns$label[1L])); ind <- c(ind, 0L)
+  need <- 0
+  for (i in seq_along(labs)) {
+    wd <- strsplit(labs[i], " ", fixed = TRUE)[[1L]]
+    wd <- wd[nzchar(wd)]
+    if (!length(wd)) next
+    m <- length(wd)
+    two <- if (m == 1L) .jst_docx_em_width(wd) else {
+      min(vapply(seq_len(m - 1L), function(k) {
+        max(.jst_docx_em_width(paste(wd[seq_len(k)], collapse = " ")),
+            .jst_docx_em_width(paste(wd[(k + 1L):m], collapse = " ")))
+      }, numeric(1)))
+    }
+    need <- max(need, two * em + 180 * ind[i])
+  }
+  need <- as.integer(ceiling(need)) + 2L * 108L
+  as.integer(min(w1, max(2160L, as.integer(ceiling(w1 / 2)), need)))
 }
 
 #' Internal helper: the decimal tab position of each number column
 #'
 #' Measured from the cell's left text edge: the block of numbers -- the
 #' widest whole part and the widest tail (the point and the digits after
-#' it, and any stars) -- centered in the cell's inner width, and never past
+#' it, and any stars) -- centered in the cell's inner width, never past
 #' the inner width less the widest tail (Session 401; until then every
-#' block sat at that right-hand limit).
+#' block sat at that right-hand limit), and never left of the widest whole
+#' part (Session 405).
 #'
 #' @param tbl A jst_table.
 #' @param widths The column widths.
@@ -3033,17 +4395,21 @@
     }, character(1))
     parts <- .jst_docx_num_parts(cells)
     # A spanning cell's tail runs on past the column: it does not set
-    # the tab (Session 403).
+    # the tab (Session 403); nor does a plain cell, centered with no tab
+    # (Session 405).
     spans <- vapply(tbl$rows, .jst_docx_spans_from, logical(1), j = j)
-    tail_w <- .jst_docx_text_width(parts$tail[!spans], size, digits = TRUE)
-    head_w <- .jst_docx_text_width(parts$head, size, digits = TRUE)
+    pl <- .jst_tbl_plain_cell(cells, cols$kind[j])
+    tail_w <- .jst_docx_text_width(parts$tail[!spans & !pl], size, digits = TRUE)
+    head_w <- .jst_docx_text_width(parts$head[!pl], size, digits = TRUE)
     # The block of numbers centered in the cell (Session 401: under a head
     # wider than its numbers, "Valid %", the block had sat at the right),
     # and short of the cell's right edge: a stop at or past it is no stop
     # to LibreOffice, which then tabs to its default stops and wraps.
+    # And never left of the widest whole part: Word pushes a number whose
+    # whole part does not fit left of the stop off the point (Session 405).
     inner  <- widths[j] - 2L * margin
-    out[j] <- as.integer(min(inner - tail_w - 40L,
-                             floor((inner + head_w - tail_w) / 2)))
+    out[j] <- as.integer(max(head_w, min(inner - tail_w - 40L,
+                                         floor((inner + head_w - tail_w) / 2))))
   }
   out
 }
@@ -3053,9 +4419,11 @@
 #' Each table's caption, table and notes (paragraphs or rows by the style),
 #' two empty paragraphs between tables (Jeff, Session 401), and the
 #' section properties: the page, landscape when the style -- or the call,
-#' since Session 403 -- says so, or when auto finds a table wider than
-#' the portrait text width; a table wider than the page fitted to it
-#' (\code{.jst_docx_fit()}).
+#' since Session 403 -- says so, or when auto finds a table that cannot fit
+#' the portrait text width at the style's size with half its padding and
+#' its labels on two lines (ruling R55, Session 404; until Session 405, any
+#' table wider than portrait at its natural width); a table wider than the
+#' page fitted to it (\code{.jst_docx_fit()}).
 #'
 #' @param tables A list of jst_table.
 #' @param style The style list.
@@ -3071,8 +4439,15 @@
   styles <- lapply(tables, .jst_table_style, style = style)
   all_widths <- mapply(.jst_docx_widths, tables, styles, SIMPLIFY = FALSE)
   natural <- vapply(all_widths, sum, integer(1))
+  # The narrowest a table goes at the style's size: half its padding, its
+  # labels on two lines.
+  narrowest <- vapply(seq_along(tables), function(i) {
+    size0 <- .jst_style_key(styles[[i]], tables[[i]]$type, "size")
+    w <- .jst_docx_widths(tables[[i]], styles[[i]], size = size0, pad = 60L)
+    as.numeric(sum(w[-1L]) + .jst_docx_stub_floor(tables[[i]], size0, w[1L]))
+  }, numeric(1))
   landscape <- identical(land_key, "yes") ||
-    (identical(land_key, "auto") && any(natural > portrait$text))
+    (identical(land_key, "auto") && any(narrowest > portrait$text))
   page <- .jst_docx_page(paper, landscape)
   for (i in seq_along(tables)) {
     tbl <- tables[[i]]
@@ -3230,28 +4605,43 @@
 #' \code{jstyle()}); the preview is a facsimile of the Word table, so what
 #' prints is what the file holds.
 #'
-#' This version makes four table types: a descriptives table from one or
-#' more \code{\link{jdesc}} results; a frequency table from one or more
+#' A table is made from each kind of result: a descriptives table from one
+#' or more \code{\link{jdesc}} results; a frequency table from one or more
 #' \code{\link{jfreq}} results -- each variable's label on a row of its
-#' own, its categories indented under it; and a regression table from one
-#' or more \code{\link{jlm}} results, or a logistic regression table from
+#' own, its categories indented under it; a regression table from one or
+#' more \code{\link{jlm}} results, or a logistic regression table from
 #' \code{\link{jlogistic}} results -- the models of one outcome side by
 #' side, each under its own head, the constant first, a dummy-coded
 #' variable's categories indented under its label with the reference
-#' category named, and the fit rows under the predictors. The variables
-#' go under role headings when \code{headings} names them, and each
-#' specific note's variables are marked when \code{markers} names them.
-#' Further table types follow.
+#' category named, and the fit rows under the predictors; a correlation
+#' table from a \code{\link{jcorr}} result -- the variables numbered, their
+#' n, mean and standard deviation, and the correlations below the
+#' diagonal; a t-test table from \code{\link{jt}} results, or an ANOVA table
+#' from \code{\link{jaov}} results, of one grouping variable -- one row per
+#' outcome, each group's mean and standard deviation, then the test; a
+#' crosstab from \code{\link{jcrosstab}} results of one column variable --
+#' each row variable's categories with their counts and percentages in
+#' each group, and the chi-square test; and a reliability table from
+#' \code{\link{jalpha}} results -- each item's mean, standard deviation,
+#' corrected item-total correlation and alpha if the item is deleted. The
+#' variables of a descriptives or frequency table go under role headings
+#' when \code{headings} names them, and each specific note's variables are
+#' marked when \code{markers} names them. A filter the analysis applied
+#' (\code{\link{jsubset}}, \code{subset =}) is named in the general note.
 #'
 #' @param x A saved result -- what an analysis function returns, kept with
-#'   \code{<-} -- or a list of them. A list of \code{jdesc()} results, or
-#'   of \code{jfreq()} results, stacks into one table, each result's
-#'   variables under its name in the list when the list is named; a list
-#'   of \code{jlm()} results, or of \code{jlogistic()} results, with one
-#'   outcome puts the models side by side, headed "Model 1", "Model 2",
-#'   ... or by the list's names. A table \code{jtable()} has already
-#'   built, or a list of them, goes to the file as it is, the tables in
-#'   the order given and numbered so.
+#'   \code{<-} -- or a list of them. Results share a table when they share
+#'   its columns: a list of \code{jdesc()} results, or of \code{jfreq()}
+#'   results, stacks into one table, each result's variables under its name
+#'   in the list when the list is named; a list of \code{jlm()} results, or
+#'   of \code{jlogistic()} results, with one outcome puts the models side by
+#'   side, headed "Model 1", "Model 2", ... or by the list's names; a list of
+#'   \code{jt()}, \code{jaov()} or \code{jcrosstab()} results with one
+#'   grouping variable stacks a row or a block per outcome; a list of
+#'   \code{jalpha()} results stacks the scales, each under its name. A
+#'   \code{jcorr()} result is a table of its own. A table \code{jtable()}
+#'   has already built, or a list of them, goes to the file as it is, the
+#'   tables in the order given and numbered so.
 #' @param headings A named list: each heading and the variables under it,
 #'   bare or in quotes, e.g. \code{list("Dependent variable" = Wellbeing,
 #'   "Independent variables" = c(Income, Age))}. Every variable of the
@@ -3261,9 +4651,12 @@
 #'   variables it marks, e.g. \code{list("Mean-centered" = c(Income,
 #'   Age))}. The style assigns the marks (superscript letters under APA),
 #'   sets each on its rows' labels, and writes the note under the table.
-#'   In a regression table a predictor's row is marked.
+#'   In a regression table a predictor's row is marked; in a t-test or
+#'   ANOVA table an outcome's; in a crosstab a variable's label row; in a
+#'   reliability table an item's.
 #' @param title The table's title; the style's title when NULL (a
-#'   regression table's names the outcome). \code{*text*} sets a word in
+#'   regression table's names the outcome, a t-test, ANOVA or crosstab's
+#'   the grouping variable). \code{*text*} sets a word in
 #'   italics.
 #' @param note The general note's text, after what the style writes
 #'   there (N, a reference category); \code{*text*} sets a word in
@@ -3384,8 +4777,8 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
     }
     .jst_check_path_chars(file, what = "path")
     if (!identical(tolower(tools::file_ext(file)), "docx")) {
-      .jst_stop("jtable() writes Word files, so the file name needs the ",
-                ".docx extension, for example:\n  file = \"",
+      .jst_stop("the file name needs the .docx extension (a Word file), ",
+                "for example:\n  file = \"",
                 tools::file_path_sans_ext(basename(file)), ".docx\"")
     }
     out_path <- .jst_table_out_path(file)
@@ -3414,9 +4807,9 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   built <- vapply(results, inherits, logical(1), "jst_table")
   if (any(built)) {
     if (!all(built)) {
-      .jst_stop("jtable() takes built tables or saved results in one call, ",
-                "not both.\nBuild each result into a table first, then give ",
-                "the tables together.")
+      .jst_stop("built tables and saved results cannot be given in one ",
+                "call.\nBuild each result into a table first, then give the ",
+                "tables together.")
     }
     if (!is.null(substitute(headings)) || !is.null(substitute(markers)) ||
         !is.null(title) || !is.null(note) || !is.null(style) ||
@@ -3447,25 +4840,22 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   }
   not_res <- !vapply(results, function(r) !is.na(.jst_table_result_fn(r)), logical(1))
   if (any(not_res)) {
-    .jst_stop("jtable() takes a saved result -- what an analysis function ",
-              "returns, kept with <- -- for example:\n",
+    .jst_stop("a table is made from a saved result -- what an analysis ",
+              "function returns, kept with <- -- for example:\n",
               "  d1 <- jdesc(community, Age, Income)\n",
               "  jtable(d1)")
   }
   classes <- vapply(results, function(r) .jst_table_result_fn(r), character(1))
   if (length(unique(classes)) > 1L) {
-    .jst_stop("jtable() does not yet put results of different kinds (",
-              .jst_and_list(unique(classes)), ") in one table.\n",
-              "Give it the results of one kind at a time.")
+    .jst_stop("results of different kinds (", .jst_and_list(unique(classes)),
+              ") cannot share a table yet.\n",
+              "Give the results of one kind at a time.")
   }
   # The table's type, and the call's settings for it: the call's layer
   # goes first in the style, so it outranks the file (the reference, Part
   # 3.2).
-  type <- if (inherits(results[[1L]], "jst_desc")) "descriptives"
-          else if (inherits(results[[1L]], "jst_freq")) "frequencies"
-          else if (inherits(results[[1L]], "jst_lm")) "regression"
-          else if (inherits(results[[1L]], "jst_logistic")) "logistic"
-          else NA_character_
+  type <- unname(.jst_table_types[intersect(class(results[[1L]]),
+                                            names(.jst_table_types))[1L]])
   if (is.na(type)) .jst_table_build(results[[1L]], st)   # the stop for an unbuilt type
   if (length(over_vals)) {
     st <- .jst_style_object(st$name, st$path,
@@ -3483,13 +4873,16 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   # The results go to their type's builder as one list, so a named list's
   # names give the headings -- or the model heads -- however many results
   # it holds.
-  tbl <- switch(type,
-    descriptives = .jst_table_build_desc(results, st, headings = hd, markers = mk,
-                                         title = title, note = note),
-    frequencies  = .jst_table_build_freq(results, st, headings = hd, markers = mk,
-                                         title = title, note = note),
-    .jst_table_build_models(results, st, headings = hd, markers = mk,
-                            title = title, note = note))
+  build <- switch(type,
+    descriptives = .jst_table_build_desc,
+    frequencies  = .jst_table_build_freq,
+    regression   = , logistic = .jst_table_build_models,
+    correlation  = .jst_table_build_corr,
+    ttest        = , anova = .jst_table_build_groups,
+    crosstab     = .jst_table_build_crosstab,
+    reliability  = .jst_table_build_alpha)
+  tbl <- build(results, st, headings = hd, markers = mk, title = title,
+               note = note)
   # What the builder has to say beside the table (the models' Ns differ):
   # printed before the preview, at every output level.
   for (m in tbl$messages) .jst_msg(m)
@@ -3756,7 +5149,9 @@ print.jst_table <- function(x, ...) {
 #' A style file is plain text: a setting is a name, an equals sign and a
 #' value; a \code{#} starts a note; the general settings come first, then
 #' one section per table type, \code{[descriptives]}, \code{[frequencies]},
-#' \code{[regression]} and \code{[logistic]}. A setting the file leaves out comes from the style
+#' \code{[regression]}, \code{[logistic]}, \code{[correlation]},
+#' \code{[ttest]}, \code{[anova]}, \code{[crosstab]} and
+#' \code{[reliability]}. A setting the file leaves out comes from the style
 #' its \code{based.on} line names. jstats looks for a style named in a call
 #' in the style folder (\code{joptions(style.dir = )}), the working
 #' directory and your jstats folder, in that order.
@@ -3974,7 +5369,12 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
              descriptives = "A descriptives table, from jdesc() results.",
              frequencies  = "A frequency table, from jfreq() results.",
              regression   = "A regression table, from jlm() results.",
-             logistic     = "A logistic regression table, from jlogistic() results.")
+             logistic     = "A logistic regression table, from jlogistic() results.",
+             correlation  = "A correlation table, from a jcorr() result.",
+             ttest        = "A t-test table, from jt() results.",
+             anova        = "An ANOVA table, from jaov() results.",
+             crosstab     = "A crosstab, from jcrosstab() results.",
+             reliability  = "A reliability table, from jalpha() results.")
   out <- c(paste0("# ", name, ".jstyle: a jstats table style."),
            "# Change a value after its = sign and save the file;",
            paste0("# jstyle(\"", name, "\") prints the settings jstats reads from it."),

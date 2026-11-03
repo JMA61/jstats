@@ -17,14 +17,15 @@
 A list: widths (integer), size and note_size (points).
 }
 \description{
-A table wider than the page loses half its number columns' padding
-first, then steps its font down a point at a time (12, 11, 10; APA
-allows a smaller size in a table), and only then narrows its columns,
-the stub first (a label may wrap, a number never) -- Session 402, item
-11. Until then every column was narrowed in proportion, and a number
-wrapped. Two more steps, 9 and 8 pt, come before the stub narrows: at
-10 pt a 17-column table with F tests still wrapped its numbers
-(Session 403; APA's floor for a table is 8 pt). The notes step down
-with the table; the caption keeps its size.
+Ruling R55 (Session 404): a table wider than its page loses half its
+number columns' padding; then its labels wrap onto at most two lines,
+the stub narrowing as far as \code{.jst_docx_stub_floor()} allows; then
+its font steps down a point at a time to 8 pt, the stub at each size
+allowed its floor again; then the stub narrows to an inch and a half and
+every column in proportion. A number never wraps until that last step.
+The notes step down with the table; the caption keeps its size. (Until
+Session 405 the font stepped down before any label wrapped -- Session
+402, item 11, settled on a 17-column regression table whose numbers set
+its width.)
 }
 \keyword{internal}

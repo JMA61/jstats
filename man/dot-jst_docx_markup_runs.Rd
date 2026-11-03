@@ -4,7 +4,13 @@
 \alias{.jst_docx_markup_runs}
 \title{Internal helper: the runs of a marked-up line}
 \usage{
-.jst_docx_markup_runs(s, size = NULL, bold = FALSE, italic = FALSE)
+.jst_docx_markup_runs(
+  s,
+  size = NULL,
+  bold = FALSE,
+  italic = FALSE,
+  color = NULL
+)
 }
 \arguments{
 \item{s}{Character(1); the line.}
@@ -13,6 +19,9 @@
 
 \item{bold, italic}{Logical; the base style of the line (Session 403: a
 caption's title, a fit row's label).}
+
+\item{color}{A six-digit hex colour, or NULL (Session 405: a column head
+with markup takes the header's colour).}
 }
 \description{
 Reads the light markup: \emph{text} italic, ^text^ superscript. Under an

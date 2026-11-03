@@ -3433,11 +3433,14 @@ jai <- function(setup = NULL, path = NULL, ...) {
                             min_tail = 10L) {
   if (!nzchar(text)) return(text)
   # Protect atomic tokens: swap internal spaces for \x01 so they travel
-  # as single words, restored after line assembly.
+  # as single words, restored after line assembly. A name = value pair
+  # starts with a letter of any script (Session 405: a table's "Cronbach's
+  # alpha = .84." had broken after its Greek letter's "="); in a session
+  # that is not UTF-8 the classes read ASCII alone, as the pattern had.
   protected <- text
   atom_re <- paste0(
     "[A-Za-z_.][A-Za-z0-9_.]*\\([^()]*\\)",              # calls
-    "|[A-Za-z][A-Za-z0-9._]* = [^ ]+",                   # arg = value (S254)
+    "|[[:alpha:]][[:alnum:]._]* = [^ ]+",                # arg = value (S254)
     "|\"[^\"\n]{1,60}\""                                # quoted phrases (S238)
   )
   m <- gregexpr(atom_re, protected)[[1]]

@@ -23,14 +23,18 @@ jtable(
 }
 \arguments{
 \item{x}{A saved result -- what an analysis function returns, kept with
-\code{<-} -- or a list of them. A list of \code{jdesc()} results, or
-of \code{jfreq()} results, stacks into one table, each result's
-variables under its name in the list when the list is named; a list
-of \code{jlm()} results, or of \code{jlogistic()} results, with one
-outcome puts the models side by side, headed "Model 1", "Model 2",
-... or by the list's names. A table \code{jtable()} has already
-built, or a list of them, goes to the file as it is, the tables in
-the order given and numbered so.}
+\code{<-} -- or a list of them. Results share a table when they share
+its columns: a list of \code{jdesc()} results, or of \code{jfreq()}
+results, stacks into one table, each result's variables under its name
+in the list when the list is named; a list of \code{jlm()} results, or
+of \code{jlogistic()} results, with one outcome puts the models side by
+side, headed "Model 1", "Model 2", ... or by the list's names; a list of
+\code{jt()}, \code{jaov()} or \code{jcrosstab()} results with one
+grouping variable stacks a row or a block per outcome; a list of
+\code{jalpha()} results stacks the scales, each under its name. A
+\code{jcorr()} result is a table of its own. A table \code{jtable()}
+has already built, or a list of them, goes to the file as it is, the
+tables in the order given and numbered so.}
 
 \item{headings}{A named list: each heading and the variables under it,
 bare or in quotes, e.g. \code{list("Dependent variable" = Wellbeing,
@@ -42,10 +46,13 @@ For a descriptives or frequency table.}
 variables it marks, e.g. \code{list("Mean-centered" = c(Income,
 Age))}. The style assigns the marks (superscript letters under APA),
 sets each on its rows' labels, and writes the note under the table.
-In a regression table a predictor's row is marked.}
+In a regression table a predictor's row is marked; in a t-test or
+ANOVA table an outcome's; in a crosstab a variable's label row; in a
+reliability table an item's.}
 
 \item{title}{The table's title; the style's title when NULL (a
-regression table's names the outcome). \code{*text*} sets a word in
+regression table's names the outcome, a t-test, ANOVA or crosstab's
+the grouping variable). \code{*text*} sets a word in
 italics.}
 
 \item{note}{The general note's text, after what the style writes
@@ -99,17 +106,28 @@ the built-in \code{"apa"} style, or a style file of your own (see
 prints is what the file holds.
 }
 \details{
-This version makes four table types: a descriptives table from one or
-more \code{\link{jdesc}} results; a frequency table from one or more
+A table is made from each kind of result: a descriptives table from one
+or more \code{\link{jdesc}} results; a frequency table from one or more
 \code{\link{jfreq}} results -- each variable's label on a row of its
-own, its categories indented under it; and a regression table from one
-or more \code{\link{jlm}} results, or a logistic regression table from
+own, its categories indented under it; a regression table from one or
+more \code{\link{jlm}} results, or a logistic regression table from
 \code{\link{jlogistic}} results -- the models of one outcome side by
 side, each under its own head, the constant first, a dummy-coded
 variable's categories indented under its label with the reference
-category named, and the fit rows under the predictors. The variables
-go under role headings when \code{headings} names them, and each
-specific note's variables are marked when \code{markers} names them.
-Further table types follow.
+category named, and the fit rows under the predictors; a correlation
+table from a \code{\link{jcorr}} result -- the variables numbered, their
+n, mean and standard deviation, and the correlations below the
+diagonal; a t-test table from \code{\link{jt}} results, or an ANOVA table
+from \code{\link{jaov}} results, of one grouping variable -- one row per
+outcome, each group's mean and standard deviation, then the test; a
+crosstab from \code{\link{jcrosstab}} results of one column variable --
+each row variable's categories with their counts and percentages in
+each group, and the chi-square test; and a reliability table from
+\code{\link{jalpha}} results -- each item's mean, standard deviation,
+corrected item-total correlation and alpha if the item is deleted. The
+variables of a descriptives or frequency table go under role headings
+when \code{headings} names them, and each specific note's variables are
+marked when \code{markers} names them. A filter the analysis applied
+(\code{\link{jsubset}}, \code{subset =}) is named in the general note.
 }
 \keyword{internal}
