@@ -19,7 +19,7 @@ prints is what the file holds."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.272</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.273</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -81,14 +81,18 @@ prints is what the file holds.</p>
 
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>A saved result – what an analysis function returns, kept with
-<code>&lt;-</code> – or a list of them. A list of <code><a href="jdesc.html">jdesc()</a></code> results, or
-of <code><a href="jfreq.html">jfreq()</a></code> results, stacks into one table, each result's
-variables under its name in the list when the list is named; a list
-of <code><a href="jlm.html">jlm()</a></code> results, or of <code><a href="jlogistic.html">jlogistic()</a></code> results, with one
-outcome puts the models side by side, headed "Model 1", "Model 2",
-... or by the list's names. A table <code>jtable()</code> has already
-built, or a list of them, goes to the file as it is, the tables in
-the order given and numbered so.</p></dd>
+<code>&lt;-</code> – or a list of them. Results share a table when they share
+its columns: a list of <code><a href="jdesc.html">jdesc()</a></code> results, or of <code><a href="jfreq.html">jfreq()</a></code>
+results, stacks into one table, each result's variables under its name
+in the list when the list is named; a list of <code><a href="jlm.html">jlm()</a></code> results, or
+of <code><a href="jlogistic.html">jlogistic()</a></code> results, with one outcome puts the models side by
+side, headed "Model 1", "Model 2", ... or by the list's names; a list of
+<code><a href="jt.html">jt()</a></code>, <code><a href="jaov.html">jaov()</a></code> or <code><a href="jcrosstab.html">jcrosstab()</a></code> results with one
+grouping variable stacks a row or a block per outcome; a list of
+<code><a href="jalpha.html">jalpha()</a></code> results stacks the scales, each under its name. A
+<code><a href="jcorr.html">jcorr()</a></code> result is a table of its own. A table <code>jtable()</code>
+has already built, or a list of them, goes to the file as it is, the
+tables in the order given and numbered so.</p></dd>
 
 
 <dt id="arg-headings">headings<a class="anchor" aria-label="anchor" href="#arg-headings"></a></dt>
@@ -104,12 +108,15 @@ For a descriptives or frequency table.</p></dd>
 variables it marks, e.g. <code>list("Mean-centered" = c(Income,
 Age))</code>. The style assigns the marks (superscript letters under APA),
 sets each on its rows' labels, and writes the note under the table.
-In a regression table a predictor's row is marked.</p></dd>
+In a regression table a predictor's row is marked; in a t-test or
+ANOVA table an outcome's; in a crosstab a variable's label row; in a
+reliability table an item's.</p></dd>
 
 
 <dt id="arg-title">title<a class="anchor" aria-label="anchor" href="#arg-title"></a></dt>
 <dd><p>The table's title; the style's title when NULL (a
-regression table's names the outcome). <code>*text*</code> sets a word in
+regression table's names the outcome, a t-test, ANOVA or crosstab's
+the grouping variable). <code>*text*</code> sets a word in
 italics.</p></dd>
 
 
@@ -171,18 +178,29 @@ which prints its preview when typed.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>This version makes four table types: a descriptives table from one or
-more <code><a href="jdesc.html">jdesc</a></code> results; a frequency table from one or more
+    <p>A table is made from each kind of result: a descriptives table from one
+or more <code><a href="jdesc.html">jdesc</a></code> results; a frequency table from one or more
 <code><a href="jfreq.html">jfreq</a></code> results – each variable's label on a row of its
-own, its categories indented under it; and a regression table from one
-or more <code><a href="jlm.html">jlm</a></code> results, or a logistic regression table from
+own, its categories indented under it; a regression table from one or
+more <code><a href="jlm.html">jlm</a></code> results, or a logistic regression table from
 <code><a href="jlogistic.html">jlogistic</a></code> results – the models of one outcome side by
 side, each under its own head, the constant first, a dummy-coded
 variable's categories indented under its label with the reference
-category named, and the fit rows under the predictors. The variables
-go under role headings when <code>headings</code> names them, and each
-specific note's variables are marked when <code>markers</code> names them.
-Further table types follow.</p>
+category named, and the fit rows under the predictors; a correlation
+table from a <code><a href="jcorr.html">jcorr</a></code> result – the variables numbered, their
+n, mean and standard deviation, and the correlations below the
+diagonal; a t-test table from <code><a href="jt.html">jt</a></code> results, or an ANOVA table
+from <code><a href="jaov.html">jaov</a></code> results, of one grouping variable – one row per
+outcome, each group's mean and standard deviation, then the test; a
+crosstab from <code><a href="jcrosstab.html">jcrosstab</a></code> results of one column variable –
+each row variable's categories with their counts and percentages in
+each group, and the chi-square test; and a reliability table from
+<code><a href="jalpha.html">jalpha</a></code> results – each item's mean, standard deviation,
+corrected item-total correlation and alpha if the item is deleted. The
+variables of a descriptives or frequency table go under role headings
+when <code>headings</code> names them, and each specific note's variables are
+marked when <code>markers</code> names them. A filter the analysis applied
+(<code><a href="jsubset.html">jsubset</a></code>, <code>subset =</code>) is named in the general note.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -7,7 +7,13 @@ that would be italic is set inside italic text.
 ## Usage
 
 ``` r
-.jst_docx_markup_runs(s, size = NULL, bold = FALSE, italic = FALSE)
+.jst_docx_markup_runs(
+  s,
+  size = NULL,
+  bold = FALSE,
+  italic = FALSE,
+  color = NULL
+)
 ```
 
 ## Arguments
@@ -24,3 +30,8 @@ that would be italic is set inside italic text.
 
   Logical; the base style of the line (Session 403: a caption's title, a
   fit row's label).
+
+- color:
+
+  A six-digit hex colour, or NULL (Session 405: a column head with
+  markup takes the header's colour).

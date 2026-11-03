@@ -2,9 +2,10 @@
 
 Measured from the cell's left text edge: the block of numbers – the
 widest whole part and the widest tail (the point and the digits after
-it, and any stars) – centered in the cell's inner width, and never past
-the inner width less the widest tail (Session 401; until then every
-block sat at that right-hand limit).
+it, and any stars) – centered in the cell's inner width, never past the
+inner width less the widest tail (Session 401; until then every block
+sat at that right-hand limit), and never left of the widest whole part
+(Session 405).
 
 ## Usage
 

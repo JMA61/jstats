@@ -48,7 +48,8 @@ or the path of the file written.
 A style file is plain text: a setting is a name, an equals sign and a
 value; a `#` starts a note; the general settings come first, then one
 section per table type, `[descriptives]`, `[frequencies]`,
-`[regression]` and `[logistic]`. A setting the file leaves out comes
+`[regression]`, `[logistic]`, `[correlation]`, `[ttest]`, `[anova]`,
+`[crosstab]` and `[reliability]`. A setting the file leaves out comes
 from the style its `based.on` line names. jstats looks for a style named
 in a call in the style folder (`joptions(style.dir = )`), the working
 directory and your jstats folder, in that order.

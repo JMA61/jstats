@@ -1,8 +1,10 @@
 # Internal helper: the column widths of a table, in dxa
 
 From the widest text each column holds at the style's size, plus the
-cell margins; the stub from its labels and their indents; a spanner's
-label spread over its columns when it is wider than they are.
+cell margins; a column of numbers at least as wide as its block, the
+widest whole part beside the widest tail (Session 405); the stub from
+its labels and their indents; a spanner's label spread over its columns
+when it is wider than they are.
 
 ## Usage
 

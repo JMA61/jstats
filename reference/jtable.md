@@ -35,7 +35,8 @@ print(x, ...)
 - x:
 
   A saved result – what an analysis function returns, kept with `<-` –
-  or a list of them. A list of
+  or a list of them. Results share a table when they share its columns:
+  a list of
   [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md)
   results, or of
   [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md)
@@ -45,9 +46,18 @@ print(x, ...)
   of
   [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md)
   results, with one outcome puts the models side by side, headed "Model
-  1", "Model 2", ... or by the list's names. A table `jtable()` has
-  already built, or a list of them, goes to the file as it is, the
-  tables in the order given and numbered so.
+  1", "Model 2", ... or by the list's names; a list of
+  [`jt()`](https://jma61.github.io/jstats/reference/jt.md),
+  [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md) or
+  [`jcrosstab()`](https://jma61.github.io/jstats/reference/jcrosstab.md)
+  results with one grouping variable stacks a row or a block per
+  outcome; a list of
+  [`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md)
+  results stacks the scales, each under its name. A
+  [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md) result
+  is a table of its own. A table `jtable()` has already built, or a list
+  of them, goes to the file as it is, the tables in the order given and
+  numbered so.
 
 - headings:
 
@@ -63,12 +73,14 @@ print(x, ...)
   e.g. `list("Mean-centered" = c(Income, Age))`. The style assigns the
   marks (superscript letters under APA), sets each on its rows' labels,
   and writes the note under the table. In a regression table a
-  predictor's row is marked.
+  predictor's row is marked; in a t-test or ANOVA table an outcome's; in
+  a crosstab a variable's label row; in a reliability table an item's.
 
 - title:
 
   The table's title; the style's title when NULL (a regression table's
-  names the outcome). `*text*` sets a word in italics.
+  names the outcome, a t-test, ANOVA or crosstab's the grouping
+  variable). `*text*` sets a word in italics.
 
 - note:
 
@@ -125,18 +137,36 @@ preview when typed.
 
 ## Details
 
-This version makes four table types: a descriptives table from one or
-more [`jdesc`](https://jma61.github.io/jstats/reference/jdesc.md)
+A table is made from each kind of result: a descriptives table from one
+or more [`jdesc`](https://jma61.github.io/jstats/reference/jdesc.md)
 results; a frequency table from one or more
 [`jfreq`](https://jma61.github.io/jstats/reference/jfreq.md) results –
 each variable's label on a row of its own, its categories indented under
-it; and a regression table from one or more
+it; a regression table from one or more
 [`jlm`](https://jma61.github.io/jstats/reference/jlm.md) results, or a
 logistic regression table from
 [`jlogistic`](https://jma61.github.io/jstats/reference/jlogistic.md)
 results – the models of one outcome side by side, each under its own
 head, the constant first, a dummy-coded variable's categories indented
 under its label with the reference category named, and the fit rows
-under the predictors. The variables go under role headings when
-`headings` names them, and each specific note's variables are marked
-when `markers` names them. Further table types follow.
+under the predictors; a correlation table from a
+[`jcorr`](https://jma61.github.io/jstats/reference/jcorr.md) result –
+the variables numbered, their n, mean and standard deviation, and the
+correlations below the diagonal; a t-test table from
+[`jt`](https://jma61.github.io/jstats/reference/jt.md) results, or an
+ANOVA table from
+[`jaov`](https://jma61.github.io/jstats/reference/jaov.md) results, of
+one grouping variable – one row per outcome, each group's mean and
+standard deviation, then the test; a crosstab from
+[`jcrosstab`](https://jma61.github.io/jstats/reference/jcrosstab.md)
+results of one column variable – each row variable's categories with
+their counts and percentages in each group, and the chi-square test; and
+a reliability table from
+[`jalpha`](https://jma61.github.io/jstats/reference/jalpha.md) results –
+each item's mean, standard deviation, corrected item-total correlation
+and alpha if the item is deleted. The variables of a descriptives or
+frequency table go under role headings when `headings` names them, and
+each specific note's variables are marked when `markers` names them. A
+filter the analysis applied
+([`jsubset`](https://jma61.github.io/jstats/reference/jsubset.md),
+`subset =`) is named in the general note.

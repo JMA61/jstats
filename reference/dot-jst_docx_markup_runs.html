@@ -11,7 +11,7 @@ that would be italic is set inside italic text."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.272</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.273</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -45,7 +45,13 @@ that would be italic is set inside italic text.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_docx_markup_runs</span><span class="op">(</span><span class="va">s</span>, size <span class="op">=</span> <span class="cn">NULL</span>, bold <span class="op">=</span> <span class="cn">FALSE</span>, italic <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_docx_markup_runs</span><span class="op">(</span></span>
+<span>  <span class="va">s</span>,</span>
+<span>  size <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  bold <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  italic <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  color <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -63,6 +69,11 @@ that would be italic is set inside italic text.</p>
 <dt id="arg-bold-italic">bold, italic<a class="anchor" aria-label="anchor" href="#arg-bold-italic"></a></dt>
 <dd><p>Logical; the base style of the line (Session 403: a
 caption's title, a fit row's label).</p></dd>
+
+
+<dt id="arg-color">color<a class="anchor" aria-label="anchor" href="#arg-color"></a></dt>
+<dd><p>A six-digit hex colour, or NULL (Session 405: a column head
+with markup takes the header's colour).</p></dd>
 
 </dl></div>
 
