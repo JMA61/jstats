@@ -12,7 +12,8 @@
   tab = NULL,
   keep_next = FALSE,
   spacing_after = NULL,
-  line = "single"
+  line = "single",
+  size = NULL
 )
 }
 \arguments{
@@ -31,6 +32,11 @@
 \item{spacing_after}{Points after the paragraph, or NULL.}
 
 \item{line}{"single" or "double".}
+
+\item{size}{Points, or NULL: the paragraph mark's size, which sets the
+height of an EMPTY cell -- given when a table is fitted to the page
+at a size below the document's, so an empty cell does not hold its
+row at the larger height (Session 403).}
 }
 \description{
 Internal helper: one paragraph

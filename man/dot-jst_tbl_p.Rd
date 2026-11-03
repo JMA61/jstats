@@ -4,7 +4,13 @@
 \alias{.jst_tbl_p}
 \title{Internal helper: format a p-value for a table cell}
 \usage{
-.jst_tbl_p(p, format = "exact", decimals = 3L, stars = c(0.05, 0.01, 0.001))
+.jst_tbl_p(
+  p,
+  format = "exact",
+  decimals = 3L,
+  stars = c(0.05, 0.01, 0.001),
+  leading.zero = FALSE
+)
 }
 \arguments{
 \item{p}{Numeric vector.}
@@ -14,10 +20,13 @@
 \item{decimals}{Integer.}
 
 \item{stars}{The thresholds, largest first.}
+
+\item{leading.zero}{Logical; TRUE keeps the zero before the point.}
 }
 \description{
 Exact to \code{decimals} places with the floor "<.001" (at 3 places;
-"<.01" at 2), the leading zero dropped as APA writes p; or stars alone;
-or both, the stars after the value. NA is a blank cell.
+"<.01" at 2), the leading zero dropped as APA writes p (kept under
+leading.zero = yes, Session 403); or stars alone; or both, the stars
+after the value. NA is a blank cell.
 }
 \keyword{internal}

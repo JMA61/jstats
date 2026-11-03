@@ -4,12 +4,15 @@
 \alias{.jst_style_columns_req}
 \title{Internal helper: what columns = takes for one table type}
 \usage{
-.jst_style_columns_req(cols, type)
+.jst_style_columns_req(cols, type, none = FALSE)
 }
 \arguments{
 \item{cols}{Character; the column keys the type knows.}
 
 \item{type}{Character(1) or NULL; the table type.}
+
+\item{none}{Logical; TRUE when "none" is a value too (columns.last,
+fit.rows).}
 }
 \value{
 Character(1), the requirement a stop names.

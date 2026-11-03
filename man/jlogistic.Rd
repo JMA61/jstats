@@ -202,8 +202,11 @@ the omnibus likelihood-ratio test (\code{chi_sq}, \code{omnibus_df},
 \item{ref_cats}{Reference category descriptions.}
 \item{dummy_groups}{Named list, one element per dummy-coded
 variable: \code{labels}, its categories as the coefficient table
-labels them, and \code{dummy}, the dummy column of each
-(\code{NA} for the reference). Used by \code{jplot()}.}
+labels them, \code{dummy}, the dummy column of each
+(\code{NA} for the reference), and, for the table layer,
+\code{codes} (the category each stands for), \code{value_labels}
+(its value label, \code{NA} where it has none) and
+\code{var_label}. Used by \code{jplot()} and \code{jtable()}.}
 \item{vif}{Named numeric vector of VIF values, or NULL.}
 \item{gvif}{The generalized VIFs, when the model has a set of dummy
 variables (a predictor of three or more categories): a data frame
@@ -211,6 +214,7 @@ of \code{term}, \code{GVIF}, \code{Df} and \code{GVIF_adj}
 (\code{GVIF^(1/(2*Df))}), one row per predictor, as the VIF table
 prints them; NULL otherwise.}
 \item{sample_info}{Pipeline and missing data counts.}
+\item{data_name}{The data frame's name as the call gave it.}
 }
 }
 \description{

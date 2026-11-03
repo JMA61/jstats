@@ -83,10 +83,14 @@
     note.label       = "Note.",       # "Notes:", "Source:"
     note.position    = "row",         # row (a merged last row) | paragraph
     note.size        = 12,
-    note.n           = "yes",         # the general note opens on N
+    n.position       = "note",        # note: the general note opens on N;
+                                      # title: "(N = 103)" after the title;
+                                      # none (ruling R51, build 3)
     decimals         = 2,             # statistics (a mean, an SD, b, SE)
-    leading.zero     = "no",          # for a statistic bounded by 1: r, p,
-                                      # beta, R2, eta2, alpha, V
+    leading.zero     = "no",          # no: dropped for a statistic bounded
+                                      # by 1 (r, p, beta, R2, eta2, alpha,
+                                      # V); yes: kept; never: dropped on
+                                      # every number below 1 (build 3)
     p.format         = "exact",       # exact | stars | both
     p.decimals       = 3,
     stars            = c(0.05, 0.01, 0.001),
@@ -122,15 +126,62 @@
     missing.label       = "Missing",
     variable.headings   = "plain",       # plain | italic | bold
     group.headings      = "italic"       # italic | bold | plain
+  ),
+  regression = list(                   # jlm() results (build 3, S403)
+    title             = "Regression Coefficients Predicting {outcome}",
+    columns           = c("b", "se", "beta", "p"),  # t, ci, beta.gelman
+    columns.last      = "none",        # columns added to the last model only
+    stub.label        = "Predictor",   # ruling R49
+    b.label           = "b",
+    se.label          = "SE",
+    beta.label        = "\u03b2",
+    p.label           = "p",
+    t.label           = "t",
+    ci.label          = "95% CI",
+    beta.gelman.label = "\u03b2*",
+    ci.style          = "one",         # one: "[LL, UL]" | two: LL and UL
+    intercept         = "yes",         # the constant's row: yes | no
+    intercept.label   = "Constant",
+    fit.rows          = "r2",          # r2, adj.r2, f, delta.r2, f.change,
+                                       # n, or none
+    reference         = "row",         # row | note | none
+    reference.label   = "reference",
+    variable.headings = "plain",       # a dummy-coded variable's label row
+    group.headings    = "italic"       # (headings = is not read; kept for
+                                       # the shared writer)
+  ),
+  logistic = list(                     # jlogistic() results (build 3, S403)
+    title             = "Logistic Regression Coefficients Predicting {outcome}",
+    columns           = c("b", "se", "or", "p"),  # wald, ci, beta.gelman
+    columns.last      = "none",
+    stub.label        = "Predictor",
+    b.label           = "b",
+    se.label          = "SE",
+    or.label          = "OR",
+    p.label           = "p",
+    wald.label        = "Wald",
+    ci.label          = "95% CI for OR",
+    beta.gelman.label = "\u03b2*",
+    ci.style          = "one",
+    intercept         = "yes",
+    intercept.label   = "Constant",
+    fit.rows          = c("chisq", "nagelkerke"),  # neg2ll, cox.snell,
+                                                   # aic, n, none
+    reference         = "row",
+    reference.label   = "reference",
+    variable.headings = "plain",
+    group.headings    = "italic"
   )
 )
 
 # The column heads a style may italicize: APA sets a statistic's symbol in
-# italics (n, M, SD, p, r, t, F, b, SE, R2), and a word (Min, Max,
-# Variable) upright. Keyed by the column key, read by the builders.
+# italics (n, M, SD, p, r, t, F, b, SE, R2, OR), and a word (Min, Max,
+# Variable, Wald) and a Greek letter (beta, eta2, alpha) upright (APA's
+# list of statistical abbreviations; Session 402). Keyed by the column key,
+# read by the builders.
 .jst_tbl_italic_heads <- c("n", "mean", "sd", "p", "r", "t", "f", "b", "se",
-                           "beta", "df", "r2", "adj.r2", "or", "wald", "d",
-                           "eta2", "alpha", "item.total", "alpha.if.deleted")
+                           "df", "r2", "adj.r2", "or", "d", "item.total",
+                           "alpha.if.deleted")
 
 #' Internal helper: which of a table's column heads are set in italics
 #'
@@ -215,13 +266,15 @@
                             about = "row: the table's last row | paragraph: under the table"),
     note.size        = list(kind = "number", min = 6, max = 72,
                             about = "the notes' text size, in points"),
-    note.n           = list(kind = "choice", choices = c("yes", "no"),
-                            about = "the general note opens on N, the number of cases: yes | no"),
+    n.position       = list(kind = "choice", choices = c("note", "title", "none"),
+                            about = c("where N, the number of cases, goes: note (the general note opens",
+                                      "on it) | title (\"(N = 103)\" after the title) | none")),
     decimals         = list(kind = "integer", min = 0, max = 6,
                             about = "the decimal places of a statistic, such as a mean"),
-    leading.zero     = list(kind = "choice", choices = c("yes", "no"),
-                            about = c("the zero before the point of a statistic that cannot exceed 1,",
-                                      "such as p: no writes .23 | yes writes 0.23")),
+    leading.zero     = list(kind = "choice", choices = c("yes", "no", "never"),
+                            about = c("the zero before the point: no drops it on a statistic that cannot",
+                                      "exceed 1, such as p (.23) | yes keeps it (0.23) | never drops it on",
+                                      "every number below 1 (.197 for an SE)")),
     p.format         = list(kind = "choice", choices = c("exact", "stars", "both"),
                             about = "exact: the p-value | stars: asterisks | both"),
     p.decimals       = list(kind = "integer", min = 1, max = 6,
@@ -277,12 +330,92 @@
                                about = "how each variable's label row is set: plain | italic | bold"),
     group.headings      = list(kind = "choice", choices = c("italic", "bold", "plain"),
                                about = "how a heading from headings = is set: italic | bold | plain")
+  ),
+  regression = list(
+    title             = list(kind = "text",
+                             about = c("the title when the call gives none; {outcome} is the outcome's",
+                                       "label")),
+    columns           = list(kind = "columns",
+                             cols = c("b", "se", "beta", "p", "t", "ci", "beta.gelman"),
+                             about = c("the columns of each model, in order: b, se, beta, p, t, ci,",
+                                       "beta.gelman (Gelman's standardized coefficient)")),
+    columns.last      = list(kind = "columns", none = TRUE,
+                             cols = c("b", "se", "beta", "p", "t", "ci", "beta.gelman"),
+                             about = "columns added to the last model only, or none"),
+    stub.label        = list(kind = "text", empty = TRUE, about = "the first column's head"),
+    b.label           = list(kind = "text", empty = TRUE, about = "the head of the b column"),
+    se.label          = list(kind = "text", empty = TRUE, about = "the head of the se column"),
+    beta.label        = list(kind = "text", empty = TRUE, about = "the head of the beta column"),
+    p.label           = list(kind = "text", empty = TRUE, about = "the head of the p column"),
+    t.label           = list(kind = "text", empty = TRUE, about = "the head of the t column"),
+    ci.label          = list(kind = "text", empty = TRUE, about = "the head of the ci column"),
+    beta.gelman.label = list(kind = "text", empty = TRUE,
+                             about = "the head of the beta.gelman column"),
+    ci.style          = list(kind = "choice", choices = c("one", "two"),
+                             about = "one: the interval in one column, [LL, UL] | two: LL and UL"),
+    intercept         = list(kind = "choice", choices = c("yes", "no"),
+                             about = "the constant's row, first in the table: yes | no"),
+    intercept.label   = list(kind = "text", about = "the constant's row label"),
+    fit.rows          = list(kind = "columns", none = TRUE,
+                             cols = c("r2", "adj.r2", "f", "delta.r2", "f.change", "n"),
+                             about = c("the fit rows under the predictors, in order: r2, adj.r2, f,",
+                                       "delta.r2 (nested models), f.change (its F test), n, or none")),
+    reference         = list(kind = "choice", choices = c("row", "note", "none"),
+                             about = c("where a dummy-coded variable's reference category is named: row",
+                                       "(after its label) | note (the general note) | none")),
+    reference.label   = list(kind = "text",
+                             about = "the word before the reference category: reference | ref."),
+    variable.headings = list(kind = "choice", choices = c("plain", "italic", "bold"),
+                             about = "how a dummy-coded variable's label row is set: plain | italic | bold"),
+    group.headings    = list(kind = "choice", choices = c("italic", "bold", "plain"),
+                             about = "how a heading row is set: italic | bold | plain")
+  ),
+  logistic = list(
+    title             = list(kind = "text",
+                             about = c("the title when the call gives none; {outcome} is the outcome's",
+                                       "label")),
+    columns           = list(kind = "columns",
+                             cols = c("b", "se", "or", "p", "wald", "ci", "beta.gelman"),
+                             about = c("the columns of each model, in order: b, se, or (the odds ratio),",
+                                       "p, wald, ci (for the odds ratio), beta.gelman")),
+    columns.last      = list(kind = "columns", none = TRUE,
+                             cols = c("b", "se", "or", "p", "wald", "ci", "beta.gelman"),
+                             about = "columns added to the last model only, or none"),
+    stub.label        = list(kind = "text", empty = TRUE, about = "the first column's head"),
+    b.label           = list(kind = "text", empty = TRUE, about = "the head of the b column"),
+    se.label          = list(kind = "text", empty = TRUE, about = "the head of the se column"),
+    or.label          = list(kind = "text", empty = TRUE, about = "the head of the or column"),
+    p.label           = list(kind = "text", empty = TRUE, about = "the head of the p column"),
+    wald.label        = list(kind = "text", empty = TRUE, about = "the head of the wald column"),
+    ci.label          = list(kind = "text", empty = TRUE, about = "the head of the ci column"),
+    beta.gelman.label = list(kind = "text", empty = TRUE,
+                             about = "the head of the beta.gelman column"),
+    ci.style          = list(kind = "choice", choices = c("one", "two"),
+                             about = "one: the interval in one column, [LL, UL] | two: LL and UL"),
+    intercept         = list(kind = "choice", choices = c("yes", "no"),
+                             about = "the constant's row, first in the table: yes | no"),
+    intercept.label   = list(kind = "text", about = "the constant's row label"),
+    fit.rows          = list(kind = "columns", none = TRUE,
+                             cols = c("chisq", "nagelkerke", "cox.snell", "neg2ll", "aic", "n"),
+                             about = c("the fit rows under the predictors, in order: chisq (the model",
+                                       "chi-square), nagelkerke, cox.snell, neg2ll, aic, n, or none")),
+    reference         = list(kind = "choice", choices = c("row", "note", "none"),
+                             about = c("where a dummy-coded variable's reference category is named: row",
+                                       "(after its label) | note (the general note) | none")),
+    reference.label   = list(kind = "text",
+                             about = "the word before the reference category: reference | ref."),
+    variable.headings = list(kind = "choice", choices = c("plain", "italic", "bold"),
+                             about = "how a dummy-coded variable's label row is set: plain | italic | bold"),
+    group.headings    = list(kind = "choice", choices = c("italic", "bold", "plain"),
+                             about = "how a heading row is set: italic | bold | plain")
   )
 )
 
 # The table types, as messages name them, in the file's section order.
 .jst_style_type_nouns <- c(descriptives = "a descriptives table",
-                           frequencies  = "a frequency table")
+                           frequencies  = "a frequency table",
+                           regression   = "a regression table",
+                           logistic     = "a logistic regression table")
 
 #' Internal helper: the built-in styles
 #'
@@ -829,8 +962,11 @@
     },
     columns = {
       x <- tolower(items())
+      # "none" where the setting allows it (columns.last, fit.rows): no
+      # columns, kept as the word so a file writes it back as given.
+      if (isTRUE(sp$none) && length(x) == 1L && identical(x, "none")) return("none")
       if (!length(x) || any(!nzchar(x)) || any(!x %in% sp$cols) || anyDuplicated(x)) {
-        bad(.jst_style_columns_req(sp$cols, type))
+        bad(.jst_style_columns_req(sp$cols, type, none = isTRUE(sp$none)))
       }
       x
     },
@@ -849,12 +985,16 @@
 #'
 #' @param cols Character; the column keys the type knows.
 #' @param type Character(1) or NULL; the table type.
+#' @param none Logical; TRUE when "none" is a value too (columns.last,
+#'   fit.rows).
 #' @return Character(1), the requirement a stop names.
 #' @keywords internal
-.jst_style_columns_req <- function(cols, type) {
+.jst_style_columns_req <- function(cols, type, none = FALSE) {
   noun <- if (!is.null(type) && type %in% names(.jst_style_type_nouns))
             .jst_style_type_nouns[[type]] else "the table"
-  paste0("columns of ", noun, ", each named once: ", .jst_choice_list(cols))
+  lst <- .jst_choice_list(cols)
+  if (none) lst <- paste0(sub("\\.$", "", lst), "; or \"none\".")
+  paste0("columns of ", noun, ", each named once: ", lst)
 }
 
 
@@ -901,6 +1041,48 @@
   s
 }
 
+#' Internal helper: whether a number keeps the zero before its point
+#'
+#' The style's leading.zero setting, read for one kind of number: yes
+#' keeps the zero on every number; no drops it on a statistic that cannot
+#' exceed 1 (p, beta, r, R2 -- APA's rule) and keeps it on any other (b,
+#' SE, a mean); never drops it on every number below 1 (".197" for an SE;
+#' Session 402, item 5).
+#'
+#' @param setting The leading.zero value.
+#' @param bounded Logical; TRUE for a statistic bounded by 1.
+#' @return Logical(1).
+#' @keywords internal
+.jst_tbl_lz <- function(setting, bounded = FALSE) {
+  switch(as.character(setting), yes = TRUE, never = FALSE, no = !bounded, TRUE)
+}
+
+#' Internal helper: format a coefficient, with a near-zero value kept visible
+#'
+#' As \code{.jst_tbl_num()}, except that a value that rounds to zero at
+#' the decimals but is not zero prints with enough places to show its
+#' first digit, as APA's Table 7.17 prints .0002 (Session 402, item 6): a
+#' b of -0.00129 at two decimals prints -0.001, where "0.00" would
+#' misreport the coefficient's sign and size. For b, SE and a confidence
+#' limit, which depend on the predictor's units; a standardized
+#' coefficient keeps the decimals.
+#'
+#' @inheritParams .jst_tbl_num
+#' @keywords internal
+.jst_tbl_coef <- function(x, decimals = 2L, thousands = "comma",
+                          leading.zero = TRUE, minus = "true") {
+  x  <- suppressWarnings(as.numeric(x))
+  dp <- vapply(x, function(v) {
+    if (is.na(v) || !is.finite(v) || v == 0 || round(v, decimals) != 0) {
+      return(as.integer(decimals))
+    }
+    as.integer(min(6L, max(decimals, -floor(log10(abs(v))))))
+  }, integer(1))
+  vapply(seq_along(x), function(i) {
+    .jst_tbl_num(x[i], dp[i], thousands, leading.zero, minus)
+  }, character(1))
+}
+
 #' Internal helper: format a count for a table cell or a note
 #'
 #' @param n Numeric vector of counts.
@@ -916,22 +1098,25 @@
 #' Internal helper: format a p-value for a table cell
 #'
 #' Exact to \code{decimals} places with the floor "<.001" (at 3 places;
-#' "<.01" at 2), the leading zero dropped as APA writes p; or stars alone;
-#' or both, the stars after the value. NA is a blank cell.
+#' "<.01" at 2), the leading zero dropped as APA writes p (kept under
+#' leading.zero = yes, Session 403); or stars alone; or both, the stars
+#' after the value. NA is a blank cell.
 #'
 #' @param p Numeric vector.
 #' @param format "exact", "stars" or "both".
 #' @param decimals Integer.
 #' @param stars The thresholds, largest first.
+#' @param leading.zero Logical; TRUE keeps the zero before the point.
 #' @keywords internal
 .jst_tbl_p <- function(p, format = "exact", decimals = 3L,
-                       stars = c(0.05, 0.01, 0.001)) {
+                       stars = c(0.05, 0.01, 0.001), leading.zero = FALSE) {
   p <- suppressWarnings(as.numeric(p))
   floor_v <- 10^(-decimals)
+  lz <- function(s) if (isTRUE(leading.zero)) s else sub("^0\\.", ".", s)
   exact <- ifelse(is.na(p), "",
                   ifelse(p < floor_v,
-                         paste0("<", sub("^0", "", sprintf(paste0("%.", decimals, "f"), floor_v))),
-                         sub("^0\\.", ".", sprintf(paste0("%.", decimals, "f"), p))))
+                         paste0("<", lz(sprintf(paste0("%.", decimals, "f"), floor_v))),
+                         lz(sprintf(paste0("%.", decimals, "f"), p))))
   st <- .jst_tbl_stars(p, stars)
   switch(format,
          exact = exact,
@@ -1048,7 +1233,8 @@
   fn <- .jst_table_result_fn(x)
   .jst_stop("jtable() does not yet make a table from ",
             if (is.na(fn)) "this kind of result" else paste0("a ", fn, " result"),
-            ".\nIt makes a table from a jdesc() or jfreq() result.", fn = "jtable")
+            ".\nIt makes a table from a jdesc(), jfreq(), jlm(), or jlogistic() ",
+            "result.", fn = "jtable")
 }
 
 #' Internal helper: the analysis function that made a result
@@ -1096,6 +1282,7 @@
   type <- "descriptives"
   key  <- function(k) .jst_style_key(style, type, k)
   dec  <- key("decimals"); thou <- key("thousands"); minus <- key("minus")
+  lz   <- .jst_tbl_lz(key("leading.zero"))
 
   # One frame of terms, each variable with the heading its result's name
   # gives it (a list of results), carried into the heading rows below.
@@ -1157,10 +1344,10 @@
     mm_dp <- min(.jst_data_dp(c(tf$min[i], tf$max[i])), dec)
     cells <- list(
       n    = .jst_tbl_count(raw$n, thou),
-      mean = .jst_tbl_num(raw$mean, dec, thou, TRUE, minus),
-      sd   = .jst_tbl_num(raw$sd, dec, thou, TRUE, minus),
-      min  = .jst_tbl_num(raw$min, mm_dp, thou, TRUE, minus),
-      max  = .jst_tbl_num(raw$max, mm_dp, thou, TRUE, minus))
+      mean = .jst_tbl_num(raw$mean, dec, thou, lz, minus),
+      sd   = .jst_tbl_num(raw$sd, dec, thou, lz, minus),
+      min  = .jst_tbl_num(raw$min, mm_dp, thou, lz, minus),
+      max  = .jst_tbl_num(raw$max, mm_dp, thou, lz, minus))
     rows[[length(rows) + 1L]] <- list(
       kind = "data", label = tf$var_label[i],
       indent = if (is.na(h)) 0L else 1L,
@@ -1169,15 +1356,14 @@
       cells = cells[col_keys], raw = raw[col_keys])
   }
 
-  # The notes: general (N, then the user's text), specific, probability
-  # (none in a descriptives table).
-  general <- character(0)
-  if (identical(key("note.n"), "yes")) {
-    pools <- unique(tf$n_pool)
-    if (length(pools) == 1L && !is.na(pools)) {
-      general <- paste0("*N* = ", .jst_tbl_count(pools, thou), ".")
-    }
-  }
+  # The notes: general (N where the style puts it, then the user's text),
+  # specific, probability (none in a descriptives table). N is written only
+  # when every variable comes from one pool of cases.
+  pools <- unique(tf$n_pool)
+  np <- .jst_table_n_parts(key("n.position"),
+                           if (length(pools) == 1L && !is.na(pools))
+                             paste0("*N* = ", .jst_tbl_count(pools, thou)))
+  general <- np$note
   if (!is.null(note)) general <- c(general, note)
 
   .jst_table_new(
@@ -1185,10 +1371,37 @@
     columns  = columns,
     rows     = rows,
     caption  = list(number = NA_integer_,
-                    title  = if (is.null(title)) key("title") else title),
+                    title  = paste0(if (is.null(title)) key("title") else title,
+                                    np$title)),
     notes    = list(general = general, specific = specific,
                     probability = character(0)),
     style    = style)
+}
+
+#' Internal helper: where a table's N goes (ruling R51)
+#'
+#' n.position = note opens the general note on N; title adds "(N = 103)"
+#' after the title, the call's own included; none writes no N. A table
+#' with no one N to write (variables from different pools of cases) gets
+#' nothing under any setting. The text is marked up for the writers (*N*
+#' italic).
+#'
+#' @param setting The n.position value.
+#' @param n_text NULL, or the sentence's body: "*N* = 103", or the
+#'   models' form when their Ns differ.
+#' @param title_text The text for the title's parenthesis; the same by
+#'   default (shorter for models whose Ns differ).
+#' @return A list: note (character(0) or the sentence) and title ("" or
+#'   the parenthesis to append).
+#' @keywords internal
+.jst_table_n_parts <- function(setting, n_text, title_text = n_text) {
+  if (is.null(n_text) || identical(setting, "none")) {
+    return(list(note = character(0), title = ""))
+  }
+  if (identical(setting, "title")) {
+    return(list(note = character(0), title = paste0(" (", title_text, ")")))
+  }
+  list(note = paste0(n_text, "."), title = "")
 }
 
 #' Internal helper: a table lists each variable once
@@ -1301,7 +1514,8 @@
   key   <- function(k) .jst_style_key(style, type, k)
   thou  <- key("thousands"); minus <- key("minus")
   pdec  <- key("percent.decimals"); mrows <- key("missing.rows")
-  pct   <- function(x) .jst_tbl_num(x, pdec, thou, TRUE, minus)
+  lz    <- .jst_tbl_lz(key("leading.zero"))
+  pct   <- function(x) .jst_tbl_num(x, pdec, thou, lz, minus)
 
   # One block per variable: its rows (the accessor), its counts (the
   # model-level accessor), the heading its result's name gives it.
@@ -1407,15 +1621,13 @@
     }
   }
 
-  # The notes: general (N when the variables share one pool, then the
-  # user's text), specific; no probability note.
-  general <- character(0)
-  if (identical(key("note.n"), "yes")) {
-    pools <- unique(vapply(blocks, function(b) as.numeric(b$n_total), numeric(1)))
-    if (length(pools) == 1L && !is.na(pools)) {
-      general <- paste0("*N* = ", .jst_tbl_count(pools, thou), ".")
-    }
-  }
+  # The notes: general (N when the variables share one pool, where the
+  # style puts it, then the user's text), specific; no probability note.
+  pools <- unique(vapply(blocks, function(b) as.numeric(b$n_total), numeric(1)))
+  np <- .jst_table_n_parts(key("n.position"),
+                           if (length(pools) == 1L && !is.na(pools))
+                             paste0("*N* = ", .jst_tbl_count(pools, thou)))
+  general <- np$note
   if (!is.null(note)) general <- c(general, note)
 
   .jst_table_new(
@@ -1423,10 +1635,496 @@
     columns  = columns,
     rows     = rows,
     caption  = list(number = NA_integer_,
-                    title  = if (is.null(title)) key("title") else title),
+                    title  = paste0(if (is.null(title)) key("title") else title,
+                                    np$title)),
     notes    = list(general = general, specific = roles$specific,
                     probability = character(0)),
     style    = style)
+}
+
+# -----------------------------------------------------------------------------
+# 4c. The regression and logistic builders (jlm() and jlogistic() results;
+#     build 3, Session 403)
+# -----------------------------------------------------------------------------
+#
+# Jeff's Table 3 (the reference, Part 4.1, and Part 1's build-3 decisions):
+# the models of one outcome SIDE BY SIDE, a spanner over each model's
+# columns, the Constant first, the predictors in the models' order, a
+# dummy-coded variable as its label row with its categories indented under
+# it, each named by its value label, the reference category named after
+# the label (reference = row), the fit rows under the predictors, and the
+# notes. One builder serves both classes: a logistic result differs in
+# its columns (the odds ratio in place of beta) and its fit rows. A
+# builder reads the code and the label, never a display string (4.3).
+
+# A jlm() or jlogistic() result: one result, built as a list of one.
+.jst_table_build.jst_lm <- function(x, style, headings = NULL, markers = NULL,
+                                    title = NULL, note = NULL, ...) {
+  .jst_table_build_models(list(x), style, headings, markers, title, note)
+}
+.jst_table_build.jst_logistic <- function(x, style, headings = NULL,
+                                          markers = NULL, title = NULL,
+                                          note = NULL, ...) {
+  .jst_table_build_models(list(x), style, headings, markers, title, note)
+}
+
+#' Internal helper: the regression or logistic table from one or more models
+#'
+#' The models of one outcome side by side, in the order given (the
+#' reference, Part 2.4). The columns are the style's, repeated per model
+#' under a spanner reading "Model 1", "Model 2", ... or the list's names,
+#' with columns.last added to the last model only; the Constant first
+#' (intercept = yes); then the predictors in first-appearance order over
+#' the models, a term's row labelled by its variable label; a dummy-coded
+#' variable of three or more categories as its label row with the
+#' categories indented under it, each named by its value label (its code
+#' where it has none), and a two-category one as one row, "label:
+#' category"; the reference category after the label (reference = row),
+#' in the general note (note) or nowhere (none); then the fit rows the
+#' style asks for, each under its model's first column, with the N row
+#' added when the models' Ns differ (Session 401). Numbers follow the
+#' style: b, SE and a confidence limit with a near-zero value kept visible
+#' (\code{.jst_tbl_coef()}), a standardized coefficient, R2 and p at the
+#' decimals with APA's leading-zero rule, counts whole. The general note:
+#' N where n.position puts it, the reference categories under reference =
+#' note, the beta* definition when the column is shown, then the user's
+#' text; stars' legend when p.format uses them. Models with different Ns
+#' are built, never stopped: the table says so and the console gets the
+#' jcomplete() line (the structure's \code{messages}, which jtable()
+#' prints).
+#'
+#' @param results A list of jst_lm, or of jst_logistic, results; names
+#'   are the model heads.
+#' @inheritParams .jst_table_build
+#' @return A jst_table, with a \code{messages} element (character; the
+#'   notes jtable() prints before the preview).
+#' @keywords internal
+.jst_table_build_models <- function(results, style, headings = NULL,
+                                    markers = NULL, title = NULL,
+                                    note = NULL) {
+  logistic <- inherits(results[[1L]], "jst_logistic")
+  type <- if (logistic) "logistic" else "regression"
+  fn   <- if (logistic) "jlogistic()" else "jlm()"
+  key  <- function(k) .jst_style_key(style, type, k)
+  dec  <- key("decimals"); thou <- key("thousands"); minus <- key("minus")
+  lzs  <- key("leading.zero"); pfmt <- key("p.format"); pdec <- key("p.decimals")
+  stars <- key("stars")
+  lz_u <- .jst_tbl_lz(lzs, FALSE); lz_b <- .jst_tbl_lz(lzs, TRUE)
+  num   <- function(x, bounded = FALSE) {
+    .jst_tbl_num(x, dec, thou, if (bounded) lz_b else lz_u, minus)
+  }
+  coef  <- function(x) .jst_tbl_coef(x, dec, thou, lz_u, minus)
+  pval  <- function(p) .jst_tbl_p(p, pfmt, pdec, stars, lz_b)
+  count <- function(n) .jst_tbl_count(n, thou)
+  use_stars <- !identical(pfmt, "exact")
+  star  <- function(p) if (use_stars) .jst_tbl_stars(p, stars) else ""
+  whole <- function(x) formatC(round(x), format = "d")
+
+  if (!is.null(headings)) {
+    .jst_stop("headings = puts the variables of a descriptives or frequency ",
+              "table under role headings; ", .jst_style_type_nouns[[type]],
+              " lists the predictors in the models' order.", fn = "jtable")
+  }
+
+  # Each result's fields, as this build stores them: a result made before
+  # them stops with its version (as the other builders stop).
+  nm <- length(results)
+  terms <- vector("list", nm); mods <- vector("list", nm)
+  groups <- vector("list", nm)
+  for (i in seq_len(nm)) {
+    r  <- results[[i]]
+    tf <- .jst_apa_terms(r); md <- .jst_apa_model(r); gr <- r$dummy_groups
+    ok <- !is.null(attr(r, "jstats_version", exact = TRUE)) &&
+      !is.null(tf) && !is.null(md) && !is.null(r$formula_used) &&
+      all(vapply(gr, function(g) !is.null(g$codes), logical(1)))
+    if (!ok) {
+      .jst_stop("this ", fn, " result was made by ",
+                .jst_table_result_version(r),
+                ", before the fields a table needs were stored.\n",
+                "Run the analysis again, then jtable() on the new result.",
+                fn = "jtable")
+    }
+    terms[[i]] <- tf; mods[[i]] <- md; groups[[i]] <- gr
+  }
+
+  # One outcome: models of different outcomes are tables of their own.
+  outs <- vapply(results, function(r) {
+    unname(attr(r$coefficients_raw, "outcome")["name"])
+  }, character(1))
+  if (length(unique(outs)) > 1L) {
+    .jst_stop("jtable() does not yet put models of different outcomes (",
+              .jst_and_list(unique(outs)), ") in one table.\n",
+              "Give it the models of one outcome at a time.", fn = "jtable")
+  }
+  out_label <- unname(attr(results[[1L]]$coefficients_raw, "outcome")["label"])
+  if (is.na(out_label) || !nzchar(out_label)) out_label <- outs[1L]
+
+  # The model heads: the list's names, else "Model 1", "Model 2", ...
+  nms   <- names(results)
+  named <- !is.null(nms) && any(nzchar(nms))
+  heads <- paste("Model", seq_len(nm))
+  if (named) heads[nzchar(nms)] <- nms[nzchar(nms)]
+
+  # The columns, per model: the style's, and columns.last for the last.
+  col_keys  <- key("columns")
+  last_cols <- key("columns.last")
+  last_cols <- if (identical(last_cols, "none")) character(0)
+               else setdiff(last_cols, col_keys)
+  ci_two    <- identical(key("ci.style"), "two")
+  keys_of   <- lapply(seq_len(nm), function(i) {
+    c(col_keys, if (i == nm) last_cols)
+  })
+  columns <- data.frame(key = "stub", label = key("stub.label"), kind = "text",
+                        italic = FALSE, stringsAsFactors = FALSE)
+  row1 <- list(); row2 <- list()
+  first_col <- character(nm)      # each model's first column key
+  pos <- 1L
+  for (i in seq_len(nm)) {
+    from <- pos + 1L
+    for (k in keys_of[[i]]) {
+      lab  <- key(paste0(k, ".label"))
+      ital <- .jst_tbl_head_italic(type, k, lab)
+      if (identical(k, "ci") && ci_two) {
+        columns <- rbind(columns, data.frame(
+          key = paste0("m", i, ".", c("ci.lower", "ci.upper")),
+          label = c("LL", "UL"), kind = "number", italic = FALSE,
+          stringsAsFactors = FALSE))
+        row2[[length(row2) + 1L]] <- list(label = lab, from = pos + 1L,
+                                          to = pos + 2L)
+        pos <- pos + 2L
+      } else {
+        columns <- rbind(columns, data.frame(
+          key = paste0("m", i, ".", k), label = lab, kind = "number",
+          italic = ital, stringsAsFactors = FALSE))
+        pos <- pos + 1L
+      }
+      if (!nzchar(first_col[i])) first_col[i] <- paste0("m", i, ".", k)
+    }
+    row1[[length(row1) + 1L]] <- list(label = heads[i], from = from, to = pos)
+  }
+  rownames(columns) <- NULL
+  spanners <- list()
+  if (nm > 1L || named) spanners <- c(spanners, list(row1))
+  if (length(row2)) spanners <- c(spanners, list(row2))
+  if (!length(spanners)) spanners <- NULL
+  num_keys <- columns$key[-1L]
+
+  # The row plan: the terms of every model in first-appearance order, a
+  # dummy-coded variable's terms gathered under its variable.
+  group_of <- function(i, term) {
+    for (v in names(groups[[i]])) {
+      if (term %in% groups[[i]][[v]]$dummy) return(v)
+    }
+    NA_character_
+  }
+  plan <- list(); seen <- character(0)
+  for (i in seq_len(nm)) {
+    tf <- terms[[i]]
+    for (j in seq_len(nrow(tf))) {
+      tk <- tf$term[j]
+      if (identical(tk, "(Intercept)")) next
+      v  <- group_of(i, tk)
+      id <- if (is.na(v)) paste0("term:", tk) else paste0("group:", v)
+      if (id %in% seen) next
+      seen <- c(seen, id)
+      plan[[length(plan) + 1L]] <- if (is.na(v)) {
+        list(kind = "term", var = tk, term = tk,
+             label = if (is.na(tf$label[j]) || !nzchar(tf$label[j])) tk
+                     else tf$label[j])
+      } else {
+        list(kind = "group", var = v)
+      }
+    }
+  }
+  # A dummy-coded variable's categories: the first model's, in code order,
+  # and any a later model adds; the reference is the one with no dummy.
+  group_cats <- function(v) {
+    codes <- character(0); labs <- character(0); dums <- character(0)
+    var_label <- v
+    for (i in seq_len(nm)) {
+      g <- groups[[i]][[v]]
+      if (is.null(g)) next
+      if (identical(var_label, v) && !is.null(g$var_label)) var_label <- g$var_label
+      for (k in seq_along(g$codes)) {
+        cd <- as.character(g$codes[k])
+        if (cd %in% codes) next
+        codes <- c(codes, cd); labs <- c(labs, g$value_labels[k])
+        dums  <- c(dums, g$dummy[k])
+      }
+    }
+    list(var_label = var_label, codes = codes, dummy = dums,
+         names = ifelse(!is.na(labs) & nzchar(labs), labs, codes))
+  }
+
+  # markers = marks a predictor's row: a term's, or a dummy-coded
+  # variable's label row.
+  vars  <- vapply(plan, function(p) p$var, character(1))
+  roles <- .jst_table_roles(vars, rep(NA_character_, length(vars)), NULL,
+                            markers, key("marks"))
+  mark_of <- roles$marks
+
+  # The cells of one term in one model, by column key; "" where the model
+  # lacks the term. Stars go on b when the table has no p column.
+  cell_of <- function(i, term, k) {
+    tf <- terms[[i]]
+    r  <- tf[tf$term == term, , drop = FALSE]
+    if (!nrow(r)) return("")
+    is_int <- identical(term, "(Intercept)")
+    switch(k,
+           b           = paste0(coef(r$b), if (!"p" %in% keys_of[[i]]) star(r$p)),
+           se          = coef(r$SE),
+           beta        = if (is_int) "" else num(r$beta, TRUE),
+           beta.gelman = if (is_int) "" else num(r$beta_gelman),
+           p           = pval(r$p),
+           t           = num(r$t),
+           wald        = num(r$Wald),
+           or          = num(r$exp_b),
+           ci          = if (logistic) {
+             paste0("[", coef(r$exp_ci_lower), ", ", coef(r$exp_ci_upper), "]")
+           } else {
+             paste0("[", coef(r$ci_lower), ", ", coef(r$ci_upper), "]")
+           },
+           ci.lower    = coef(if (logistic) r$exp_ci_lower else r$ci_lower),
+           ci.upper    = coef(if (logistic) r$exp_ci_upper else r$ci_upper),
+           "")
+  }
+  term_cells <- function(term) {
+    cells <- stats::setNames(vector("list", length(num_keys)), num_keys)
+    for (ck in num_keys) {
+      i <- as.integer(sub("^m([0-9]+)\\..*$", "\\1", ck))
+      k <- sub("^m[0-9]+\\.", "", ck)
+      cells[[ck]] <- cell_of(i, term, k)
+    }
+    cells
+  }
+  data_row <- function(label, indent, cells, marks = character(0),
+                       markup = FALSE, tail = "", span = NULL) {
+    list(kind = "data", label = label, indent = indent, marks = marks,
+         cells = cells, raw = list(), markup = markup, tail = tail,
+         span = span)
+  }
+  ref_set <- key("reference"); ref_word <- key("reference.label")
+  ref_of  <- function(ref_name) {
+    if (identical(ref_set, "row")) paste0(" (", ref_word, " = ", ref_name, ")")
+    else ""
+  }
+
+  rows <- list(); ref_notes <- character(0)
+  # The Constant, first.
+  if (identical(key("intercept"), "yes") &&
+      any(vapply(terms, function(tf) "(Intercept)" %in% tf$term, logical(1)))) {
+    rows[[length(rows) + 1L]] <- data_row(key("intercept.label"), 0L,
+                                          term_cells("(Intercept)"))
+  }
+  for (p in plan) {
+    marks <- if (is.null(mark_of[[p$var]])) character(0) else mark_of[[p$var]]
+    if (identical(p$kind, "term")) {
+      rows[[length(rows) + 1L]] <- data_row(p$label, 0L, term_cells(p$term), marks)
+      next
+    }
+    g   <- group_cats(p$var)
+    ref <- which(is.na(g$dummy))
+    ref_name <- if (length(ref)) g$names[ref[1L]] else NA_character_
+    cats <- which(!is.na(g$dummy))
+    if (identical(ref_set, "note") && !is.na(ref_name)) {
+      ref_notes <- c(ref_notes, paste0("Reference category for ", g$var_label,
+                                       ": ", ref_name, "."))
+    }
+    # The reference parenthetical is the row's tail: after the label and
+    # any mark on it.
+    suffix <- if (!is.na(ref_name)) ref_of(ref_name) else ""
+    if (length(cats) == 1L) {
+      # A two-category variable: one row, "label: category" (Session 402,
+      # item 7).
+      rows[[length(rows) + 1L]] <- data_row(
+        paste0(g$var_label, ": ", g$names[cats]), 0L,
+        term_cells(g$dummy[cats]), marks, tail = suffix)
+      next
+    }
+    rows[[length(rows) + 1L]] <- list(kind = "heading", level = "variable",
+                                      label = g$var_label, indent = 0L,
+                                      marks = marks, cells = list(),
+                                      raw = list(), tail = suffix)
+    for (k in cats) {
+      rows[[length(rows) + 1L]] <- data_row(g$names[k], 1L,
+                                            term_cells(g$dummy[k]))
+    }
+  }
+
+  # The fit rows, each under its model's first column.
+  ns <- vapply(mods, function(m) as.numeric(m$n), numeric(1))
+  ns_differ <- length(unique(ns)) > 1L
+  fit_keys  <- key("fit.rows")
+  fit_none  <- identical(fit_keys, "none")
+  if (fit_none) fit_keys <- character(0)
+  if (ns_differ && !fit_none && !"n" %in% fit_keys) fit_keys <- c(fit_keys, "n")
+  messages <- character(0)
+  # Delta R2 and its F test need nested models on one set of cases.
+  nested <- !ns_differ && nm > 1L && all(vapply(seq_len(nm)[-1L], function(i) {
+    all(terms[[i - 1L]]$term %in% terms[[i]]$term)
+  }, logical(1)))
+  if (!logistic && any(c("delta.r2", "f.change") %in% fit_keys) && !nested) {
+    gone <- intersect(c("delta.r2", "f.change"), fit_keys)
+    messages <- c(messages, paste0(
+      "Note: the ", .jst_and_list(c(delta.r2 = "delta R2", f.change = "F change")[gone]),
+      if (length(gone) == 1L) " row is" else " rows are",
+      " left out: ", if (length(gone) == 1L) "it needs" else "they need",
+      " nested models -- each holding every predictor of the one before ",
+      "it -- fit on the same cases."))
+    fit_keys <- setdiff(fit_keys, gone)
+  }
+  n_pred <- vapply(terms, function(tf) sum(tf$term != "(Intercept)"), integer(1))
+  fit_cell <- function(k, i) {
+    m <- mods[[i]]
+    if (logistic) {
+      switch(k,
+             chisq      = paste0(num(m$chi_sq), star(m$omnibus_p), " (",
+                                 whole(m$omnibus_df), ")"),
+             nagelkerke = num(m$nagelkerke_r2, TRUE),
+             cox.snell  = num(m$cox_snell_r2, TRUE),
+             neg2ll     = num(-2 * m$ll_model),
+             aic        = num(m$aic),
+             n          = count(m$n),
+             "")
+    } else {
+      switch(k,
+             r2       = num(m$r_squared, TRUE),
+             adj.r2   = num(m$adj_r_squared, TRUE),
+             f        = paste0(num(m$f_value), star(m$f_p), " (", whole(m$f_df1),
+                               ", ", whole(m$f_df2), ")"),
+             delta.r2 = if (i == 1L) "" else
+               num(m$r_squared - mods[[i - 1L]]$r_squared, TRUE),
+             f.change = if (i == 1L) "" else {
+               d1 <- n_pred[i] - n_pred[i - 1L]; d2 <- m$df_residual
+               fc <- ((m$r_squared - mods[[i - 1L]]$r_squared) / d1) /
+                 ((1 - m$r_squared) / d2)
+               pc <- stats::pf(fc, d1, d2, lower.tail = FALSE)
+               paste0(num(fc), star(pc), " (", whole(d1), ", ", whole(d2), ")")
+             },
+             n        = count(m$n),
+             "")
+    }
+  }
+  fit_labels <- if (logistic) {
+    c(chisq = "Model \u03c7\u00b2", nagelkerke = "Nagelkerke *R*\u00b2",
+      cox.snell = "Cox and Snell *R*\u00b2", neg2ll = "\u22122 log likelihood",
+      aic = "AIC", n = "*N*")
+  } else {
+    c(r2 = "*R*\u00b2", adj.r2 = "Adjusted *R*\u00b2", f = "*F*",
+      delta.r2 = "\u0394*R*\u00b2", f.change = "\u0394*F*", n = "*N*")
+  }
+  # A fit cell spans its model's columns: its value sits on the b
+  # column's point, and the df that follow an F or a chi-square run on
+  # into the model's other columns, empty in a fit row, instead of
+  # widening b (Session 403).
+  spans <- lapply(row1, function(sp) c(sp$from, sp$to))
+  for (k in fit_keys) {
+    cells <- stats::setNames(as.list(rep("", length(num_keys))), num_keys)
+    for (i in seq_len(nm)) cells[[first_col[i]]] <- fit_cell(k, i)
+    rows[[length(rows) + 1L]] <- data_row(fit_labels[[k]], 0L, cells,
+                                          markup = TRUE, span = spans)
+  }
+
+  # The notes: N where n.position puts it (the models' Ns when they
+  # differ), the reference categories, the beta* definition with its
+  # column, the user's text; the stars' legend when stars are shown.
+  n_text <- if (!ns_differ) {
+    paste0("*N* = ", count(ns[1L]))
+  } else {
+    parts <- vapply(unique(ns), function(u) {
+      paste0(count(u), " (", .jst_table_model_list(heads[ns == u]), ")")
+    }, character(1))
+    paste0("*N* differs by model: ", paste(parts, collapse = ", "))
+  }
+  np <- .jst_table_n_parts(key("n.position"), n_text,
+                           if (ns_differ) "*N* differs by model" else n_text)
+  general <- c(np$note, ref_notes)
+  if ("beta.gelman" %in% unlist(keys_of)) {
+    general <- c(general, paste0(
+      "\u03b2* = Gelman's (2008) standardized coefficient: each continuous ",
+      "predictor divided by two standard deviations, each binary predictor ",
+      "kept at 0 and 1."))
+  }
+  if (!is.null(note)) general <- c(general, note)
+  probability <- if (use_stars) .jst_tbl_stars_legend(stars) else character(0)
+
+  # The console note when the Ns differ: each model's N, and the
+  # jcomplete() line that puts them on one set of cases (Session 401).
+  if (ns_differ) {
+    vars_all <- character(0)
+    for (i in seq_len(nm)) {
+      av <- all.vars(results[[i]]$formula_used)
+      for (v in names(groups[[i]])) av[av %in% groups[[i]][[v]]$dummy] <- v
+      vars_all <- union(vars_all, av)
+    }
+    dn <- results[[which.max(ns)]]$data_name
+    dk <- if (is.character(dn) && length(dn) == 1L && !is.na(dn) && nzchar(dn)) {
+      tryCatch(.jst_data_arg_kind(str2lang(dn)), error = function(e) "expression")
+    } else "expression"
+    data_txt <- if (dk %in% c("name", "place")) dn else "mydata"
+    pre <- if (identical(data_txt, "mydata") && is.character(dn) &&
+               length(dn) == 1L && !is.na(dn) && nzchar(dn)) {
+      paste0("  mydata <- ", dn, "\n")
+    }
+    parts <- vapply(unique(ns), function(u) {
+      paste0(.jst_table_model_list(heads[ns == u]), ": ", count(u))
+    }, character(1))
+    messages <- c(messages, paste0(
+      "Note: the models were fit on different numbers of cases (",
+      paste(parts, collapse = "; "), "); the table's note says so.\n",
+      "To fit every model on the same cases, run jcomplete() on the ",
+      "largest model's variables, then the models again:\n",
+      pre, "  jcomplete(", data_txt, ", ", paste(vars_all, collapse = ", "), ")"))
+  }
+
+  tbl <- .jst_table_new(
+    type     = type,
+    columns  = columns,
+    rows     = rows,
+    caption  = list(number = NA_integer_,
+                    title  = paste0(
+                      if (is.null(title)) gsub("{outcome}", out_label, key("title"),
+                                               fixed = TRUE)
+                      else title,
+                      np$title)),
+    notes    = list(general = general, specific = roles$specific,
+                    probability = probability),
+    spanners = spanners,
+    style    = style)
+  tbl$messages <- messages
+  tbl
+}
+
+#' Internal helper: a list of model heads, for a note
+#'
+#' "Model 2", "Model 3" and "Model 4" become "Models 2, 3, and 4"; named
+#' heads are listed as given.
+#'
+#' @param heads Character; the heads.
+#' @keywords internal
+.jst_table_model_list <- function(heads) {
+  if (length(heads) > 1L && all(grepl("^Model [0-9]+$", heads))) {
+    return(paste0("Models ", .jst_and_list(sub("^Model ", "", heads))))
+  }
+  .jst_and_list(heads)
+}
+
+#' Internal helper: the variables of a result that headings = and markers =
+#' may name
+#'
+#' A descriptives or frequency result's variables; a model's predictors --
+#' each term as the coefficient table keys it, a dummy-coded variable by
+#' its own name (the intercept aside).
+#'
+#' @param r A result.
+#' @return Character, possibly empty.
+#' @keywords internal
+.jst_table_result_vars <- function(r) {
+  tf <- .jst_apa_terms(r)
+  if (is.null(tf)) return(character(0))
+  if (!inherits(r, c("jst_lm", "jst_logistic"))) return(tf$variable)
+  dummies <- unlist(lapply(r$dummy_groups, function(g) g$dummy))
+  c(setdiff(tf$term, c("(Intercept)", dummies)), names(r$dummy_groups))
 }
 
 #' Internal helper: the version a result was made by, for a stop
@@ -1493,11 +2191,13 @@
   txt <- function(s) gsub("\u2212", "-", s, fixed = TRUE)
 
   # The stub column's text: a heading, or a label with its marks and its
-  # indent.
+  # indent; a fit row's label carries markup, stripped here.
   stub <- vapply(tbl$rows, function(r) {
-    paste0(strrep(" ", 2L * r$indent), txt(r$label),
+    paste0(strrep(" ", 2L * r$indent),
+           txt(if (isTRUE(r$markup)) .jst_table_strip_markup(r$label) else r$label),
            if (length(r$marks)) paste0(.jst_table_mark_text(r$marks), collapse = "")
-           else "")
+           else "",
+           if (is.null(r$tail)) "" else txt(r$tail))
   }, character(1))
   # The number columns: whole part and tail (the point and what follows),
   # so the cells align on the point as a decimal tab aligns them.
@@ -1507,22 +2207,49 @@
       if (identical(r$kind, "heading")) "" else txt(r$cells[[k]])
     }, character(1))
   })
+  # A number may open on a sign, a "<" (p's floor) or a "[" (a confidence
+  # interval), and may have no digit before the point (".38"): the head
+  # is everything before the point, so the points line up as the decimal
+  # tab lines them up in the file, and the "<" hangs to the left.
   split_num <- function(s) {
-    is_num <- grepl("^[-+]?[0-9]", s)
-    head <- ifelse(is_num, sub("^([-+]?[0-9,]*)(.*)$", "\\1", s), s)
-    tail <- ifelse(is_num, sub("^([-+]?[0-9,]*)(.*)$", "\\2", s), "")
+    is_num <- grepl("^[<>\\[]?[-+]?([0-9]|\\.[0-9])", s)
+    head <- ifelse(is_num, sub("^([<>\\[]?[-+]?[0-9,]*)(.*)$", "\\1", s), s)
+    tail <- ifelse(is_num, sub("^([<>\\[]?[-+]?[0-9,]*)(.*)$", "\\2", s), "")
     list(head = head, tail = tail)
   }
   parts  <- lapply(body, split_num)
   heads  <- cols$label
+  # A spanning cell (a fit row's, across its model's columns): its whole
+  # part sets the column's width with the other cells', its tail runs on
+  # past the column, so the tail is left out here.
+  span_from <- function(r, j) {
+    if (is.null(r$span)) return(FALSE)
+    any(vapply(r$span, function(sp) sp[1L] == j, logical(1)))
+  }
+  spanning <- vapply(seq_len(nc), function(j) {
+    vapply(tbl$rows, span_from, logical(1), j = j)
+  }, logical(length(tbl$rows)))
+  spanning <- matrix(spanning, nrow = length(tbl$rows))
   widths <- integer(nc)
   widths[1L] <- max(.jst_dw(heads[1L]), .jst_dw(stub), 0L)
+  hws <- integer(nc); tws <- integer(nc)
   for (j in seq_len(nc)[-1L]) {
     p  <- parts[[j - 1L]]
-    hw <- max(.jst_dw(p$head), 0L); tw <- max(.jst_dw(p$tail), 0L)
+    hw <- max(.jst_dw(p$head), 0L)
+    tw <- max(.jst_dw(p$tail[!spanning[, j]]), 0L)
+    hws[j] <- hw; tws[j] <- tw
     widths[j] <- max(.jst_dw(heads[j]), hw + tw)
   }
   gap <- "  "
+  for (i in seq_along(tbl$rows)) {
+    for (sp in tbl$rows[[i]]$span) {
+      from <- sp[1L]; to <- sp[2L]
+      p <- parts[[from - 1L]]
+      need <- widths[from] - tws[from] + .jst_dw(p$tail[i])
+      have <- sum(widths[from:to]) + 2L * (to - from)
+      if (need > have) widths[to] <- widths[to] + (need - have)
+    }
+  }
   total <- sum(widths) + 2L * (nc - 1L)
   rule  <- strrep("-", total)
   pad_l <- function(s, w) paste0(s, strrep(" ", pmax(0L, w - .jst_dw(s))))
@@ -1533,22 +2260,24 @@
   }
   emit <- function(line) cat(sub("[ ]+$", "", line), "\n", sep = "")
 
-  # The caption.
-  form <- key("caption.form")
-  cap  <- paste0("Table ", number)
+  # The caption (its title's markup -- the N a style puts there -- stripped).
+  form  <- key("caption.form")
+  cap   <- paste0("Table ", number)
+  ttl   <- txt(.jst_table_strip_markup(tbl$caption$title))
   if (identical(form, "apa")) {
-    cat(cap, "\n", tbl$caption$title, "\n", sep = "")
+    cat(cap, "\n", ttl, "\n", sep = "")
   } else if (identical(form, "report")) {
-    cat(cap, ": ", tbl$caption$title, "\n", sep = "")
+    cat(cap, ": ", ttl, "\n", sep = "")
   } else {
-    cat(cap, ". ", tbl$caption$title, "\n", sep = "")
+    cat(cap, ". ", ttl, "\n", sep = "")
   }
   emit(rule)
-  # Spanners, centered over their columns.
-  if (length(tbl$spanners)) {
+  # Spanners, each row centered over its columns: a list of rows, the top
+  # row first (the models, then a confidence interval's LL and UL).
+  for (srow in tbl$spanners) {
     line <- ""
     at <- 1L
-    for (sp in tbl$spanners) {
+    for (sp in srow) {
       from <- sp$from; to <- sp$to
       w <- sum(widths[from:to]) + 2L * (to - from)
       lead <- if (from > at) sum(widths[at:(from - 1L)]) + 2L * (from - at) else 0L
@@ -1562,14 +2291,25 @@
                vapply(seq_len(nc)[-1L], function(j) ctr(heads[j], widths[j]),
                       character(1))), collapse = gap))
   emit(rule)
-  # The rows.
+  # The rows; a spanning cell laid across its columns, on the first's
+  # point.
   for (i in seq_along(tbl$rows)) {
     cells <- pad_l(stub[i], widths[1L])
-    for (j in seq_len(nc)[-1L]) {
+    j <- 2L
+    while (j <= nc) {
       p  <- parts[[j - 1L]]
-      hw <- max(.jst_dw(p$head), 0L); tw <- max(.jst_dw(p$tail), 0L)
-      cell <- paste0(pad_r(p$head[i], hw), pad_l(p$tail[i], tw))
-      cells <- c(cells, pad_r(cell, widths[j]))
+      hw <- hws[j]; tw <- tws[j]
+      to <- j
+      for (sp in tbl$rows[[i]]$span) if (sp[1L] == j) to <- sp[2L]
+      if (to > j) {
+        cell <- paste0(strrep(" ", widths[j] - hw - tw), pad_r(p$head[i], hw),
+                       p$tail[i])
+        cells <- c(cells, pad_l(cell, sum(widths[j:to]) + 2L * (to - j)))
+      } else {
+        cell <- paste0(pad_r(p$head[i], hw), pad_l(p$tail[i], tw))
+        cells <- c(cells, pad_r(cell, widths[j]))
+      }
+      j <- to + 1L
     }
     emit(paste(cells, collapse = gap))
   }
@@ -1623,11 +2363,22 @@
   }
   if (plain) {
     out <- gsub("\\^([a-z]+)\\^", "^\\1", out)
-    out <- gsub("\\^([^^]+)\\^", "\\1", out)
-    out <- gsub("\\*([^*]+)\\*", "\\1", out)
+    out <- .jst_table_strip_markup(out)
     out <- gsub("\u2212", "-", out, fixed = TRUE)
   }
   out
+}
+
+#' Internal helper: strip the light markup for the console
+#'
+#' \code{*italic*} and \code{^superscript^} lose their marks; the text
+#' stays.
+#'
+#' @param x Character vector.
+#' @keywords internal
+.jst_table_strip_markup <- function(x) {
+  x <- gsub("\\^([^^]+)\\^", "\\1", x)
+  gsub("\\*([^*]+)\\*", "\\1", x)
 }
 
 
@@ -1688,27 +2439,36 @@
          "</w:r>")
 }
 
-#' Internal helper: the runs of a marked-up note line
+#' Internal helper: the runs of a marked-up line
 #'
-#' Reads the light markup: *text* italic, ^text^ superscript.
+#' Reads the light markup: *text* italic, ^text^ superscript. Under an
+#' italic base (an apa caption's title) *text* is set upright, as a word
+#' that would be italic is set inside italic text.
 #'
 #' @param s Character(1); the line.
 #' @param size Points.
+#' @param bold,italic Logical; the base style of the line (Session 403: a
+#'   caption's title, a fit row's label).
 #' @keywords internal
-.jst_docx_markup_runs <- function(s, size = NULL) {
+.jst_docx_markup_runs <- function(s, size = NULL, bold = FALSE, italic = FALSE) {
   out <- character(0)
   rest <- s
   while (nzchar(rest)) {
     m <- regexpr("\\*[^*]+\\*|\\^[^^]+\\^", rest)
     if (m < 0L) {
-      out <- c(out, .jst_docx_run(rest, size = size)); break
+      out <- c(out, .jst_docx_run(rest, bold = bold, italic = italic, size = size))
+      break
     }
-    if (m > 1L) out <- c(out, .jst_docx_run(substr(rest, 1L, m - 1L), size = size))
+    if (m > 1L) {
+      out <- c(out, .jst_docx_run(substr(rest, 1L, m - 1L), bold = bold,
+                                  italic = italic, size = size))
+    }
     tok <- substr(rest, m, m + attr(m, "match.length") - 1L)
     inner <- substr(tok, 2L, nchar(tok) - 1L)
     out <- c(out, if (startsWith(tok, "*"))
-      .jst_docx_run(inner, italic = TRUE, size = size)
-      else .jst_docx_run(inner, superscript = TRUE, size = size))
+      .jst_docx_run(inner, bold = bold, italic = !italic, size = size)
+      else .jst_docx_run(inner, bold = bold, italic = italic, superscript = TRUE,
+                         size = size))
     rest <- substr(rest, m + attr(m, "match.length"), nchar(rest))
   }
   paste(out, collapse = "")
@@ -1724,10 +2484,14 @@
 #' @param keep_next Logical.
 #' @param spacing_after Points after the paragraph, or NULL.
 #' @param line "single" or "double".
+#' @param size Points, or NULL: the paragraph mark's size, which sets the
+#'   height of an EMPTY cell -- given when a table is fitted to the page
+#'   at a size below the document's, so an empty cell does not hold its
+#'   row at the larger height (Session 403).
 #' @keywords internal
 .jst_docx_par <- function(runs, style = NULL, jc = NULL, ind = NULL,
                           tab = NULL, keep_next = FALSE,
-                          spacing_after = NULL, line = "single") {
+                          spacing_after = NULL, line = "single", size = NULL) {
   ppr <- c(if (!is.null(style)) paste0("<w:pStyle w:val=\"", style, "\"/>"),
            if (keep_next) "<w:keepNext/>",
            if (!is.null(tab)) paste0("<w:tabs><w:tab w:val=\"decimal\" w:pos=\"",
@@ -1737,7 +2501,9 @@
                   "\" w:line=\"", if (identical(line, "double")) 480 else 240,
                   "\" w:lineRule=\"auto\"/>"),
            if (!is.null(ind)) paste0("<w:ind w:left=\"", ind, "\"/>"),
-           if (!is.null(jc)) paste0("<w:jc w:val=\"", jc, "\"/>"))
+           if (!is.null(jc)) paste0("<w:jc w:val=\"", jc, "\"/>"),
+           if (!is.null(size)) paste0("<w:rPr><w:sz w:val=\"", size * 2,
+                                      "\"/><w:szCs w:val=\"", size * 2, "\"/></w:rPr>"))
   paste0("<w:p><w:pPr>", paste(ppr, collapse = ""), "</w:pPr>", runs, "</w:p>")
 }
 
@@ -1769,20 +2535,24 @@
 .jst_docx_caption_pars <- function(tbl, style, number) {
   key  <- function(k) .jst_style_key(style, tbl$type, k)
   form <- key("caption.form"); size <- key("caption.size")
+  # The title's markup: the N a style puts after it (n.position = title)
+  # is "*N* = 103", N upright inside apa's italic title and italic in the
+  # other forms.
   title <- tbl$caption$title
   if (identical(form, "apa")) {
     c(.jst_docx_par(.jst_docx_seq_runs(number, TRUE, size), style = "Caption",
                     keep_next = TRUE),
-      .jst_docx_par(.jst_docx_run(title, italic = TRUE, size = size),
+      .jst_docx_par(.jst_docx_markup_runs(title, size = size, italic = TRUE),
                     keep_next = TRUE, spacing_after = 6))
   } else if (identical(form, "report")) {
     .jst_docx_par(paste0(.jst_docx_seq_runs(number, TRUE, size),
-                         .jst_docx_run(paste0(": ", title), bold = TRUE, size = size)),
+                         .jst_docx_markup_runs(paste0(": ", title), size = size,
+                                               bold = TRUE)),
                   style = "Caption", keep_next = TRUE, spacing_after = 6)
   } else {
     .jst_docx_par(paste0(.jst_docx_seq_runs(number, TRUE, size),
                          .jst_docx_run(".", bold = TRUE, size = size),
-                         .jst_docx_run(paste0(" ", title), size = size)),
+                         .jst_docx_markup_runs(paste0(" ", title), size = size)),
                   style = "Caption", keep_next = TRUE, spacing_after = 6)
   }
 }
@@ -1792,10 +2562,12 @@
 #' @param tbl A jst_table.
 #' @param style The style list.
 #' @param keep_next Logical; for a note inside a row.
+#' @param size Points, or NULL for the style's note.size (a table fitted
+#'   to the page steps it down with the table's size, Session 403).
 #' @return Character; one paragraph per note line.
 #' @keywords internal
-.jst_docx_note_pars <- function(tbl, style, keep_next = FALSE) {
-  size  <- .jst_style_key(style, tbl$type, "note.size")
+.jst_docx_note_pars <- function(tbl, style, keep_next = FALSE, size = NULL) {
+  if (is.null(size)) size <- .jst_style_key(style, tbl$type, "note.size")
   lines <- .jst_table_note_lines(tbl, style, plain = FALSE)
   vapply(lines, function(ln) {
     .jst_docx_par(.jst_docx_markup_runs(ln, size = size), keep_next = keep_next)
@@ -1907,13 +2679,21 @@
 #' @param style The style list.
 #' @param number The table's number (for a caption row).
 #' @param widths Column widths in dxa.
+#' @param size,note_size Points, or NULL for the style's size and
+#'   note.size: a table fitted to the page passes the stepped-down sizes
+#'   (Session 403).
 #' @return Character(1); the w:tbl element.
 #' @keywords internal
-.jst_docx_table <- function(tbl, style, number, widths) {
+.jst_docx_table <- function(tbl, style, number, widths, size = NULL,
+                            note_size = NULL) {
   type <- tbl$type
   key  <- function(k) .jst_style_key(style, type, k)
   cols <- tbl$columns; nc <- nrow(cols)
-  size <- key("size"); line <- key("line.spacing")
+  if (is.null(size)) size <- key("size")
+  # The paragraph mark's size, set only when the table is fitted below the
+  # document's size, so the XML of an unfitted table is unchanged.
+  msz  <- if (!identical(as.numeric(size), as.numeric(key("size")))) size else NULL
+  line <- key("line.spacing")
   rules <- key("rules"); rcol <- key("rule.color")
   hfill <- key("header.fill"); bfill <- key("band.fill")
   hfill <- if (identical(hfill, "none")) NULL else hfill
@@ -1947,31 +2727,36 @@
                          .jst_docx_cell(pars, total, nil, span = nc), "</w:tr>"))
   }
 
-  # Spanners over the header (none in a descriptives table).
-  if (length(tbl$spanners)) {
+  # Spanner rows over the header (a regression table's models, then a
+  # confidence interval's LL and UL): the top row carries the table's top
+  # rule, each spanner a rule under its label; an empty cell where a row
+  # spans nothing.
+  for (si in seq_along(tbl$spanners)) {
+    srow  <- tbl$spanners[[si]]
+    top   <- draw_h && si == 1L
     cells <- character(0); at <- 1L
-    for (sp in tbl$spanners) {
+    for (sp in srow) {
       if (sp$from > at) {
         for (j in at:(sp$from - 1L)) {
           cells <- c(cells, .jst_docx_cell(
-            .jst_docx_par("", keep_next = TRUE, line = line), widths[j],
-            .jst_docx_borders(rules, draw_h, FALSE, grid || (outer && j == 1L),
+            .jst_docx_par("", keep_next = TRUE, line = line, size = msz), widths[j],
+            .jst_docx_borders(rules, top, FALSE, grid || (outer && j == 1L),
                               grid || (outer && j == nc), rcol), fill = hfill))
         }
       }
       w <- sum(widths[sp$from:sp$to])
       cells <- c(cells, .jst_docx_cell(
         .jst_docx_par(.jst_docx_run(sp$label, bold = hbold, color = htext, size = size),
-                      jc = "center", keep_next = TRUE, line = line), w,
-        .jst_docx_borders(rules, draw_h, TRUE, grid || (outer && sp$from == 1L),
+                      jc = "center", keep_next = TRUE, line = line, size = msz), w,
+        .jst_docx_borders(rules, top, draw_h, grid || (outer && sp$from == 1L),
                           grid || (outer && sp$to == nc), rcol),
         span = sp$to - sp$from + 1L, fill = hfill))
       at <- sp$to + 1L
     }
     if (at <= nc) for (j in at:nc) {
       cells <- c(cells, .jst_docx_cell(
-        .jst_docx_par("", keep_next = TRUE, line = line), widths[j],
-        .jst_docx_borders(rules, draw_h, FALSE, grid || (outer && j == 1L),
+        .jst_docx_par("", keep_next = TRUE, line = line, size = msz), widths[j],
+        .jst_docx_borders(rules, top, FALSE, grid || (outer && j == 1L),
                           grid || (outer && j == nc), rcol), fill = hfill))
     }
     rows_xml <- c(rows_xml, paste0("<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>",
@@ -1984,7 +2769,7 @@
                           color = htext, size = size)
     .jst_docx_cell(
       .jst_docx_par(runs, jc = if (j == 1L) "left" else "center",
-                    keep_next = TRUE, line = line),
+                    keep_next = TRUE, line = line, size = msz),
       widths[j],
       .jst_docx_borders(rules, draw_h && !length(tbl$spanners), draw_h,
                         grid || (outer && j == 1L), grid || (outer && j == nc), rcol),
@@ -2011,16 +2796,25 @@
       # frequency table's) takes variable.headings, its indent and its
       # marks.
       emph <- if (identical(r$level, "variable")) key("variable.headings") else gh
-      runs <- paste0(.jst_docx_run(r$label, bold = identical(emph, "bold"),
-                                   italic = identical(emph, "italic"), size = size),
+      runs <- paste0(if (isTRUE(r$markup)) {
+                       .jst_docx_markup_runs(r$label, size = size,
+                                             bold = identical(emph, "bold"),
+                                             italic = identical(emph, "italic"))
+                     } else {
+                       .jst_docx_run(r$label, bold = identical(emph, "bold"),
+                                     italic = identical(emph, "italic"), size = size)
+                     },
                      if (length(r$marks)) .jst_docx_run(paste(r$marks, collapse = ","),
-                                                        superscript = TRUE, size = size))
+                                                        superscript = TRUE, size = size),
+                     if (!is.null(r$tail) && nzchar(r$tail))
+                       .jst_docx_run(r$tail, bold = identical(emph, "bold"),
+                                     italic = identical(emph, "italic"), size = size))
       borders <- .jst_docx_borders(rules, grid, bottom, grid || outer, grid || outer, rcol)
       rows_xml <- c(rows_xml, paste0(
         "<w:tr><w:trPr><w:cantSplit/></w:trPr>",
         .jst_docx_cell(.jst_docx_par(runs, ind = if (isTRUE(r$indent > 0L))
                                                    180L * r$indent else NULL,
-                                     keep_next = keep, line = line),
+                                     keep_next = keep, line = line, size = msz),
                        total, borders, span = nc),
         "</w:tr>"))
       next
@@ -2028,31 +2822,43 @@
     band <- band + 1L
     if (!is.null(bfill) && band %% 2L == 0L) fill <- bfill
     cells <- character(nc)
-    stub_runs <- paste0(.jst_docx_run(r$label, size = size),
+    # A fit row's label carries markup (*R*2 -- an italic R); any other
+    # label is text as written.
+    stub_runs <- paste0(if (isTRUE(r$markup)) .jst_docx_markup_runs(r$label, size = size)
+                        else .jst_docx_run(r$label, size = size),
                         if (length(r$marks)) .jst_docx_run(paste(r$marks, collapse = ","),
-                                                           superscript = TRUE, size = size))
+                                                           superscript = TRUE, size = size),
+                        if (!is.null(r$tail) && nzchar(r$tail))
+                          .jst_docx_run(r$tail, size = size))
     cells[1L] <- .jst_docx_cell(
       .jst_docx_par(stub_runs, ind = if (r$indent > 0L) 180L * r$indent else NULL,
-                    keep_next = keep, line = line),
+                    keep_next = keep, line = line, size = msz),
       widths[1L],
       .jst_docx_borders(rules, grid, bottom, grid || outer, grid, rcol), fill = fill)
-    for (j in seq_len(nc)[-1L]) {
+    j <- 2L
+    while (j <= nc) {
       k <- cols$key[j]
       s <- r$cells[[k]]
       runs <- if (is.null(s) || !nzchar(s)) "" else .jst_docx_run(s, size = size)
+      # A spanning cell (a fit row's) takes its model's columns, its value
+      # on the first column's tab (Session 403).
+      to <- j
+      for (sp in r$span) if (sp[1L] == j) to <- sp[2L]
       cells[j] <- .jst_docx_cell(
-        .jst_docx_par(runs, tab = dec_tabs[j], keep_next = keep, line = line),
-        widths[j],
-        .jst_docx_borders(rules, grid, bottom, grid, grid || (outer && j == nc), rcol),
-        fill = fill)
+        .jst_docx_par(runs, tab = dec_tabs[j], keep_next = keep, line = line, size = msz),
+        sum(widths[j:to]),
+        .jst_docx_borders(rules, grid, bottom, grid, grid || (outer && to == nc), rcol),
+        span = if (to > j) to - j + 1L else NULL, fill = fill)
+      j <- to + 1L
     }
+    cells <- cells[nzchar(cells)]
     rows_xml <- c(rows_xml, paste0("<w:tr><w:trPr><w:cantSplit/></w:trPr>",
                                    paste(cells, collapse = ""), "</w:tr>"))
   }
 
   # A note row: the notes' paragraphs, no borders.
   if (note_row) {
-    pars <- .jst_docx_note_pars(tbl, style, keep_next = FALSE)
+    pars <- .jst_docx_note_pars(tbl, style, keep_next = FALSE, size = note_size)
     if (length(pars)) {
       rows_xml <- c(rows_xml, span_all(paste(pars, collapse = ""), nil))
     }
@@ -2077,30 +2883,130 @@
 #' Internal helper: the column widths of a table, in dxa
 #'
 #' From the widest text each column holds at the style's size, plus the
-#' cell margins; the stub from its labels and their indents.
+#' cell margins; the stub from its labels and their indents; a spanner's
+#' label spread over its columns when it is wider than they are.
 #'
 #' @param tbl A jst_table.
 #' @param style The style list.
+#' @param size Points, or NULL for the style's size.
+#' @param pad The twips added to each number column beside its margins
+#'   (120; a table fitted to the page gives up half of it first, Session
+#'   403).
 #' @return Integer vector, one per column.
 #' @keywords internal
-.jst_docx_widths <- function(tbl, style) {
-  size <- .jst_style_key(style, tbl$type, "size")
+.jst_docx_widths <- function(tbl, style, size = NULL, pad = 120L) {
+  if (is.null(size)) size <- .jst_style_key(style, tbl$type, "size")
   cols <- tbl$columns; nc <- nrow(cols)
   margin <- 108L
+  # The stub's width is its data rows' labels: a heading row spans the
+  # table, so its label never sets the stub (Session 403).
   stub_text <- vapply(tbl$rows, function(r) {
-    paste0(strrep("  ", r$indent), r$label, paste(r$marks, collapse = ""))
+    if (identical(r$kind, "heading")) return("")
+    paste0(strrep("  ", r$indent),
+           if (isTRUE(r$markup)) .jst_table_strip_markup(r$label) else r$label,
+           paste(r$marks, collapse = ""), if (is.null(r$tail)) "" else r$tail)
   }, character(1))
   w <- integer(nc)
   w[1L] <- max(.jst_docx_text_width(c(stub_text, cols$label[1L]), size)) + 2L * margin
+  # A spanning cell (a fit row's, across its model's columns, Session
+  # 403): its whole part sets the first column's width with the other
+  # cells', and its tail -- the df after an F -- the span's, below.
   for (j in seq_len(nc)[-1L]) {
     k <- cols$key[j]
     cells <- vapply(tbl$rows, function(r) {
-      s <- r$cells[[k]]; if (is.null(s)) "" else s
+      s <- r$cells[[k]]; if (is.null(s)) s <- ""
+      if (.jst_docx_spans_from(r, j)) .jst_docx_num_parts(s)$head else s
     }, character(1))
     w[j] <- max(.jst_docx_text_width(cells, size, digits = TRUE),
-                .jst_docx_text_width(cols$label[j], size)) + 2L * margin + 120L
+                .jst_docx_text_width(cols$label[j], size)) + 2L * margin + pad
+  }
+  for (srow in tbl$spanners) for (sp in srow) {
+    need <- .jst_docx_text_width(sp$label, size) + 2L * margin
+    have <- sum(w[sp$from:sp$to])
+    if (need > have) {
+      extra <- need - have
+      w[sp$from:sp$to] <- w[sp$from:sp$to] + ceiling(extra / (sp$to - sp$from + 1L))
+    }
+  }
+  for (r in tbl$rows) for (sp in r$span) {
+    from <- sp[1L]; to <- sp[2L]
+    s <- r$cells[[cols$key[from]]]
+    if (is.null(s) || !nzchar(s)) next
+    need <- w[from] + .jst_docx_text_width(.jst_docx_num_parts(s)$tail, size,
+                                           digits = TRUE)
+    have <- sum(w[from:to])
+    if (need > have) w[to] <- w[to] + (need - have)
   }
   as.integer(w)
+}
+
+#' Internal helper: does a row's cell at a column span columns?
+#'
+#' A fit row's cell spans its model's columns (Session 403); the row's
+#' span field holds each span as c(from, to).
+#'
+#' @param r A row of a jst_table.
+#' @param j A column index.
+#' @return Logical.
+#' @keywords internal
+.jst_docx_spans_from <- function(r, j) {
+  if (is.null(r$span)) return(FALSE)
+  any(vapply(r$span, function(sp) sp[1L] == j, logical(1)))
+}
+
+#' Internal helper: a number cell's whole part and its tail
+#'
+#' The tail is the point and what follows it -- the decimals, any stars,
+#' the df after an F -- or, with no point, whatever follows the digits;
+#' the whole part is the rest. The decimal tab aligns the two.
+#'
+#' @param s Character.
+#' @return A list: head and tail, character vectors of s's length.
+#' @keywords internal
+.jst_docx_num_parts <- function(s) {
+  tails <- ifelse(grepl("[.]", s), sub("^[^.]*", "", s),
+                  sub("^[-\u2212+0-9,]*", "", s))
+  list(head = substr(s, 1L, nchar(s) - nchar(tails)), tail = tails)
+}
+
+#' Internal helper: a table's widths and sizes, fitted to the page
+#'
+#' A table wider than the page loses half its number columns' padding
+#' first, then steps its font down a point at a time (12, 11, 10; APA
+#' allows a smaller size in a table), and only then narrows its columns,
+#' the stub first (a label may wrap, a number never) -- Session 402, item
+#' 11. Until then every column was narrowed in proportion, and a number
+#' wrapped. Two more steps, 9 and 8 pt, come before the stub narrows: at
+#' 10 pt a 17-column table with F tests still wrapped its numbers
+#' (Session 403; APA's floor for a table is 8 pt). The notes step down
+#' with the table; the caption keeps its size.
+#'
+#' @param tbl A jst_table.
+#' @param style The style list.
+#' @param page_text The text width available, in dxa.
+#' @return A list: widths (integer), size and note_size (points).
+#' @keywords internal
+.jst_docx_fit <- function(tbl, style, page_text) {
+  size0 <- .jst_style_key(style, tbl$type, "size")
+  note0 <- .jst_style_key(style, tbl$type, "note.size")
+  steps <- list(list(size = size0, pad = 120L), list(size = size0, pad = 60L))
+  for (d in 1:4) if (size0 - d >= 8) steps <- c(steps, list(list(size = size0 - d, pad = 60L)))
+  fit <- NULL
+  for (st in steps) {
+    w <- .jst_docx_widths(tbl, style, size = st$size, pad = st$pad)
+    fit <- list(widths = w, size = st$size,
+                note_size = max(6, note0 - (size0 - st$size)))
+    if (sum(w) <= page_text) return(fit)
+  }
+  # Still too wide: the stub gives way, down to an inch and a half; then
+  # every column in proportion.
+  w <- fit$widths
+  excess <- sum(w) - page_text
+  give <- min(excess, max(0L, w[1L] - 2160L))
+  w[1L] <- w[1L] - give
+  if (sum(w) > page_text) w <- as.integer(floor(w * page_text / sum(w)))
+  fit$widths <- as.integer(w)
+  fit
 }
 
 #' Internal helper: the decimal tab position of each number column
@@ -2125,11 +3031,12 @@
     cells <- vapply(tbl$rows, function(r) {
       s <- r$cells[[k]]; if (is.null(s)) "" else s
     }, character(1))
-    tails <- ifelse(grepl("[.]", cells), sub("^[^.]*", "", cells),
-                    sub("^[-\u2212+0-9,]*", "", cells))
-    heads <- substr(cells, 1L, nchar(cells) - nchar(tails))
-    tail_w <- .jst_docx_text_width(tails, size, digits = TRUE)
-    head_w <- .jst_docx_text_width(heads, size, digits = TRUE)
+    parts <- .jst_docx_num_parts(cells)
+    # A spanning cell's tail runs on past the column: it does not set
+    # the tab (Session 403).
+    spans <- vapply(tbl$rows, .jst_docx_spans_from, logical(1), j = j)
+    tail_w <- .jst_docx_text_width(parts$tail[!spans], size, digits = TRUE)
+    head_w <- .jst_docx_text_width(parts$head, size, digits = TRUE)
     # The block of numbers centered in the cell (Session 401: under a head
     # wider than its numbers, "Valid %", the block had sat at the right),
     # and short of the cell's right edge: a stop at or past it is no stop
@@ -2144,9 +3051,11 @@
 #' Internal helper: the body of a document holding tables
 #'
 #' Each table's caption, table and notes (paragraphs or rows by the style),
-#' an empty paragraph between tables, and the section properties: the
-#' page, landscape when the style says so or when auto finds the table
-#' wider than the portrait text width.
+#' two empty paragraphs between tables (Jeff, Session 401), and the
+#' section properties: the page, landscape when the style -- or the call,
+#' since Session 403 -- says so, or when auto finds a table wider than
+#' the portrait text width; a table wider than the page fitted to it
+#' (\code{.jst_docx_fit()}).
 #'
 #' @param tables A list of jst_table.
 #' @param style The style list.
@@ -2168,21 +3077,18 @@
   for (i in seq_along(tables)) {
     tbl <- tables[[i]]
     tst <- styles[[i]]
-    widths <- all_widths[[i]]
-    # A table wider than the page is shrunk to it, every column in
-    # proportion.
-    if (sum(widths) > page$text) {
-      widths <- as.integer(floor(widths * page$text / sum(widths)))
-    }
+    fit <- if (natural[i] > page$text) .jst_docx_fit(tbl, tst, page$text)
+           else list(widths = all_widths[[i]], size = NULL, note_size = NULL)
     key <- function(k) .jst_style_key(tst, tbl$type, k)
     if (!identical(key("caption.position"), "row")) {
       body <- c(body, .jst_docx_caption_pars(tbl, tst, i))
     }
-    body <- c(body, .jst_docx_table(tbl, tst, i, widths))
+    body <- c(body, .jst_docx_table(tbl, tst, i, fit$widths, size = fit$size,
+                                    note_size = fit$note_size))
     if (!identical(key("note.position"), "row")) {
-      body <- c(body, .jst_docx_note_pars(tbl, tst))
+      body <- c(body, .jst_docx_note_pars(tbl, tst, size = fit$note_size))
     }
-    if (i < length(tables)) body <- c(body, .jst_docx_par(""))
+    if (i < length(tables)) body <- c(body, .jst_docx_par(""), .jst_docx_par(""))
   }
   sect <- paste0("<w:sectPr><w:pgSz w:w=\"", page$w, "\" w:h=\"", page$h, "\"",
                  if (landscape) " w:orient=\"landscape\"", "/>",
@@ -2324,31 +3230,44 @@
 #' \code{jstyle()}); the preview is a facsimile of the Word table, so what
 #' prints is what the file holds.
 #'
-#' This version makes two table types: a descriptives table from one or
-#' more \code{\link{jdesc}} results, and a frequency table from one or
-#' more \code{\link{jfreq}} results -- each variable's label on a row of
-#' its own, its categories indented under it. The variables go under role
-#' headings when \code{headings} names them, and each specific note's
-#' variables are marked when \code{markers} names them. Further table
-#' types follow.
+#' This version makes four table types: a descriptives table from one or
+#' more \code{\link{jdesc}} results; a frequency table from one or more
+#' \code{\link{jfreq}} results -- each variable's label on a row of its
+#' own, its categories indented under it; and a regression table from one
+#' or more \code{\link{jlm}} results, or a logistic regression table from
+#' \code{\link{jlogistic}} results -- the models of one outcome side by
+#' side, each under its own head, the constant first, a dummy-coded
+#' variable's categories indented under its label with the reference
+#' category named, and the fit rows under the predictors. The variables
+#' go under role headings when \code{headings} names them, and each
+#' specific note's variables are marked when \code{markers} names them.
+#' Further table types follow.
 #'
 #' @param x A saved result -- what an analysis function returns, kept with
 #'   \code{<-} -- or a list of them. A list of \code{jdesc()} results, or
 #'   of \code{jfreq()} results, stacks into one table, each result's
-#'   variables under its name in the list when the list is named. A table
-#'   \code{jtable()} has already built, or a list of them, goes to the file
-#'   as it is, the tables in the order given and numbered so.
+#'   variables under its name in the list when the list is named; a list
+#'   of \code{jlm()} results, or of \code{jlogistic()} results, with one
+#'   outcome puts the models side by side, headed "Model 1", "Model 2",
+#'   ... or by the list's names. A table \code{jtable()} has already
+#'   built, or a list of them, goes to the file as it is, the tables in
+#'   the order given and numbered so.
 #' @param headings A named list: each heading and the variables under it,
 #'   bare or in quotes, e.g. \code{list("Dependent variable" = Wellbeing,
 #'   "Independent variables" = c(Income, Age))}. Every variable of the
 #'   result goes under one heading; the table follows the list's order.
+#'   For a descriptives or frequency table.
 #' @param markers A named list: each specific note's text and the
 #'   variables it marks, e.g. \code{list("Mean-centered" = c(Income,
 #'   Age))}. The style assigns the marks (superscript letters under APA),
 #'   sets each on its rows' labels, and writes the note under the table.
-#' @param title The table's title; the style's title when NULL.
-#' @param note The general note's text, after the N the style writes;
-#'   \code{*text*} sets a word in italics. NULL for none.
+#'   In a regression table a predictor's row is marked.
+#' @param title The table's title; the style's title when NULL (a
+#'   regression table's names the outcome). \code{*text*} sets a word in
+#'   italics.
+#' @param note The general note's text, after what the style writes
+#'   there (N, a reference category); \code{*text*} sets a word in
+#'   italics. NULL for none.
 #' @param file The Word file to write, with its .docx extension: a bare
 #'   name goes in the output folder (\code{joptions(output.dir = )}) or the
 #'   working directory; a path with a folder goes there. NULL writes
@@ -2370,10 +3289,12 @@
 #'   and writes the file alone.
 #' @param ... A setting of the table type's section of the style, for this
 #'   table only, e.g. \code{columns = c("mean", "sd")} for a descriptives
-#'   table or \code{missing.rows = "none"} for a frequency table: the call
-#'   outranks the style file. The general settings (the font, the caption's
-#'   form, the decimals) are the style file's. Any other input stops with
-#'   "unused input".
+#'   table, \code{missing.rows = "none"} for a frequency table or
+#'   \code{fit.rows = c("r2", "delta.r2")} for a regression table: the
+#'   call outranks the style file. The general settings (the font, the
+#'   caption's form, the decimals) are the style file's, except
+#'   \code{landscape = "yes"} or \code{"no"}, a page choice the call may
+#'   make. Any other input stops with "unused input".
 #'
 #' @return The table, invisibly: an object of class \code{jst_table},
 #'   which prints its preview when typed.
@@ -2405,7 +3326,10 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   .jst_check_args(dots[!is_key], aliases = c(notes = "note", near),
                   fn_name = "jtable", positional = "refuse")
   over_q <- dots[is_key]
-  gen_given <- intersect(names(over_q), gen_keys)
+  # A general setting stays the style file's -- except landscape, a page
+  # choice the call may make (Jeff, Session 402: "can we have a landscape
+  # option?").
+  gen_given <- setdiff(intersect(names(over_q), gen_keys), "landscape")
   if (length(gen_given)) {
     .jst_stop(.jst_and_list(paste0(gen_given, " =")),
               if (length(gen_given) == 1L) " is one of a style's general settings, which a call "
@@ -2422,7 +3346,10 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   text_keys <- character(0)
   for (k in names(over_q)) {
     sps <- Filter(Negate(is.null), lapply(.jst_style_spec[types], `[[`, k))
-    vals <- unique(unlist(lapply(sps, function(sp) c(sp$choices, sp$cols))))
+    if (identical(k, "landscape")) sps <- list(.jst_style_spec$general$landscape)
+    vals <- unique(unlist(lapply(sps, function(sp) {
+      c(sp$choices, sp$cols, if (isTRUE(sp$none)) "none")
+    })))
     if (length(vals)) word_specs[[k]] <- .jst_word_spec(vals, "its value")
     if (any(vapply(sps, function(sp) identical(sp$kind, "text"), logical(1)))) {
       text_keys <- c(text_keys, k)
@@ -2536,6 +3463,8 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   # 3.2).
   type <- if (inherits(results[[1L]], "jst_desc")) "descriptives"
           else if (inherits(results[[1L]], "jst_freq")) "frequencies"
+          else if (inherits(results[[1L]], "jst_lm")) "regression"
+          else if (inherits(results[[1L]], "jst_logistic")) "logistic"
           else NA_character_
   if (is.na(type)) .jst_table_build(results[[1L]], st)   # the stop for an unbuilt type
   if (length(over_vals)) {
@@ -2545,22 +3474,25 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
                             st$skipped)
   }
   # The headings and markers, read as names: a bare name the results hold
-  # is their variable whatever the workspace holds (ruling R18).
-  vars <- unique(unlist(lapply(results, function(r) {
-    tf <- .jst_apa_terms(r); if (is.null(tf)) character(0) else tf$variable
-  })))
+  # is their variable whatever the workspace holds (ruling R18). A model's
+  # variables are its predictors.
+  vars <- unique(unlist(lapply(results, .jst_table_result_vars)))
   hd <- .jst_table_name_groups(substitute(headings), env, "headings", vars)
   mk <- .jst_table_name_groups(substitute(markers), env, "markers", vars)
 
   # The results go to their type's builder as one list, so a named list's
-  # names give the headings however many results it holds.
-  tbl <- if (identical(type, "descriptives")) {
-    .jst_table_build_desc(results, st, headings = hd, markers = mk,
-                          title = title, note = note)
-  } else {
-    .jst_table_build_freq(results, st, headings = hd, markers = mk,
-                          title = title, note = note)
-  }
+  # names give the headings -- or the model heads -- however many results
+  # it holds.
+  tbl <- switch(type,
+    descriptives = .jst_table_build_desc(results, st, headings = hd, markers = mk,
+                                         title = title, note = note),
+    frequencies  = .jst_table_build_freq(results, st, headings = hd, markers = mk,
+                                         title = title, note = note),
+    .jst_table_build_models(results, st, headings = hd, markers = mk,
+                            title = title, note = note))
+  # What the builder has to say beside the table (the models' Ns differ):
+  # printed before the preview, at every output level.
+  for (m in tbl$messages) .jst_msg(m)
 
   # The overwrite question comes after every check that can stop the call
   # and before the preview, so the answer is given once, and the preview
@@ -2631,12 +3563,18 @@ print.jst_table <- function(x, ...) {
 #' @param vals A named list: the settings, evaluated.
 #' @param type The table type.
 #' @param fn The user-facing function's name.
-#' @return A layer: list(source = "the call", <type> = list(...)).
+#' @return A layer: list(source = "the call", <type> = list(...)), with a
+#'   general part when the call sets landscape (Session 403).
 #' @keywords internal
 .jst_style_call_layer <- function(vals, type, fn) {
   sec <- .jst_style_spec[[type]]
-  out <- list()
+  out <- list(); gen <- list()
   for (k in names(vals)) {
+    if (identical(k, "landscape")) {
+      gen[[k]] <- .jst_style_check_value(k, .jst_style_spec$general[[k]], vals[[k]],
+                                         "general", fn)
+      next
+    }
     if (!k %in% names(sec)) {
       owners <- names(Filter(function(s) k %in% names(s),
                              .jst_style_spec[names(.jst_style_type_nouns)]))
@@ -2647,7 +3585,9 @@ print.jst_table <- function(x, ...) {
     }
     out[[k]] <- .jst_style_check_value(k, sec[[k]], vals[[k]], type, fn)
   }
-  stats::setNames(list("the call", out), c("source", type))
+  layer <- stats::setNames(list("the call", out), c("source", type))
+  if (length(gen)) layer$general <- gen
+  layer
 }
 
 #' Internal helper: where jtable() writes a file
@@ -2815,8 +3755,8 @@ print.jst_table <- function(x, ...) {
 #'
 #' A style file is plain text: a setting is a name, an equals sign and a
 #' value; a \code{#} starts a note; the general settings come first, then
-#' one section per table type, \code{[descriptives]} and
-#' \code{[frequencies]}. A setting the file leaves out comes from the style
+#' one section per table type, \code{[descriptives]}, \code{[frequencies]},
+#' \code{[regression]} and \code{[logistic]}. A setting the file leaves out comes from the style
 #' its \code{based.on} line names. jstats looks for a style named in a call
 #' in the style folder (\code{joptions(style.dir = )}), the working
 #' directory and your jstats folder, in that order.
@@ -3032,7 +3972,9 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
 .jst_style_file_lines <- function(st, name) {
   heads <- c(general = "The general settings: the look of every table.",
              descriptives = "A descriptives table, from jdesc() results.",
-             frequencies  = "A frequency table, from jfreq() results.")
+             frequencies  = "A frequency table, from jfreq() results.",
+             regression   = "A regression table, from jlm() results.",
+             logistic     = "A logistic regression table, from jlogistic() results.")
   out <- c(paste0("# ", name, ".jstyle: a jstats table style."),
            "# Change a value after its = sign and save the file;",
            paste0("# jstyle(\"", name, "\") prints the settings jstats reads from it."),

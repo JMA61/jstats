@@ -4,18 +4,25 @@
 \alias{.jst_docx_widths}
 \title{Internal helper: the column widths of a table, in dxa}
 \usage{
-.jst_docx_widths(tbl, style)
+.jst_docx_widths(tbl, style, size = NULL, pad = 120L)
 }
 \arguments{
 \item{tbl}{A jst_table.}
 
 \item{style}{The style list.}
+
+\item{size}{Points, or NULL for the style's size.}
+
+\item{pad}{The twips added to each number column beside its margins
+(120; a table fitted to the page gives up half of it first, Session
+403).}
 }
 \value{
 Integer vector, one per column.
 }
 \description{
 From the widest text each column holds at the style's size, plus the
-cell margins; the stub from its labels and their indents.
+cell margins; the stub from its labels and their indents; a spanner's
+label spread over its columns when it is wider than they are.
 }
 \keyword{internal}

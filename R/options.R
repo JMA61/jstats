@@ -797,7 +797,9 @@ joutput <- function(level, effect.size = NULL,
       "\n"),
     data.dir             = paste0("Data folder: ", dd_label, "\n"),
     output.dir           = paste0("Output folder: ", od_label, "\n"),
-    style                = paste0("Style: ", st, "\n"),
+    # "Publication style" (ruling R50, Session 401; built Session 403): the
+    # one file per publication holds its tables and, later, its plots.
+    style                = paste0("Publication style: ", st, "\n"),
     style.dir            = paste0("Style folder: ", sd_label, "\n"),
     corr.layout          = paste0("Correlation layout: ", cl, "\n"),
     missing.detail       = paste0("Missing-value detail: ", md, "\n"),

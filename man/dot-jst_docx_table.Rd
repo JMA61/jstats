@@ -4,7 +4,7 @@
 \alias{.jst_docx_table}
 \title{Internal helper: the table of a jst_table, as XML}
 \usage{
-.jst_docx_table(tbl, style, number, widths)
+.jst_docx_table(tbl, style, number, widths, size = NULL, note_size = NULL)
 }
 \arguments{
 \item{tbl}{A jst_table.}
@@ -14,6 +14,10 @@
 \item{number}{The table's number (for a caption row).}
 
 \item{widths}{Column widths in dxa.}
+
+\item{size, note_size}{Points, or NULL for the style's size and
+note.size: a table fitted to the page passes the stepped-down sizes
+(Session 403).}
 }
 \value{
 Character(1); the w:tbl element.

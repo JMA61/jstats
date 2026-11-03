@@ -4,7 +4,7 @@
 \alias{.jst_docx_note_pars}
 \title{Internal helper: the note paragraphs of a table}
 \usage{
-.jst_docx_note_pars(tbl, style, keep_next = FALSE)
+.jst_docx_note_pars(tbl, style, keep_next = FALSE, size = NULL)
 }
 \arguments{
 \item{tbl}{A jst_table.}
@@ -12,6 +12,9 @@
 \item{style}{The style list.}
 
 \item{keep_next}{Logical; for a note inside a row.}
+
+\item{size}{Points, or NULL for the style's note.size (a table fitted
+to the page steps it down with the table's size, Session 403).}
 }
 \value{
 Character; one paragraph per note line.

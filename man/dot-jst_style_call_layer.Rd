@@ -14,7 +14,8 @@
 \item{fn}{The user-facing function's name.}
 }
 \value{
-A layer: list(source = "the call", \if{html}{\out{<type>}} = list(...)).
+A layer: list(source = "the call", \if{html}{\out{<type>}} = list(...)), with a
+general part when the call sets landscape (Session 403).
 }
 \description{
 Each setting the call gives must be one of the table type's section's

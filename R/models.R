@@ -645,7 +645,13 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' @return A named list, one element per dummy-coded variable in the
 #'   model, each a list of \code{labels} (character) and \code{dummy}
 #'   (character, \code{NA} for the reference), in code order. Empty when
-#'   the model has no dummy-coded predictor.
+#'   the model has no dummy-coded predictor. Since Session 403
+#'   (Capability Slate T, build 3) each element also carries what the
+#'   table layer reads, never a display string: \code{codes} (the
+#'   category each dummy stands for: the value the cells hold, or a
+#'   factor's level), \code{value_labels} (each category's value label,
+#'   \code{NA} where it has none) and \code{var_label} (the variable's
+#'   label, its name when it has none).
 #'
 #' @keywords internal
 .jst_dummy_groups <- function(dummy_regs, auto_cat_regs, dummy_coef_names,
@@ -668,11 +674,29 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     idx <- c(reg$ref_idx, reg$non_ref_idx[keep])
     dum <- c(NA_character_, reg$dummy_names[keep])
     ord <- order(idx)
+    # The code and the label the table layer reads (Session 403), as
+    # jfreq()'s rows carry them since Session 399: a factor's or a text
+    # variable's code is its level, with no label; a numeric code's label is
+    # its value label, NA where it has none.
+    if (identical(reg$var_type, "factor") ||
+        identical(reg$var_type, "character")) {
+      cv    <- .jst_dummy_category_values(reg, col)
+      codes <- as.character(cv[idx[ord]])
+      vals  <- rep(NA_character_, length(codes))
+    } else {
+      codes <- reg$codes[idx[ord]]
+      vals  <- if (is.null(vl)) rep(NA_character_, length(codes))
+               else names(vl)[match(as.character(codes),
+                                    as.character(unname(vl)))]
+    }
     out[[v]] <- list(
       labels = vapply(idx[ord], function(i) {
         .jst_format_value_labels(reg$codes[i], vl, value_mode)
       }, character(1)),
-      dummy  = dum[ord])
+      dummy  = dum[ord],
+      codes        = codes,
+      value_labels = vals,
+      var_label    = .jst_label_or_name(lab_src, v))
   }
   out
 }
@@ -3315,8 +3339,11 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'       variables in the model.}
 #'     \item{dummy_groups}{Named list, one element per dummy-coded
 #'       variable: \code{labels}, its categories as the coefficient table
-#'       labels them, and \code{dummy}, the dummy column of each
-#'       (\code{NA} for the reference). Used by \code{jplot()}.}
+#'       labels them, \code{dummy}, the dummy column of each
+#'       (\code{NA} for the reference), and, for the table layer,
+#'       \code{codes} (the category each stands for), \code{value_labels}
+#'       (its value label, \code{NA} where it has none) and
+#'       \code{var_label}. Used by \code{jplot()} and \code{jtable()}.}
 #'     \item{vif}{Named numeric vector of VIF values, or NULL for bivariate.}
 #'     \item{gvif}{The generalized VIFs, when the model has a set of dummy
 #'       variables (a predictor of three or more categories): a data frame
@@ -3324,6 +3351,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'       (\code{GVIF^(1/(2*Df))}), one row per predictor, as the VIF table
 #'       prints them; NULL otherwise.}
 #'     \item{sample_info}{Pipeline and missing data counts.}
+#'     \item{data_name}{The data frame's name as the call gave it.}
 #'   }
 #'
 #' @section Interactions:
@@ -4429,7 +4457,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                                         value_mode_coef),
     vif             = vif_values,
     gvif            = gvif_df,
-    sample_info     = sample_info
+    sample_info     = sample_info,
+    # The data frame's name as the call gave it, for the line jtable()
+    # offers when models in one table differ in N (Session 403); jcorr()
+    # has carried it since Session 377.
+    data_name       = .jst_data_name
   )
   class(ret) <- "jst_lm"
   ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
@@ -4631,8 +4663,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'     \item{ref_cats}{Reference category descriptions.}
 #'     \item{dummy_groups}{Named list, one element per dummy-coded
 #'       variable: \code{labels}, its categories as the coefficient table
-#'       labels them, and \code{dummy}, the dummy column of each
-#'       (\code{NA} for the reference). Used by \code{jplot()}.}
+#'       labels them, \code{dummy}, the dummy column of each
+#'       (\code{NA} for the reference), and, for the table layer,
+#'       \code{codes} (the category each stands for), \code{value_labels}
+#'       (its value label, \code{NA} where it has none) and
+#'       \code{var_label}. Used by \code{jplot()} and \code{jtable()}.}
 #'     \item{vif}{Named numeric vector of VIF values, or NULL.}
 #'     \item{gvif}{The generalized VIFs, when the model has a set of dummy
 #'       variables (a predictor of three or more categories): a data frame
@@ -4640,6 +4675,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'       (\code{GVIF^(1/(2*Df))}), one row per predictor, as the VIF table
 #'       prints them; NULL otherwise.}
 #'     \item{sample_info}{Pipeline and missing data counts.}
+#'     \item{data_name}{The data frame's name as the call gave it.}
 #'   }
 #'
 #' @section Interactions:
@@ -5868,7 +5904,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                                         value_mode_coef),
     vif             = vif_values,
     gvif            = gvif_df,
-    sample_info     = sample_info
+    sample_info     = sample_info,
+    # The data frame's name as the call gave it (Session 403; as jlm()).
+    data_name       = .jst_data_name
   )
   class(ret) <- "jst_logistic"
   ret <- .jst_stamp_result(ret)   # Session 399: the version that made it

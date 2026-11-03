@@ -16,8 +16,10 @@ A list: xml (the document part) and landscape (logical).
 }
 \description{
 Each table's caption, table and notes (paragraphs or rows by the style),
-an empty paragraph between tables, and the section properties: the
-page, landscape when the style says so or when auto finds the table
-wider than the portrait text width.
+two empty paragraphs between tables (Jeff, Session 401), and the
+section properties: the page, landscape when the style -- or the call,
+since Session 403 -- says so, or when auto finds a table wider than
+the portrait text width; a table wider than the page fitted to it
+(\code{.jst_docx_fit()}).
 }
 \keyword{internal}

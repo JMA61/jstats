@@ -25,24 +25,32 @@ jtable(
 \item{x}{A saved result -- what an analysis function returns, kept with
 \code{<-} -- or a list of them. A list of \code{jdesc()} results, or
 of \code{jfreq()} results, stacks into one table, each result's
-variables under its name in the list when the list is named. A table
-\code{jtable()} has already built, or a list of them, goes to the file
-as it is, the tables in the order given and numbered so.}
+variables under its name in the list when the list is named; a list
+of \code{jlm()} results, or of \code{jlogistic()} results, with one
+outcome puts the models side by side, headed "Model 1", "Model 2",
+... or by the list's names. A table \code{jtable()} has already
+built, or a list of them, goes to the file as it is, the tables in
+the order given and numbered so.}
 
 \item{headings}{A named list: each heading and the variables under it,
 bare or in quotes, e.g. \code{list("Dependent variable" = Wellbeing,
 "Independent variables" = c(Income, Age))}. Every variable of the
-result goes under one heading; the table follows the list's order.}
+result goes under one heading; the table follows the list's order.
+For a descriptives or frequency table.}
 
 \item{markers}{A named list: each specific note's text and the
 variables it marks, e.g. \code{list("Mean-centered" = c(Income,
 Age))}. The style assigns the marks (superscript letters under APA),
-sets each on its rows' labels, and writes the note under the table.}
+sets each on its rows' labels, and writes the note under the table.
+In a regression table a predictor's row is marked.}
 
-\item{title}{The table's title; the style's title when NULL.}
+\item{title}{The table's title; the style's title when NULL (a
+regression table's names the outcome). \code{*text*} sets a word in
+italics.}
 
-\item{note}{The general note's text, after the N the style writes;
-\code{*text*} sets a word in italics. NULL for none.}
+\item{note}{The general note's text, after what the style writes
+there (N, a reference category); \code{*text*} sets a word in
+italics. NULL for none.}
 
 \item{file}{The Word file to write, with its .docx extension: a bare
 name goes in the output folder (\code{joptions(output.dir = )}) or the
@@ -70,10 +78,12 @@ and writes the file alone.}
 
 \item{...}{A setting of the table type's section of the style, for this
 table only, e.g. \code{columns = c("mean", "sd")} for a descriptives
-table or \code{missing.rows = "none"} for a frequency table: the call
-outranks the style file. The general settings (the font, the caption's
-form, the decimals) are the style file's. Any other input stops with
-"unused input".}
+table, \code{missing.rows = "none"} for a frequency table or
+\code{fit.rows = c("r2", "delta.r2")} for a regression table: the
+call outranks the style file. The general settings (the font, the
+caption's form, the decimals) are the style file's, except
+\code{landscape = "yes"} or \code{"no"}, a page choice the call may
+make. Any other input stops with "unused input".}
 }
 \value{
 The table, invisibly: an object of class \code{jst_table},
@@ -89,12 +99,17 @@ the built-in \code{"apa"} style, or a style file of your own (see
 prints is what the file holds.
 }
 \details{
-This version makes two table types: a descriptives table from one or
-more \code{\link{jdesc}} results, and a frequency table from one or
-more \code{\link{jfreq}} results -- each variable's label on a row of
-its own, its categories indented under it. The variables go under role
-headings when \code{headings} names them, and each specific note's
-variables are marked when \code{markers} names them. Further table
-types follow.
+This version makes four table types: a descriptives table from one or
+more \code{\link{jdesc}} results; a frequency table from one or more
+\code{\link{jfreq}} results -- each variable's label on a row of its
+own, its categories indented under it; and a regression table from one
+or more \code{\link{jlm}} results, or a logistic regression table from
+\code{\link{jlogistic}} results -- the models of one outcome side by
+side, each under its own head, the constant first, a dummy-coded
+variable's categories indented under its label with the reference
+category named, and the fit rows under the predictors. The variables
+go under role headings when \code{headings} names them, and each
+specific note's variables are marked when \code{markers} names them.
+Further table types follow.
 }
 \keyword{internal}

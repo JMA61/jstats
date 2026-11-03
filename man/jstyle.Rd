@@ -41,8 +41,8 @@ TableLook As").
 \details{
 A style file is plain text: a setting is a name, an equals sign and a
 value; a \code{#} starts a note; the general settings come first, then
-one section per table type, \code{[descriptives]} and
-\code{[frequencies]}. A setting the file leaves out comes from the style
+one section per table type, \code{[descriptives]}, \code{[frequencies]},
+\code{[regression]} and \code{[logistic]}. A setting the file leaves out comes from the style
 its \code{based.on} line names. jstats looks for a style named in a call
 in the style folder (\code{joptions(style.dir = )}), the working
 directory and your jstats folder, in that order.

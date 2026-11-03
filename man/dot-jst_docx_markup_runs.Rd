@@ -2,16 +2,21 @@
 % Please edit documentation in R/tables.R
 \name{.jst_docx_markup_runs}
 \alias{.jst_docx_markup_runs}
-\title{Internal helper: the runs of a marked-up note line}
+\title{Internal helper: the runs of a marked-up line}
 \usage{
-.jst_docx_markup_runs(s, size = NULL)
+.jst_docx_markup_runs(s, size = NULL, bold = FALSE, italic = FALSE)
 }
 \arguments{
 \item{s}{Character(1); the line.}
 
 \item{size}{Points.}
+
+\item{bold, italic}{Logical; the base style of the line (Session 403: a
+caption's title, a fit row's label).}
 }
 \description{
-Reads the light markup: \emph{text} italic, ^text^ superscript.
+Reads the light markup: \emph{text} italic, ^text^ superscript. Under an
+italic base (an apa caption's title) \emph{text} is set upright, as a word
+that would be italic is set inside italic text.
 }
 \keyword{internal}
