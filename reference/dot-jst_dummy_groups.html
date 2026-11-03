@@ -29,7 +29,7 @@ the analysis sample is not drawn. Unlike
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.271</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.272</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -113,7 +113,13 @@ coefficient table uses it.</p></dd>
     <p>A named list, one element per dummy-coded variable in the
 model, each a list of <code>labels</code> (character) and <code>dummy</code>
 (character, <code>NA</code> for the reference), in code order. Empty when
-the model has no dummy-coded predictor.</p>
+the model has no dummy-coded predictor. Since Session 403
+(Capability Slate T, build 3) each element also carries what the
+table layer reads, never a display string: <code>codes</code> (the
+category each dummy stands for: the value the cells hold, or a
+factor's level), <code>value_labels</code> (each category's value label,
+<code>NA</code> where it has none) and <code>var_label</code> (the variable's
+label, its name when it has none).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -13,7 +13,7 @@ Gelman-standardized coefficients and odds ratios (Exp(b))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.271</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.272</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -320,8 +320,11 @@ the omnibus likelihood-ratio test (<code>chi_sq</code>, <code>omnibus_df</code>,
 <dt>dummy_groups</dt>
 <dd><p>Named list, one element per dummy-coded
 variable: <code>labels</code>, its categories as the coefficient table
-labels them, and <code>dummy</code>, the dummy column of each
-(<code>NA</code> for the reference). Used by <code><a href="jplot.html">jplot()</a></code>.</p></dd>
+labels them, <code>dummy</code>, the dummy column of each
+(<code>NA</code> for the reference), and, for the table layer,
+<code>codes</code> (the category each stands for), <code>value_labels</code>
+(its value label, <code>NA</code> where it has none) and
+<code>var_label</code>. Used by <code><a href="jplot.html">jplot()</a></code> and <code><a href="jtable.html">jtable()</a></code>.</p></dd>
 
 <dt>vif</dt>
 <dd><p>Named numeric vector of VIF values, or NULL.</p></dd>
@@ -335,6 +338,9 @@ prints them; NULL otherwise.</p></dd>
 
 <dt>sample_info</dt>
 <dd><p>Pipeline and missing data counts.</p></dd>
+
+<dt>data_name</dt>
+<dd><p>The data frame's name as the call gave it.</p></dd>
 
 
 </dl></div>

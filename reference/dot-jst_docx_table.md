@@ -5,7 +5,7 @@ Internal helper: the table of a jst_table, as XML
 ## Usage
 
 ``` r
-.jst_docx_table(tbl, style, number, widths)
+.jst_docx_table(tbl, style, number, widths, size = NULL, note_size = NULL)
 ```
 
 ## Arguments
@@ -25,6 +25,11 @@ Internal helper: the table of a jst_table, as XML
 - widths:
 
   Column widths in dxa.
+
+- size, note_size:
+
+  Points, or NULL for the style's size and note.size: a table fitted to
+  the page passes the stepped-down sizes (Session 403).
 
 ## Value
 

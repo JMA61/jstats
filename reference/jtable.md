@@ -40,9 +40,14 @@ print(x, ...)
   results, or of
   [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md)
   results, stacks into one table, each result's variables under its name
-  in the list when the list is named. A table `jtable()` has already
-  built, or a list of them, goes to the file as it is, the tables in the
-  order given and numbered so.
+  in the list when the list is named; a list of
+  [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md) results, or
+  of
+  [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md)
+  results, with one outcome puts the models side by side, headed "Model
+  1", "Model 2", ... or by the list's names. A table `jtable()` has
+  already built, or a list of them, goes to the file as it is, the
+  tables in the order given and numbered so.
 
 - headings:
 
@@ -50,23 +55,25 @@ print(x, ...)
   quotes, e.g.
   `list("Dependent variable" = Wellbeing, "Independent variables" = c(Income, Age))`.
   Every variable of the result goes under one heading; the table follows
-  the list's order.
+  the list's order. For a descriptives or frequency table.
 
 - markers:
 
   A named list: each specific note's text and the variables it marks,
   e.g. `list("Mean-centered" = c(Income, Age))`. The style assigns the
   marks (superscript letters under APA), sets each on its rows' labels,
-  and writes the note under the table.
+  and writes the note under the table. In a regression table a
+  predictor's row is marked.
 
 - title:
 
-  The table's title; the style's title when NULL.
+  The table's title; the style's title when NULL (a regression table's
+  names the outcome). `*text*` sets a word in italics.
 
 - note:
 
-  The general note's text, after the N the style writes; `*text*` sets a
-  word in italics. NULL for none.
+  The general note's text, after what the style writes there (N, a
+  reference category); `*text*` sets a word in italics. NULL for none.
 
 - file:
 
@@ -103,11 +110,13 @@ print(x, ...)
 - ...:
 
   A setting of the table type's section of the style, for this table
-  only, e.g. `columns = c("mean", "sd")` for a descriptives table or
-  `missing.rows = "none"` for a frequency table: the call outranks the
-  style file. The general settings (the font, the caption's form, the
-  decimals) are the style file's. Any other input stops with "unused
-  input".
+  only, e.g. `columns = c("mean", "sd")` for a descriptives table,
+  `missing.rows = "none"` for a frequency table or
+  `fit.rows = c("r2", "delta.r2")` for a regression table: the call
+  outranks the style file. The general settings (the font, the caption's
+  form, the decimals) are the style file's, except `landscape = "yes"`
+  or `"no"`, a page choice the call may make. Any other input stops with
+  "unused input".
 
 ## Value
 
@@ -116,11 +125,18 @@ preview when typed.
 
 ## Details
 
-This version makes two table types: a descriptives table from one or
+This version makes four table types: a descriptives table from one or
 more [`jdesc`](https://jma61.github.io/jstats/reference/jdesc.md)
-results, and a frequency table from one or more
+results; a frequency table from one or more
 [`jfreq`](https://jma61.github.io/jstats/reference/jfreq.md) results –
 each variable's label on a row of its own, its categories indented under
-it. The variables go under role headings when `headings` names them, and
-each specific note's variables are marked when `markers` names them.
-Further table types follow.
+it; and a regression table from one or more
+[`jlm`](https://jma61.github.io/jstats/reference/jlm.md) results, or a
+logistic regression table from
+[`jlogistic`](https://jma61.github.io/jstats/reference/jlogistic.md)
+results – the models of one outcome side by side, each under its own
+head, the constant first, a dummy-coded variable's categories indented
+under its label with the reference category named, and the fit rows
+under the predictors. The variables go under role headings when
+`headings` names them, and each specific note's variables are marked
+when `markers` names them. Further table types follow.

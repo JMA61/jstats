@@ -1,0 +1,35 @@
+# Internal helper: a table's widths and sizes, fitted to the page
+
+A table wider than the page loses half its number columns' padding
+first, then steps its font down a point at a time (12, 11, 10; APA
+allows a smaller size in a table), and only then narrows its columns,
+the stub first (a label may wrap, a number never) – Session 402, item
+11. Until then every column was narrowed in proportion, and a number
+wrapped. Two more steps, 9 and 8 pt, come before the stub narrows: at 10
+pt a 17-column table with F tests still wrapped its numbers (Session
+403; APA's floor for a table is 8 pt). The notes step down with the
+table; the caption keeps its size.
+
+## Usage
+
+``` r
+.jst_docx_fit(tbl, style, page_text)
+```
+
+## Arguments
+
+- tbl:
+
+  A jst_table.
+
+- style:
+
+  The style list.
+
+- page_text:
+
+  The text width available, in dxa.
+
+## Value
+
+A list: widths (integer), size and note_size (points).

@@ -13,7 +13,8 @@ Internal helper: one paragraph
   tab = NULL,
   keep_next = FALSE,
   spacing_after = NULL,
-  line = "single"
+  line = "single",
+  size = NULL
 )
 ```
 
@@ -50,3 +51,10 @@ Internal helper: one paragraph
 - line:
 
   "single" or "double".
+
+- size:
+
+  Points, or NULL: the paragraph mark's size, which sets the height of
+  an EMPTY cell – given when a table is fitted to the page at a size
+  below the document's, so an empty cell does not hold its row at the
+  larger height (Session 403).

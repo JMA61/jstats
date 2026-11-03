@@ -1,9 +1,11 @@
 # Internal helper: the body of a document holding tables
 
 Each table's caption, table and notes (paragraphs or rows by the style),
-an empty paragraph between tables, and the section properties: the page,
-landscape when the style says so or when auto finds the table wider than
-the portrait text width.
+two empty paragraphs between tables (Jeff, Session 401), and the section
+properties: the page, landscape when the style – or the call, since
+Session 403 – says so, or when auto finds a table wider than the
+portrait text width; a table wider than the page fitted to it
+([`.jst_docx_fit()`](https://jma61.github.io/jstats/reference/dot-jst_docx_fit.md)).
 
 ## Usage
 

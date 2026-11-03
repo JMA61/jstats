@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.271</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.272</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_docx_table</span><span class="op">(</span><span class="va">tbl</span>, <span class="va">style</span>, <span class="va">number</span>, <span class="va">widths</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_docx_table</span><span class="op">(</span><span class="va">tbl</span>, <span class="va">style</span>, <span class="va">number</span>, <span class="va">widths</span>, size <span class="op">=</span> <span class="cn">NULL</span>, note_size <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -60,6 +60,12 @@
 
 <dt id="arg-widths">widths<a class="anchor" aria-label="anchor" href="#arg-widths"></a></dt>
 <dd><p>Column widths in dxa.</p></dd>
+
+
+<dt id="arg-size-note-size">size, note_size<a class="anchor" aria-label="anchor" href="#arg-size-note-size"></a></dt>
+<dd><p>Points, or NULL for the style's size and
+note.size: a table fitted to the page passes the stepped-down sizes
+(Session 403).</p></dd>
 
 </dl></div>
     <div class="section level2">

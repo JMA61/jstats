@@ -308,7 +308,7 @@ joptions()                                        # show current settings
 #> SPSS-style missing value codes: -99, -98, -97
 #> Data folder: Working directory
 #> Output folder: Working directory
-#> Style: apa
+#> Publication style: apa
 #> Style folder: Not set
 #> Correlation layout: wide
 #> Missing-value detail: per_code
@@ -348,11 +348,11 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> 
 joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: /tmp/RtmpMNZa3u/Data
+#> Data folder: /tmp/RtmpN6YxbE/Data
 #> Run joptions() to see all settings.
 #> 
 #> Created the data folder:
-#>   /tmp/RtmpMNZa3u/Data
+#>   /tmp/RtmpN6YxbE/Data
 #> 
                                                   # (created if absent)
 joptions(data.dir = NULL)                         # back to the working directory
@@ -362,11 +362,11 @@ joptions(data.dir = NULL)                         # back to the working director
 #> 
 joptions(output.dir = file.path(tempdir(), "Tables")) # where tables are written
 #> Options Settings
-#> Output folder: /tmp/RtmpMNZa3u/Tables
+#> Output folder: /tmp/RtmpN6YxbE/Tables
 #> Run joptions() to see all settings.
 #> 
 #> Created the output folder:
-#>   /tmp/RtmpMNZa3u/Tables
+#>   /tmp/RtmpN6YxbE/Tables
 #> 
 joptions(output.dir = NULL)                       # back to the working directory
 #> Options Settings
@@ -408,7 +408,7 @@ joptions(NULL)                                    # reset all to defaults
 #> SPSS-style missing value codes: -99, -98, -97
 #> Data folder: Working directory
 #> Output folder: Working directory
-#> Style: apa
+#> Publication style: apa
 #> Style folder: Not set
 #> Correlation layout: wide
 #> Missing-value detail: per_code

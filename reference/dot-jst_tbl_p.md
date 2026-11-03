@@ -1,13 +1,20 @@
 # Internal helper: format a p-value for a table cell
 
 Exact to `decimals` places with the floor "\<.001" (at 3 places; "\<.01"
-at 2), the leading zero dropped as APA writes p; or stars alone; or
-both, the stars after the value. NA is a blank cell.
+at 2), the leading zero dropped as APA writes p (kept under leading.zero
+= yes, Session 403); or stars alone; or both, the stars after the value.
+NA is a blank cell.
 
 ## Usage
 
 ``` r
-.jst_tbl_p(p, format = "exact", decimals = 3L, stars = c(0.05, 0.01, 0.001))
+.jst_tbl_p(
+  p,
+  format = "exact",
+  decimals = 3L,
+  stars = c(0.05, 0.01, 0.001),
+  leading.zero = FALSE
+)
 ```
 
 ## Arguments
@@ -27,3 +34,7 @@ both, the stars after the value. NA is a blank cell.
 - stars:
 
   The thresholds, largest first.
+
+- leading.zero:
+
+  Logical; TRUE keeps the zero before the point.

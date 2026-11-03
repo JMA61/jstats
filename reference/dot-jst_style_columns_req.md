@@ -5,7 +5,7 @@ Internal helper: what columns = takes for one table type
 ## Usage
 
 ``` r
-.jst_style_columns_req(cols, type)
+.jst_style_columns_req(cols, type, none = FALSE)
 ```
 
 ## Arguments
@@ -17,6 +17,10 @@ Internal helper: what columns = takes for one table type
 - type:
 
   Character(1) or NULL; the table type.
+
+- none:
+
+  Logical; TRUE when "none" is a value too (columns.last, fit.rows).
 
 ## Value
 

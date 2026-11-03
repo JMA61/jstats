@@ -19,7 +19,7 @@ prints is what the file holds."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.271</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.272</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -83,32 +83,40 @@ prints is what the file holds.</p>
 <dd><p>A saved result – what an analysis function returns, kept with
 <code>&lt;-</code> – or a list of them. A list of <code><a href="jdesc.html">jdesc()</a></code> results, or
 of <code><a href="jfreq.html">jfreq()</a></code> results, stacks into one table, each result's
-variables under its name in the list when the list is named. A table
-<code>jtable()</code> has already built, or a list of them, goes to the file
-as it is, the tables in the order given and numbered so.</p></dd>
+variables under its name in the list when the list is named; a list
+of <code><a href="jlm.html">jlm()</a></code> results, or of <code><a href="jlogistic.html">jlogistic()</a></code> results, with one
+outcome puts the models side by side, headed "Model 1", "Model 2",
+... or by the list's names. A table <code>jtable()</code> has already
+built, or a list of them, goes to the file as it is, the tables in
+the order given and numbered so.</p></dd>
 
 
 <dt id="arg-headings">headings<a class="anchor" aria-label="anchor" href="#arg-headings"></a></dt>
 <dd><p>A named list: each heading and the variables under it,
 bare or in quotes, e.g. <code>list("Dependent variable" = Wellbeing,
 "Independent variables" = c(Income, Age))</code>. Every variable of the
-result goes under one heading; the table follows the list's order.</p></dd>
+result goes under one heading; the table follows the list's order.
+For a descriptives or frequency table.</p></dd>
 
 
 <dt id="arg-markers">markers<a class="anchor" aria-label="anchor" href="#arg-markers"></a></dt>
 <dd><p>A named list: each specific note's text and the
 variables it marks, e.g. <code>list("Mean-centered" = c(Income,
 Age))</code>. The style assigns the marks (superscript letters under APA),
-sets each on its rows' labels, and writes the note under the table.</p></dd>
+sets each on its rows' labels, and writes the note under the table.
+In a regression table a predictor's row is marked.</p></dd>
 
 
 <dt id="arg-title">title<a class="anchor" aria-label="anchor" href="#arg-title"></a></dt>
-<dd><p>The table's title; the style's title when NULL.</p></dd>
+<dd><p>The table's title; the style's title when NULL (a
+regression table's names the outcome). <code>*text*</code> sets a word in
+italics.</p></dd>
 
 
 <dt id="arg-note">note<a class="anchor" aria-label="anchor" href="#arg-note"></a></dt>
-<dd><p>The general note's text, after the N the style writes;
-<code>*text*</code> sets a word in italics. NULL for none.</p></dd>
+<dd><p>The general note's text, after what the style writes
+there (N, a reference category); <code>*text*</code> sets a word in
+italics. NULL for none.</p></dd>
 
 
 <dt id="arg-file">file<a class="anchor" aria-label="anchor" href="#arg-file"></a></dt>
@@ -148,10 +156,12 @@ and writes the file alone.</p></dd>
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>A setting of the table type's section of the style, for this
 table only, e.g. <code>columns = c("mean", "sd")</code> for a descriptives
-table or <code>missing.rows = "none"</code> for a frequency table: the call
-outranks the style file. The general settings (the font, the caption's
-form, the decimals) are the style file's. Any other input stops with
-"unused input".</p></dd>
+table, <code>missing.rows = "none"</code> for a frequency table or
+<code>fit.rows = c("r2", "delta.r2")</code> for a regression table: the
+call outranks the style file. The general settings (the font, the
+caption's form, the decimals) are the style file's, except
+<code>landscape = "yes"</code> or <code>"no"</code>, a page choice the call may
+make. Any other input stops with "unused input".</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -161,13 +171,18 @@ which prints its preview when typed.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>This version makes two table types: a descriptives table from one or
-more <code><a href="jdesc.html">jdesc</a></code> results, and a frequency table from one or
-more <code><a href="jfreq.html">jfreq</a></code> results – each variable's label on a row of
-its own, its categories indented under it. The variables go under role
-headings when <code>headings</code> names them, and each specific note's
-variables are marked when <code>markers</code> names them. Further table
-types follow.</p>
+    <p>This version makes four table types: a descriptives table from one or
+more <code><a href="jdesc.html">jdesc</a></code> results; a frequency table from one or more
+<code><a href="jfreq.html">jfreq</a></code> results – each variable's label on a row of its
+own, its categories indented under it; and a regression table from one
+or more <code><a href="jlm.html">jlm</a></code> results, or a logistic regression table from
+<code><a href="jlogistic.html">jlogistic</a></code> results – the models of one outcome side by
+side, each under its own head, the constant first, a dummy-coded
+variable's categories indented under its label with the reference
+category named, and the fit rows under the predictors. The variables
+go under role headings when <code>headings</code> names them, and each
+specific note's variables are marked when <code>markers</code> names them.
+Further table types follow.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -55,4 +55,9 @@ two categories along the axis.
 A named list, one element per dummy-coded variable in the model, each a
 list of `labels` (character) and `dummy` (character, `NA` for the
 reference), in code order. Empty when the model has no dummy-coded
-predictor.
+predictor. Since Session 403 (Capability Slate T, build 3) each element
+also carries what the table layer reads, never a display string: `codes`
+(the category each dummy stands for: the value the cells hold, or a
+factor's level), `value_labels` (each category's value label, `NA` where
+it has none) and `var_label` (the variable's label, its name when it has
+none).

@@ -26,4 +26,5 @@ checked as a file's is.
 
 ## Value
 
-A layer: list(source = "the call", = list(...)).
+A layer: list(source = "the call", = list(...)), with a general part
+when the call sets landscape (Session 403).

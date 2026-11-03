@@ -310,9 +310,12 @@ Invisibly returns a list of class `jst_logistic` containing:
 - dummy_groups:
 
   Named list, one element per dummy-coded variable: `labels`, its
-  categories as the coefficient table labels them, and `dummy`, the
-  dummy column of each (`NA` for the reference). Used by
-  [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md).
+  categories as the coefficient table labels them, `dummy`, the dummy
+  column of each (`NA` for the reference), and, for the table layer,
+  `codes` (the category each stands for), `value_labels` (its value
+  label, `NA` where it has none) and `var_label`. Used by
+  [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) and
+  [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md).
 
 - vif:
 
@@ -328,6 +331,10 @@ Invisibly returns a list of class `jst_logistic` containing:
 - sample_info:
 
   Pipeline and missing data counts.
+
+- data_name:
+
+  The data frame's name as the call gave it.
 
 ## Details
 
