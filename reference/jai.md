@@ -92,7 +92,7 @@ jai()
 #> jstats conventions
 #> 
 #> Orientation for users and AI assistants.
-#> Orientation text v3.8 | jstats 0.9.273 | generated 2026-11-03
+#> Orientation text v3.9 | jstats 0.9.274 | generated 2026-11-04
 #> 
 #> jstats is an integrated set of j-prefixed analysis functions (jdesc,
 #> jfreq, jlm, ...) with shared syntax and output styled after commercial
@@ -170,8 +170,11 @@ jai()
 #>   instead. For anything not listed, check help("jstats") for the full
 #>   function list before reaching for another package.
 #> 
-#> - Analysis functions print their results directly; nothing needs to be
-#>   stored. The few functions that change data, such as jdeclare_missing() and
+#> - Analysis functions print their results directly. Keep a result with
+#>   <- (m1 <- jlm(...)) to make a publication table of it with
+#>   jtable(), or to pass it to another package: jstats results work with
+#>   tidy() and glance(), so packages such as modelsummary read them.
+#>   The few functions that change data, such as jdeclare_missing() and
 #>   jconvert(), take modify = TRUE to apply the change directly
 #>   (jdeclare_missing(df, ..., modify = TRUE)) -- the form jstats teaches.
 #>   They also return the changed data frame, so assigning back
@@ -179,7 +182,22 @@ jai()
 #>   translates missing-value codes between software conventions -- it is for
 #>   moving data to other software or to plain base-R form, and is never a
 #>   prerequisite for analysis in jstats, which reads labelled data directly.
-#>   Save data across sessions with jsave().
+#>   Save data across sessions with jsave(), and a kept result or table
+#>   with base R's saveRDS() (read it back with readRDS()).
+#> 
+#> - Publication tables come from jtable() on kept results:
+#>   jtable(m1, file = "Table1.docx") writes a Word file. One call makes
+#>   one table; to put several in one file, build each and give them
+#>   together: jtable(list(t1, t2), file = "Tables.docx"). jtable()
+#>   reports what it made, and print(t1) shows a table in the console. A
+#>   table's look and conventions come from a style: the built-in "apa",
+#>   or a .jstyle text file. jstyle("apa", save.as = "myjournal")
+#>   writes a copy holding every setting, each with a note on what it
+#>   takes; jstyle("myjournal") checks a file and prints its settings;
+#>   ?jstyle_settings lists them all. To change a style, edit values only
+#>   -- never add, rename or remove a setting or a section -- give colors
+#>   by name (lightblue) or six hex digits (ADD8E6), then run
+#>   jstyle("myjournal"), which names any value it cannot use.
 #> 
 #> - Detailed help and worked examples for each function are available via
 #>   ?jdesc, ?jdeclare_missing, and so on.

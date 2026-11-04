@@ -5,7 +5,7 @@ Internal helper: the parts of a document file
 ## Usage
 
 ``` r
-.jst_docx_parts(tables, style)
+.jst_docx_parts(tables, style, landscape = NULL)
 ```
 
 ## Arguments
@@ -17,6 +17,10 @@ Internal helper: the parts of a document file
 - style:
 
   The style list.
+
+- landscape:
+
+  NULL, or the page setting for every page (the writing call's).
 
 ## Value
 

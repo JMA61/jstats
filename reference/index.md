@@ -39,6 +39,19 @@ Build scale scores and check internal consistency.
 - [`javg()`](https://jma61.github.io/jstats/reference/javg.md) : Compute
   a row-wise mean across multiple variables
 
+## Publication tables
+
+Tables in Word from saved results, and the styles that set their look.
+
+- [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md)
+  [`print(`*`<jst_table>`*`)`](https://jma61.github.io/jstats/reference/jtable.md)
+  [`print(`*`<jst_tables>`*`)`](https://jma61.github.io/jstats/reference/jtable.md)
+  : Make a publication table from a saved result
+- [`jstyle()`](https://jma61.github.io/jstats/reference/jstyle.md) :
+  Show, list and copy table styles
+- [`jstyle_settings`](https://jma61.github.io/jstats/reference/jstyle_settings.md)
+  : The settings of a table style
+
 ## Prepare and manage your data
 
 Recode, encode text, relabel, declare missing values, and select cases.

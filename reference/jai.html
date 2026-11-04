@@ -19,7 +19,7 @@ what they find there."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.273</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.274</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,7 +137,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats conventions</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Orientation for users and AI assistants.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.8 | jstats 0.9.273 | generated 2026-11-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.9 | jstats 0.9.274 | generated 2026-11-04</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats is an integrated set of j-prefixed analysis functions (jdesc,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jfreq, jlm, ...) with shared syntax and output styled after commercial</span>
@@ -215,8 +215,11 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   instead. For anything not listed, check help("jstats") for the full</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   function list before reaching for another package.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Analysis functions print their results directly; nothing needs to be</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   stored. The few functions that change data, such as jdeclare_missing() and</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Analysis functions print their results directly. Keep a result with</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   &lt;- (m1 &lt;- jlm(...)) to make a publication table of it with</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jtable(), or to pass it to another package: jstats results work with</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   tidy() and glance(), so packages such as modelsummary read them.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   The few functions that change data, such as jdeclare_missing() and</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jconvert(), take modify = TRUE to apply the change directly</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   (jdeclare_missing(df, ..., modify = TRUE)) -- the form jstats teaches.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   They also return the changed data frame, so assigning back</span>
@@ -224,7 +227,22 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   translates missing-value codes between software conventions -- it is for</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   moving data to other software or to plain base-R form, and is never a</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   prerequisite for analysis in jstats, which reads labelled data directly.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Save data across sessions with jsave().</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Save data across sessions with jsave(), and a kept result or table</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   with base R's saveRDS() (read it back with readRDS()).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Publication tables come from jtable() on kept results:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jtable(m1, file = "Table1.docx") writes a Word file. One call makes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   one table; to put several in one file, build each and give them</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   together: jtable(list(t1, t2), file = "Tables.docx"). jtable()</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   reports what it made, and print(t1) shows a table in the console. A</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   table's look and conventions come from a style: the built-in "apa",</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   or a .jstyle text file. jstyle("apa", save.as = "myjournal")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   writes a copy holding every setting, each with a note on what it</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   takes; jstyle("myjournal") checks a file and prints its settings;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   ?jstyle_settings lists them all. To change a style, edit values only</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   -- never add, rename or remove a setting or a section -- give colors</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   by name (lightblue) or six hex digits (ADD8E6), then run</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jstyle("myjournal"), which names any value it cannot use.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Detailed help and worked examples for each function are available via</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ?jdesc, ?jdeclare_missing, and so on.</span>

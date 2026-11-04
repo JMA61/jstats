@@ -28,3 +28,6 @@ Wording per the S207 trigger-edge probe – a token list, not prose, with
 the dataset names load-bearing – and the S209 closing sentence, which
 pairs the anti-guessing warning with the remedy: warned but not told
 what to do, the S209 run avoided jstats entirely and reached for haven.
+Session 406 (orientation v3.9) added jtable and jstyle with the phrase
+naming tables and styles, so a request about a table's look loads the
+skill.

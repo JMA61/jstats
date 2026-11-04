@@ -1,13 +1,10 @@
 # Make a publication table from a saved result
 
-`jtable()` turns a saved analysis result into a publication table: it
-prints a preview in the console and, when `file` is given, writes the
-table to a Word file (.docx) that opens in Word, LibreOffice and Google
-Docs. The table's look and conventions come from a style – the built-in
-`"apa"` style, or a style file of your own (see
-[`jstyle()`](https://jma61.github.io/jstats/reference/jstyle.md)); the
-preview is a facsimile of the Word table, so what prints is what the
-file holds.
+`jtable()` turns a saved analysis result into a publication table and,
+when `file` is given, writes it to a Word file (.docx) that opens in
+Word, LibreOffice and Google Docs. The table's look and conventions come
+from a style – the built-in `"apa"` style, or a style file of your own
+(see [`jstyle`](https://jma61.github.io/jstats/reference/jstyle.md)).
 
 ## Usage
 
@@ -28,6 +25,9 @@ jtable(
 
 # S3 method for class 'jst_table'
 print(x, ...)
+
+# S3 method for class 'jst_tables'
+print(x, ...)
 ```
 
 ## Arguments
@@ -35,8 +35,7 @@ print(x, ...)
 - x:
 
   A saved result – what an analysis function returns, kept with `<-` –
-  or a list of them. Results share a table when they share its columns:
-  a list of
+  or a list of them that share one table: a list of
   [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md)
   results, or of
   [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md)
@@ -55,9 +54,8 @@ print(x, ...)
   [`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md)
   results stacks the scales, each under its name. A
   [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md) result
-  is a table of its own. A table `jtable()` has already built, or a list
-  of them, goes to the file as it is, the tables in the order given and
-  numbered so.
+  is a table of its own. Or a table `jtable()` has already built, or a
+  list of them: they go to the file as they are, in the order given.
 
 - headings:
 
@@ -114,10 +112,10 @@ print(x, ...)
 
 - print:
 
-  Print the preview? NULL (the default) follows the
+  Print the report of what was made? NULL (the default) follows the
   [`joutput`](https://jma61.github.io/jstats/reference/joutput.md)
-  level: the preview prints unless the level is `"silent"`. TRUE prints
-  it under any level; FALSE prints nothing and writes the file alone.
+  level: the report prints unless the level is `"silent"`. TRUE prints
+  it under any level; FALSE prints nothing.
 
 - ...:
 
@@ -125,15 +123,19 @@ print(x, ...)
   only, e.g. `columns = c("mean", "sd")` for a descriptives table,
   `missing.rows = "none"` for a frequency table or
   `fit.rows = c("r2", "delta.r2")` for a regression table: the call
-  outranks the style file. The general settings (the font, the caption's
+  outranks the style file.
+  [`jstyle_settings`](https://jma61.github.io/jstats/reference/jstyle_settings.md)
+  lists every setting. The general settings (the font, the caption's
   form, the decimals) are the style file's, except `landscape = "yes"`
   or `"no"`, a page choice the call may make. Any other input stops with
   "unused input".
 
 ## Value
 
-The table, invisibly: an object of class `jst_table`, which prints its
-preview when typed.
+The table, invisibly: an object of class `jst_table`, which shows a
+facsimile of the Word table when printed. A call given two or more built
+tables returns them together (class `jst_tables`), which prints each
+one, numbered as in the file.
 
 ## Details
 
@@ -170,3 +172,114 @@ each specific note's variables are marked when `markers` names them. A
 filter the analysis applied
 ([`jsubset`](https://jma61.github.io/jstats/reference/jsubset.md),
 `subset =`) is named in the general note.
+
+**One call, one table.** The results given to one call make one table:
+results share a table when they share its columns (see `x`). Results
+that cannot share one – results of different kinds, models of different
+outcomes, tests of different grouping variables – stop, and the message
+gives the lines that make each table in a call of its own. To put
+several tables in one file, build each table, then give the tables
+together: `jtable(list(t1, t2, t3), file = "Tables.docx")`. The tables
+keep the order given and are numbered so.
+
+**What prints.** `jtable()` reports what it made: each table's number
+and title, what it holds, the page it is on (a landscape page, the text
+stepped down to fit), and where the file was written. To see a table in
+the console, keep it with `<-` and print it: `print(t1)`, or type `t1`.
+The console shows a facsimile of the Word table, its numbers formatted
+by the style.
+
+**The page.** Under the style's `landscape = "auto"` each table gets the
+page it needs: a table too wide for a portrait page sits on landscape
+pages of its own, and the tables around it stay portrait.
+`landscape = "yes"` or `"no"` in the call that writes a file sets every
+page.
+
+**The analysis inside the call.** `jtable(jlm(Fear ~ Age, d))` runs the
+analysis without printing it and makes its table; errors and warnings
+still show.
+
+**Keeping a result for a later session.** A saved result is an R object,
+which base R keeps in a file of its own: `saveRDS(m1, "m1.rds")`, then
+in a later session `m1 <- readRDS("m1.rds")`. A result made by an
+earlier version of jstats than the table needs stops, and says which
+version made it.
+
+## See also
+
+[`jstyle`](https://jma61.github.io/jstats/reference/jstyle.md) for
+styles,
+[`jstyle_settings`](https://jma61.github.io/jstats/reference/jstyle_settings.md)
+for every setting a style holds.
+
+## Examples
+
+``` r
+# Keep a result, make its table, and look at it in the console
+d1 <- jdesc(community, Age, Income, print = FALSE)
+t1 <- jtable(d1, title = "Descriptive Statistics for Study Variables")
+#> Table 1. Descriptive Statistics for Study Variables
+#>   2 variables, on a portrait page.
+#> No file was written.
+#> 
+print(t1)
+#> Table 1
+#> Descriptive Statistics for Study Variables
+#> --------------------------------------------------------------
+#> Variable              n       M          SD       Min     Max
+#> --------------------------------------------------------------
+#> Age (years)          103      40.65      11.62      18      71
+#> Annual income (USD)   97  49,855.67  17,427.22  14,000  93,000
+#> --------------------------------------------------------------
+#> Note. N = 103.
+#> 
+
+# Two models of one outcome side by side, written to a Word file
+m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
+m2 <- jlm(WellbeingScore ~ Age + Volunteer, community, print = FALSE)
+t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
+             overwrite = TRUE)
+#> Table 1. Regression Coefficients Predicting Wellbeing score (0-100)
+#>   2 models side by side, on a portrait page.
+#> Table written to /tmp/RtmpS2VjTu/Table2.docx
+#> 
+
+# Several tables in one file: build each, then give them together
+doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
+              overwrite = TRUE)
+#> Table 1. Descriptive Statistics for Study Variables
+#>   2 variables, on a portrait page.
+#> Table 2. Regression Coefficients Predicting Wellbeing score (0-100)
+#>   2 models side by side, on a portrait page.
+#> 2 tables written to /tmp/RtmpS2VjTu/Tables.docx
+#> 
+print(doc)
+#> Table 1
+#> Descriptive Statistics for Study Variables
+#> --------------------------------------------------------------
+#> Variable              n       M          SD       Min     Max
+#> --------------------------------------------------------------
+#> Age (years)          103      40.65      11.62      18      71
+#> Annual income (USD)   97  49,855.67  17,427.22  14,000  93,000
+#> --------------------------------------------------------------
+#> Note. N = 103.
+#> 
+#> Table 2
+#> Regression Coefficients Predicting Wellbeing score (0-100)
+#> --------------------------------------------------------------------------
+#>                                   Model 1                  Model 2
+#> Predictor                   b     SE    β     p      b     SE    β     p
+#> --------------------------------------------------------------------------
+#> Constant                  37.11  3.90       <.001  37.33  3.81       <.001
+#> Age (years)                0.34  0.09  .34  <.001   0.27  0.09  .27   .005
+#> Volunteered in past year                            5.36  2.18  .23   .016
+#> R²                          .12                      .17
+#> --------------------------------------------------------------------------
+#> Note. N = 103.
+#> 
+
+# Keep a result for a later session with base R
+path <- file.path(tempdir(), "m1.rds")
+saveRDS(m1, path)
+m1 <- readRDS(path)
+```

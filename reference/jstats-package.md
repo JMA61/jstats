@@ -146,6 +146,17 @@ package's GitHub repository.
   [`jt()`](https://jma61.github.io/jstats/reference/jt.md),
   [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md), etc.
 
+**Publication tables**
+
+- [`jtable`](https://jma61.github.io/jstats/reference/jtable.md) –
+  publication tables from saved results, written to a Word file
+
+- [`jstyle`](https://jma61.github.io/jstats/reference/jstyle.md) – list,
+  print, and check table styles, and save a copy, or a short style
+  holding only the settings that differ;
+  [`jstyle_settings`](https://jma61.github.io/jstats/reference/jstyle_settings.md)
+  lists every setting a style holds
+
 **Package and assistant support**
 
 - [`jupdate`](https://jma61.github.io/jstats/reference/jupdate.md) –
