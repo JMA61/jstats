@@ -35,6 +35,13 @@ reference:
       - jsum
       - javg
 
+  - title: Publication tables
+    desc: Tables in Word from saved results, and the styles that set their look.
+    contents:
+      - jtable
+      - jstyle
+      - jstyle_settings
+
   - title: Prepare and manage your data
     desc: Recode, encode text, relabel, declare missing values, and select cases.
     contents:
