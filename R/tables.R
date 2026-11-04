@@ -38,8 +38,12 @@
 # correlation, t-test, ANOVA, crosstab and reliability tables. Every result
 # class an analysis function returns has its table type.
 #
-# jtable() is UNEXPORTED until the layer's last build (ruling R48): the
-# batteries call it bare.
+# Build 5 (Session 406) finished the layer and EXPORTED jtable() and jstyle()
+# (ruling R48 ends): one call makes one table (ruling R56), a call reports
+# what it made and print() shows a table (ruling R57), several built tables
+# go to one file as a document object, each table on the page it needs,
+# jstyle(save.as =) writes a short file from settings, and the settings
+# help page (jstyle_settings) is generated from .jst_style_spec.
 
 
 # -----------------------------------------------------------------------------
@@ -1947,14 +1951,14 @@
     terms[[i]] <- tf; mods[[i]] <- md; groups[[i]] <- gr
   }
 
-  # One outcome: models of different outcomes are tables of their own.
+  # One outcome: models of different outcomes are tables of their own, and
+  # jtable() sorts its results before a builder sees them (ruling R56,
+  # Session 406).
   outs <- vapply(results, function(r) {
     unname(attr(r$coefficients_raw, "outcome")["name"])
   }, character(1))
   if (length(unique(outs)) > 1L) {
-    .jst_stop("models of different outcomes (", .jst_and_list(unique(outs)),
-              ") cannot share a table yet.\n",
-              "Give the models of one outcome at a time.", fn = "jtable")
+    stop(".jst_table_build_models(): models of different outcomes", call. = FALSE)
   }
   out_label <- unname(attr(results[[1L]]$coefficients_raw, "outcome")["label"])
   if (is.na(out_label) || !nzchar(out_label)) out_label <- outs[1L]
@@ -2686,11 +2690,11 @@
   }
   count <- function(n) .jst_tbl_count(n, thou)
   .jst_table_no_headings(headings, type, "its variables in the result's order")
+  # Each jcorr() result is a table of its own (ruling R54): jtable() gives
+  # this builder one at a time, and its stop for a list of them is
+  # .jst_table_split_stop()'s (ruling R56, Session 406).
   if (length(results) > 1L) {
-    .jst_stop("each jcorr() result is a table of its own, and one call makes ",
-              "one table.\n",
-              "Give one jcorr() result at a time; to correlate more variables, ",
-              "name them in one jcorr() call.", fn = "jtable")
+    stop(".jst_table_build_corr(): one jcorr() result per table", call. = FALSE)
   }
   r  <- results[[1L]]
   tf <- .jst_apa_terms(r)
@@ -2851,23 +2855,15 @@
     terms[[i]] <- tf; mods[[i]] <- md
   }
   # One grouping variable (ruling R54), the same groups in every result,
-  # each outcome once.
+  # each outcome once. jtable() sorts its results by what they share
+  # before a builder sees them, so results of different grouping variables
+  # or groups stop there, with the lines that make each table (ruling R56,
+  # Session 406); here they are an internal fault.
   grps <- vapply(mods, function(m) as.character(m$group), character(1))
-  if (length(unique(grps)) > 1L) {
-    .jst_stop(fn, " results of different grouping variables (",
-              .jst_and_list(unique(grps)), ") cannot share a table yet.\n",
-              "Give the results of one grouping variable at a time.",
-              fn = "jtable")
-  }
   codes <- lapply(terms, function(tf) as.character(tf$group_code))
-  if (!all(vapply(codes, identical, logical(1), codes[[1L]]))) {
-    sets <- vapply(terms, function(tf) {
-      .jst_and_list(.jst_table_cat_names(tf$group_code, tf$group_label))
-    }, character(1))
-    .jst_stop("the ", fn, " results compare different groups of ", grps[1L],
-              " (", paste(unique(sets), collapse = "; "), ").\n",
-              "Give the results that compare the same groups at a time.",
-              fn = "jtable")
+  if (length(unique(grps)) > 1L ||
+      !all(vapply(codes, identical, logical(1), codes[[1L]]))) {
+    stop(".jst_table_build_groups(): results of different groups", call. = FALSE)
   }
   outs <- vapply(mods, function(m) as.character(m$outcome), character(1))
   .jst_table_once(outs)
@@ -3107,23 +3103,15 @@
     }
   }
   vname <- function(cats) unname(attr(cats, "variable")["name"])
+  # One column variable with one set of categories (ruling R54); jtable()
+  # sorts its results before a builder sees them (ruling R56, Session 406).
   cvars <- vapply(results, function(r) vname(r$col_categories), character(1))
-  if (length(unique(cvars)) > 1L) {
-    .jst_stop("jcrosstab() results with different column variables (",
-              .jst_and_list(unique(cvars)), ") cannot share a table yet.\n",
-              "Give the results of one column variable at a time.", fn = "jtable")
-  }
   cc <- results[[1L]]$col_categories
   ccodes <- lapply(results, function(r) as.character(r$col_categories$code))
-  if (!all(vapply(ccodes, identical, logical(1), ccodes[[1L]]))) {
-    sets <- vapply(results, function(r) {
-      .jst_and_list(.jst_table_cat_names(r$col_categories$code,
-                                         r$col_categories$label))
-    }, character(1))
-    .jst_stop("the jcrosstab() results hold different categories of ", cvars[1L],
-              " (", paste(unique(sets), collapse = "; "), ").\n",
-              "Give the results whose column variable has the same categories ",
-              "at a time.", fn = "jtable")
+  if (length(unique(cvars)) > 1L ||
+      !all(vapply(ccodes, identical, logical(1), ccodes[[1L]]))) {
+    stop(".jst_table_build_crosstab(): results of different column variables",
+         call. = FALSE)
   }
   rvars <- vapply(results, function(r) vname(r$row_categories), character(1))
   .jst_table_once(rvars)
@@ -4418,62 +4406,116 @@
 #'
 #' Each table's caption, table and notes (paragraphs or rows by the style),
 #' two empty paragraphs between tables (Jeff, Session 401), and the
-#' section properties: the page, landscape when the style -- or the call,
-#' since Session 403 -- says so, or when auto finds a table that cannot fit
-#' the portrait text width at the style's size with half its padding and
-#' its labels on two lines (ruling R55, Session 404; until Session 405, any
-#' table wider than portrait at its natural width); a table wider than the
-#' page fitted to it (\code{.jst_docx_fit()}).
+#' section properties. Since Session 406 each table has the page it needs
+#' (\code{.jst_docx_layout()}): where the orientation changes between two
+#' tables, the second empty paragraph ends a section, and Word starts the
+#' next table on a new page turned its own way; tables in a row with the
+#' same orientation share pages. Until then one orientation served the
+#' whole document: landscape when the style -- or the call, since Session
+#' 403 -- said so, or when auto found any table that could not fit the
+#' portrait text width at the style's size with half its padding and its
+#' labels on two lines (ruling R55, Session 404).
 #'
 #' @param tables A list of jst_table.
 #' @param style The style list.
-#' @return A list: xml (the document part) and landscape (logical).
+#' @param landscape NULL, or "auto", "yes" or "no" for every page (the
+#'   writing call's setting).
+#' @return A list: xml (the document part) and landscape (logical, one per
+#'   table).
 #' @keywords internal
-.jst_docx_document <- function(tables, style) {
+.jst_docx_document <- function(tables, style, landscape = NULL) {
   body <- character(0)
-  paper <- .jst_style_key(style, "general", "paper")
-  land_key <- .jst_style_key(style, "general", "landscape")
-  portrait <- .jst_docx_page(paper, FALSE)
-  # Each table in the style it was built under (the page and the fonts are
-  # the document's style).
-  styles <- lapply(tables, .jst_table_style, style = style)
-  all_widths <- mapply(.jst_docx_widths, tables, styles, SIMPLIFY = FALSE)
-  natural <- vapply(all_widths, sum, integer(1))
-  # The narrowest a table goes at the style's size: half its padding, its
-  # labels on two lines.
-  narrowest <- vapply(seq_along(tables), function(i) {
-    size0 <- .jst_style_key(styles[[i]], tables[[i]]$type, "size")
-    w <- .jst_docx_widths(tables[[i]], styles[[i]], size = size0, pad = 60L)
-    as.numeric(sum(w[-1L]) + .jst_docx_stub_floor(tables[[i]], size0, w[1L]))
-  }, numeric(1))
-  landscape <- identical(land_key, "yes") ||
-    (identical(land_key, "auto") && any(narrowest > portrait$text))
-  page <- .jst_docx_page(paper, landscape)
+  lay  <- .jst_docx_layout(tables, style, landscape)
   for (i in seq_along(tables)) {
     tbl <- tables[[i]]
-    tst <- styles[[i]]
-    fit <- if (natural[i] > page$text) .jst_docx_fit(tbl, tst, page$text)
-           else list(widths = all_widths[[i]], size = NULL, note_size = NULL)
+    L   <- lay[[i]]
+    tst <- L$style
     key <- function(k) .jst_style_key(tst, tbl$type, k)
     if (!identical(key("caption.position"), "row")) {
       body <- c(body, .jst_docx_caption_pars(tbl, tst, i))
     }
-    body <- c(body, .jst_docx_table(tbl, tst, i, fit$widths, size = fit$size,
-                                    note_size = fit$note_size))
+    body <- c(body, .jst_docx_table(tbl, tst, i, L$fit$widths, size = L$fit$size,
+                                    note_size = L$fit$note_size))
     if (!identical(key("note.position"), "row")) {
-      body <- c(body, .jst_docx_note_pars(tbl, tst, size = fit$note_size))
+      body <- c(body, .jst_docx_note_pars(tbl, tst, size = L$fit$note_size))
     }
-    if (i < length(tables)) body <- c(body, .jst_docx_par(""), .jst_docx_par(""))
+    if (i < length(tables)) {
+      # Two empty paragraphs between tables (Session 401); where the next
+      # table needs the other page orientation, the second paragraph ends
+      # this section, so the next table starts a new page turned its own
+      # way (Session 406).
+      body <- c(body, .jst_docx_par(""),
+                if (identical(L$landscape, lay[[i + 1L]]$landscape)) .jst_docx_par("")
+                else paste0("<w:p><w:pPr>", .jst_docx_sect(L$page, L$landscape),
+                            "</w:pPr></w:p>"))
+    }
   }
-  sect <- paste0("<w:sectPr><w:pgSz w:w=\"", page$w, "\" w:h=\"", page$h, "\"",
-                 if (landscape) " w:orient=\"landscape\"", "/>",
-                 "<w:pgMar w:top=\"1440\" w:right=\"1440\" w:bottom=\"1440\" ",
-                 "w:left=\"1440\" w:header=\"708\" w:footer=\"708\" w:gutter=\"0\"/>",
-                 "</w:sectPr>")
+  last <- lay[[length(lay)]]
   xml <- paste0("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
                 "<w:document xmlns:w=\"", .jst_docx_ns, "\"><w:body>",
-                paste(body, collapse = ""), sect, "</w:body></w:document>")
-  list(xml = xml, landscape = landscape)
+                paste(body, collapse = ""), .jst_docx_sect(last$page, last$landscape),
+                "</w:body></w:document>")
+  list(xml = xml, landscape = vapply(lay, function(L) L$landscape, logical(1)))
+}
+
+#' Internal helper: a section's properties
+#'
+#' The page size, turned for landscape, and the margins.
+#'
+#' @param page A page from \code{.jst_docx_page()}.
+#' @param landscape Logical(1).
+#' @return Character(1), the w:sectPr element.
+#' @keywords internal
+.jst_docx_sect <- function(page, landscape) {
+  paste0("<w:sectPr><w:pgSz w:w=\"", page$w, "\" w:h=\"", page$h, "\"",
+         if (landscape) " w:orient=\"landscape\"", "/>",
+         "<w:pgMar w:top=\"1440\" w:right=\"1440\" w:bottom=\"1440\" ",
+         "w:left=\"1440\" w:header=\"708\" w:footer=\"708\" w:gutter=\"0\"/>",
+         "</w:sectPr>")
+}
+
+#' Internal helper: each table's page and fit in a document
+#'
+#' Each table gets the page it needs (Session 406): the setting is its own
+#' style's landscape (the style it was built under, a call's own setting
+#' included), read for its table type, so a table built with landscape =
+#' "yes" keeps its page in any document; under auto it turns only when the
+#' table cannot fit the portrait text width at the style's size with half
+#' its padding and its labels on two lines (ruling R55). \code{landscape}
+#' given -- the setting in the call that writes the document -- sets every
+#' page. Until Session 406 a document had one orientation, so one wide
+#' table turned every page. A table wider than its page is fitted to it
+#' (\code{.jst_docx_fit()}). The paper is the document style's.
+#'
+#' @param tables A list of jst_table.
+#' @param style The document's style.
+#' @param landscape NULL, or "auto", "yes" or "no" for every page.
+#' @return A list, one element per table: style (the table's), landscape
+#'   (logical), page, fit (widths, size and note_size; size NULL when the
+#'   table fits as it is), natural (the widths before any fit) and size0
+#'   (the style's size).
+#' @keywords internal
+.jst_docx_layout <- function(tables, style, landscape = NULL) {
+  paper    <- .jst_style_key(style, "general", "paper")
+  portrait <- .jst_docx_page(paper, FALSE)
+  lapply(tables, function(tbl) {
+    tst   <- .jst_table_style(tbl, style)
+    size0 <- .jst_style_key(tst, tbl$type, "size")
+    land_key <- if (is.null(landscape)) .jst_style_key(tst, tbl$type, "landscape")
+                else landscape
+    nat <- .jst_docx_widths(tbl, tst)
+    # The narrowest the table goes at the style's size: half its padding,
+    # its labels on two lines.
+    w60 <- .jst_docx_widths(tbl, tst, size = size0, pad = 60L)
+    narrowest <- as.numeric(sum(w60[-1L]) + .jst_docx_stub_floor(tbl, size0, w60[1L]))
+    land <- identical(land_key, "yes") ||
+      (identical(land_key, "auto") && narrowest > portrait$text)
+    page <- .jst_docx_page(paper, land)
+    fit  <- if (sum(nat) > page$text) .jst_docx_fit(tbl, tst, page$text)
+            else list(widths = nat, size = NULL, note_size = NULL)
+    list(style = tst, landscape = land, page = page, fit = fit, natural = nat,
+         size0 = size0)
+  })
 }
 
 #' Internal helper: the styles part
@@ -4515,10 +4557,12 @@
 #'
 #' @param tables A list of jst_table.
 #' @param style The style list.
+#' @param landscape NULL, or the page setting for every page (the writing
+#'   call's).
 #' @return A named list of parts: path in the package, then the text.
 #' @keywords internal
-.jst_docx_parts <- function(tables, style) {
-  doc <- .jst_docx_document(tables, style)
+.jst_docx_parts <- function(tables, style, landscape = NULL) {
+  doc <- .jst_docx_document(tables, style, landscape)
   ct <- paste0(
     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
     "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">",
@@ -4597,13 +4641,11 @@
 
 #' Make a publication table from a saved result
 #'
-#' \code{jtable()} turns a saved analysis result into a publication table:
-#' it prints a preview in the console and, when \code{file} is given,
-#' writes the table to a Word file (.docx) that opens in Word, LibreOffice
-#' and Google Docs. The table's look and conventions come from a style --
-#' the built-in \code{"apa"} style, or a style file of your own (see
-#' \code{jstyle()}); the preview is a facsimile of the Word table, so what
-#' prints is what the file holds.
+#' \code{jtable()} turns a saved analysis result into a publication table
+#' and, when \code{file} is given, writes it to a Word file (.docx) that
+#' opens in Word, LibreOffice and Google Docs. The table's look and
+#' conventions come from a style -- the built-in \code{"apa"} style, or a
+#' style file of your own (see \code{\link{jstyle}}).
 #'
 #' A table is made from each kind of result: a descriptives table from one
 #' or more \code{\link{jdesc}} results; a frequency table from one or more
@@ -4629,19 +4671,53 @@
 #' marked when \code{markers} names them. A filter the analysis applied
 #' (\code{\link{jsubset}}, \code{subset =}) is named in the general note.
 #'
+#' @details
+#' \strong{One call, one table.} The results given to one call make one
+#' table: results share a table when they share its columns (see
+#' \code{x}). Results that cannot share one -- results of different
+#' kinds, models of different outcomes, tests of different grouping
+#' variables -- stop, and the message gives the lines that make each
+#' table in a call of its own. To put several tables in one file, build
+#' each table, then give the tables together:
+#' \code{jtable(list(t1, t2, t3), file = "Tables.docx")}. The tables keep
+#' the order given and are numbered so.
+#'
+#' \strong{What prints.} \code{jtable()} reports what it made: each table's
+#' number and title, what it holds, the page it is on (a landscape page,
+#' the text stepped down to fit), and where the file was written. To see a
+#' table in the console, keep it with \code{<-} and print it:
+#' \code{print(t1)}, or type \code{t1}. The console shows a facsimile of
+#' the Word table, its numbers formatted by the style.
+#'
+#' \strong{The page.} Under the style's \code{landscape = "auto"} each
+#' table gets the page it needs: a table too wide for a portrait page sits
+#' on landscape pages of its own, and the tables around it stay portrait.
+#' \code{landscape = "yes"} or \code{"no"} in the call that writes a file
+#' sets every page.
+#'
+#' \strong{The analysis inside the call.} \code{jtable(jlm(Fear ~ Age,
+#' d))} runs the analysis without printing it and makes its table; errors
+#' and warnings still show.
+#'
+#' \strong{Keeping a result for a later session.} A saved result is an R
+#' object, which base R keeps in a file of its own:
+#' \code{saveRDS(m1, "m1.rds")}, then in a later session
+#' \code{m1 <- readRDS("m1.rds")}. A result made by an earlier version of
+#' jstats than the table needs stops, and says which version made it.
+#'
 #' @param x A saved result -- what an analysis function returns, kept with
-#'   \code{<-} -- or a list of them. Results share a table when they share
-#'   its columns: a list of \code{jdesc()} results, or of \code{jfreq()}
-#'   results, stacks into one table, each result's variables under its name
-#'   in the list when the list is named; a list of \code{jlm()} results, or
-#'   of \code{jlogistic()} results, with one outcome puts the models side by
-#'   side, headed "Model 1", "Model 2", ... or by the list's names; a list of
-#'   \code{jt()}, \code{jaov()} or \code{jcrosstab()} results with one
+#'   \code{<-} -- or a list of them that share one table: a list of
+#'   \code{jdesc()} results, or of \code{jfreq()} results, stacks into one
+#'   table, each result's variables under its name in the list when the
+#'   list is named; a list of \code{jlm()} results, or of
+#'   \code{jlogistic()} results, with one outcome puts the models side by
+#'   side, headed "Model 1", "Model 2", ... or by the list's names; a list
+#'   of \code{jt()}, \code{jaov()} or \code{jcrosstab()} results with one
 #'   grouping variable stacks a row or a block per outcome; a list of
 #'   \code{jalpha()} results stacks the scales, each under its name. A
-#'   \code{jcorr()} result is a table of its own. A table \code{jtable()}
-#'   has already built, or a list of them, goes to the file as it is, the
-#'   tables in the order given and numbered so.
+#'   \code{jcorr()} result is a table of its own. Or a table \code{jtable()}
+#'   has already built, or a list of them: they go to the file as they
+#'   are, in the order given.
 #' @param headings A named list: each heading and the variables under it,
 #'   bare or in quotes, e.g. \code{list("Dependent variable" = Wellbeing,
 #'   "Independent variables" = c(Income, Age))}. Every variable of the
@@ -4676,23 +4752,51 @@
 #'   program your computer opens .docx files with; only in an interactive
 #'   session, so a script or a rendered page opens nothing. Needs
 #'   \code{file}.
-#' @param print Print the preview? NULL (the default) follows the
-#'   \code{\link{joutput}} level: the preview prints unless the level is
-#'   \code{"silent"}. TRUE prints it under any level; FALSE prints nothing
-#'   and writes the file alone.
+#' @param print Print the report of what was made? NULL (the default)
+#'   follows the \code{\link{joutput}} level: the report prints unless the
+#'   level is \code{"silent"}. TRUE prints it under any level; FALSE prints
+#'   nothing.
 #' @param ... A setting of the table type's section of the style, for this
 #'   table only, e.g. \code{columns = c("mean", "sd")} for a descriptives
 #'   table, \code{missing.rows = "none"} for a frequency table or
 #'   \code{fit.rows = c("r2", "delta.r2")} for a regression table: the
-#'   call outranks the style file. The general settings (the font, the
-#'   caption's form, the decimals) are the style file's, except
-#'   \code{landscape = "yes"} or \code{"no"}, a page choice the call may
-#'   make. Any other input stops with "unused input".
+#'   call outranks the style file. \code{\link{jstyle_settings}} lists
+#'   every setting. The general settings (the font, the caption's form,
+#'   the decimals) are the style file's, except \code{landscape = "yes"} or
+#'   \code{"no"}, a page choice the call may make. Any other input stops
+#'   with "unused input".
 #'
-#' @return The table, invisibly: an object of class \code{jst_table},
-#'   which prints its preview when typed.
+#' @return The table, invisibly: an object of class \code{jst_table}, which
+#'   shows a facsimile of the Word table when printed. A call given two or
+#'   more built tables returns them together (class \code{jst_tables}),
+#'   which prints each one, numbered as in the file.
 #'
-#' @keywords internal
+#' @seealso \code{\link{jstyle}} for styles, \code{\link{jstyle_settings}}
+#'   for every setting a style holds.
+#'
+#' @examples
+#' # Keep a result, make its table, and look at it in the console
+#' d1 <- jdesc(community, Age, Income, print = FALSE)
+#' t1 <- jtable(d1, title = "Descriptive Statistics for Study Variables")
+#' print(t1)
+#'
+#' # Two models of one outcome side by side, written to a Word file
+#' m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
+#' m2 <- jlm(WellbeingScore ~ Age + Volunteer, community, print = FALSE)
+#' t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
+#'              overwrite = TRUE)
+#'
+#' # Several tables in one file: build each, then give them together
+#' doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
+#'               overwrite = TRUE)
+#' print(doc)
+#'
+#' # Keep a result for a later session with base R
+#' path <- file.path(tempdir(), "m1.rds")
+#' saveRDS(m1, path)
+#' m1 <- readRDS(path)
+#'
+#' @export
 jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
                    note = NULL, file = NULL, style = NULL,
                    overwrite = FALSE, open = FALSE, print = NULL, ...) {
@@ -4792,18 +4896,25 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   }
 
   # The result, forced here: a nested analysis call runs with its output
-  # discarded, and only the table prints. Errors and warnings pass.
+  # discarded, and only what jtable() reports prints. Errors and warnings
+  # pass.
+  x_sub <- substitute(x)
   x <- .jst_output_scope(FALSE, x)
-  results <- if (is.list(x) && !inherits(x, c(.jst_apa_classes, "jst_table"))) x
-             else list(x)
+  results <- if (is.list(x) && !inherits(x, c(.jst_apa_classes, "jst_table"))) {
+    if (inherits(x, "jst_tables")) unclass(x) else x
+  } else list(x)
+  # A document given inside a list -- jtable(list(doc, t4)) -- puts its
+  # tables in place (Session 406).
+  results <- .jst_tables_splice(results)
   if (length(results) == 0L) {
     .jst_stop("the list given to jtable() is empty.")
   }
   # Built tables -- one, or a list of them -- go to the file as they are,
-  # in the order given, each previewed with its number: the document call
-  # of the reference's Part 2.2 in its first form. A built table beside a
-  # result is refused: a result is built first. A built table keeps the
-  # style it was built under.
+  # in the order given, each numbered: the document call of the reference's
+  # Part 2.2. A built table beside a result is refused: a result is built
+  # first. A built table keeps the style it was built under; landscape =,
+  # a page choice, is the one setting the writing call may give (Session
+  # 406: it sets every page).
   built <- vapply(results, inherits, logical(1), "jst_table")
   if (any(built)) {
     if (!all(built)) {
@@ -4813,30 +4924,19 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
     }
     if (!is.null(substitute(headings)) || !is.null(substitute(markers)) ||
         !is.null(title) || !is.null(note) || !is.null(style) ||
-        length(over_q)) {
+        length(setdiff(names(over_q), "landscape"))) {
       .jst_stop("headings =, markers =, title =, note =, style =, and a ",
                 "style's settings belong to the call that builds a table ",
                 "from a result; a built table keeps its own.")
     }
+    land <- if (is.null(over_vals$landscape)) NULL else
+      .jst_style_check_value("landscape", .jst_style_spec$general$landscape,
+                             over_vals$landscape, "general", "jtable")
     doc_st <- .jst_table_style(results[[1L]], st)
-    write <- !is.null(out_path) &&
-      .jst_table_overwrite_gate(out_path, overwrite, ask = interactive())
-    if (.jst_print_on(print)) {
-      for (i in seq_along(results)) {
-        .jst_table_preview(results[[i]], .jst_table_style(results[[i]], st),
-                           number = i)
-      }
-    }
-    if (write) {
-      .jst_docx_pack(.jst_docx_parts(results, doc_st), out_path)
-      if (.jst_print_on(print)) {
-        .jst_msg_out(paste0(if (length(results) == 1L) "Table" else "Tables",
-                            " written to ", .jst_norm_path(out_path)))
-        cat("\n")
-      }
-      .jst_table_open(out_path, open)
-    }
-    return(invisible(if (length(results) == 1L) results[[1L]] else results))
+    .jst_table_finish(results, doc_st, out_path, overwrite, open, print,
+                      landscape = land, hint = TRUE)
+    return(invisible(if (length(results) == 1L) results[[1L]]
+                     else .jst_tables_new(results)))
   }
   not_res <- !vapply(results, function(r) !is.na(.jst_table_result_fn(r)), logical(1))
   if (any(not_res)) {
@@ -4845,17 +4945,26 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
               "  d1 <- jdesc(community, Age, Income)\n",
               "  jtable(d1)")
   }
-  classes <- vapply(results, function(r) .jst_table_result_fn(r), character(1))
-  if (length(unique(classes)) > 1L) {
-    .jst_stop("results of different kinds (", .jst_and_list(unique(classes)),
-              ") cannot share a table yet.\n",
-              "Give the results of one kind at a time.")
+  # One call makes one table (ruling R56, Session 406: "Wouldn't the user be
+  # determining what results go together into the same table and the code
+  # simply providing a stop error if that's not possible?"). Results that
+  # cannot share a table -- results of different kinds, models of different
+  # outcomes, tests of different grouping variables or groups, crosstabs of
+  # different column variables, two jcorr() results -- stop, with the lines
+  # that make each table and write them to one file.
+  groups <- .jst_table_share_groups(results)
+  if (length(groups) > 1L) {
+    .jst_table_split_stop(results, groups, x_sub, env, st, over_q, over_vals,
+                          given = c(headings = !is.null(substitute(headings)),
+                                    markers  = !is.null(substitute(markers)),
+                                    title    = !is.null(title),
+                                    note     = !is.null(note)),
+                          mc = mc)
   }
   # The table's type, and the call's settings for it: the call's layer
   # goes first in the style, so it outranks the file (the reference, Part
   # 3.2).
-  type <- unname(.jst_table_types[intersect(class(results[[1L]]),
-                                            names(.jst_table_types))[1L]])
+  type <- .jst_table_type_of(results[[1L]])
   if (is.na(type)) .jst_table_build(results[[1L]], st)   # the stop for an unbuilt type
   if (length(over_vals)) {
     st <- .jst_style_object(st$name, st$path,
@@ -4873,34 +4982,20 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   # The results go to their type's builder as one list, so a named list's
   # names give the headings -- or the model heads -- however many results
   # it holds.
-  build <- switch(type,
-    descriptives = .jst_table_build_desc,
-    frequencies  = .jst_table_build_freq,
-    regression   = , logistic = .jst_table_build_models,
-    correlation  = .jst_table_build_corr,
-    ttest        = , anova = .jst_table_build_groups,
-    crosstab     = .jst_table_build_crosstab,
-    reliability  = .jst_table_build_alpha)
-  tbl <- build(results, st, headings = hd, markers = mk, title = title,
-               note = note)
+  tbl <- .jst_table_builder(type)(results, st, headings = hd, markers = mk,
+                                  title = title, note = note)
+  # What the report says of the table, and what the combining hint reads
+  # when the table is later written beside others (Session 406).
+  tbl$summary <- .jst_table_summary(results, type, hd)
+  tbl$share   <- .jst_table_share_key(results[[1L]], 1L)
+  tbl$vars    <- vars
+  tbl$source  <- .jst_table_elements(x_sub, results)$source
   # What the builder has to say beside the table (the models' Ns differ):
-  # printed before the preview, at every output level.
+  # printed before the report, at every output level.
   for (m in tbl$messages) .jst_msg(m)
-
-  # The overwrite question comes after every check that can stop the call
-  # and before the preview, so the answer is given once, and the preview
-  # and the "written" line print together after it.
-  write <- !is.null(out_path) &&
-    .jst_table_overwrite_gate(out_path, overwrite, ask = interactive())
-  if (.jst_print_on(print)) .jst_table_preview(tbl, st, number = 1L)
-  if (write) {
-    .jst_docx_pack(.jst_docx_parts(list(tbl), st), out_path)
-    if (.jst_print_on(print)) {
-      .jst_msg_out(paste0("Table written to ", .jst_norm_path(out_path)))
-      cat("\n")
-    }
-    .jst_table_open(out_path, open)
-  }
+  .jst_table_finish(list(tbl), st, out_path, overwrite, open, print,
+                    how = c(.jst_call_with(cl, mc, "file", "Table1.docx"),
+                            .jst_term_text(cl)))
   invisible(tbl)
 }
 
@@ -4909,6 +5004,539 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
 print.jst_table <- function(x, ...) {
   .jst_table_preview(x, .jst_table_style(x, NULL), number = 1L)
   invisible(x)
+}
+
+#' @rdname jtable
+#' @exportS3Method
+print.jst_tables <- function(x, ...) {
+  for (i in seq_along(x)) {
+    .jst_table_preview(x[[i]], .jst_table_style(x[[i]], NULL), number = i)
+  }
+  invisible(x)
+}
+
+#' Internal helper: tables together, as one document
+#'
+#' What a call that writes two or more built tables returns (Session 406):
+#' a list of jst_table of class "jst_tables". Typed, or given to print(), it
+#' shows every table's preview numbered as in the file; given to jtable(),
+#' alone or inside a list, it is written as its tables.
+#'
+#' @param tables A list of jst_table.
+#' @return An object of class "jst_tables".
+#' @keywords internal
+.jst_tables_new <- function(tables) {
+  structure(tables, class = "jst_tables")
+}
+
+#' Internal helper: put a document's tables in its place in a list
+#'
+#' @param results The list jtable() was given.
+#' @return The list, each jst_tables element replaced by its tables, names
+#'   kept for the other elements.
+#' @keywords internal
+.jst_tables_splice <- function(results) {
+  docs <- vapply(results, inherits, logical(1), "jst_tables")
+  if (!any(docs)) return(results)
+  rn  <- names(results); if (is.null(rn)) rn <- rep("", length(results))
+  out <- list(); nms <- character(0)
+  for (i in seq_along(results)) {
+    if (docs[i]) {
+      el  <- unclass(results[[i]])
+      out <- c(out, unname(el)); nms <- c(nms, rep("", length(el)))
+    } else {
+      out <- c(out, list(results[[i]])); nms <- c(nms, rn[i])
+    }
+  }
+  names(out) <- if (any(nzchar(nms))) nms else NULL
+  out
+}
+
+#' Internal helper: a result's table type
+#'
+#' @param r A result.
+#' @return Character(1): "descriptives", "regression", ...; NA for an object
+#'   of no result class.
+#' @keywords internal
+.jst_table_type_of <- function(r) {
+  unname(.jst_table_types[intersect(class(r), names(.jst_table_types))[1L]])
+}
+
+#' Internal helper: the builder of a table type
+#'
+#' @param type Character(1), a table type.
+#' @return The builder function.
+#' @keywords internal
+.jst_table_builder <- function(type) {
+  switch(type,
+    descriptives = .jst_table_build_desc,
+    frequencies  = .jst_table_build_freq,
+    regression   = , logistic = .jst_table_build_models,
+    correlation  = .jst_table_build_corr,
+    ttest        = , anova = .jst_table_build_groups,
+    crosstab     = .jst_table_build_crosstab,
+    reliability  = .jst_table_build_alpha)
+}
+
+#' Internal helper: what a result shares with the others of its table
+#'
+#' Ruling R54: results share a table when they share its columns -- every
+#' jdesc() result, every jfreq() and every jalpha() result of a call stacks;
+#' models of one outcome sit side by side; t tests, ANOVAs and crosstabs of
+#' one grouping (column) variable with one set of groups stack; each
+#' jcorr() result is a table of its own. Two results share a table when
+#' their keys are the same. A field a result made before it existed cannot
+#' give is read as a key of its own, so the result's table is built alone
+#' and its stop says which version made it.
+#'
+#' @param r A result.
+#' @param i Its place in the list.
+#' @return Character(1): the table type, then what the table's columns
+#'   depend on.
+#' @keywords internal
+.jst_table_share_key <- function(r, i) {
+  type <- .jst_table_type_of(r)
+  one  <- function(expr) {
+    k <- tryCatch(expr, error = function(e) NA_character_)
+    if (length(k) != 1L) NA_character_ else as.character(k)
+  }
+  key <- switch(type,
+    regression = , logistic = one(unname(attr(r$coefficients_raw, "outcome")["name"])),
+    ttest = , anova = one({
+      md <- .jst_apa_model(r); tf <- .jst_apa_terms(r)
+      paste(c(as.character(md$group), as.character(tf$group_code)), collapse = "\r")
+    }),
+    crosstab = one({
+      cc <- r$col_categories
+      paste(c(unname(attr(cc, "variable")["name"]), as.character(cc$code)),
+            collapse = "\r")
+    }),
+    correlation = NA_character_,
+    "")
+  if (is.na(key)) key <- paste0("\r#", i)
+  paste(type, key, sep = "\n")
+}
+
+#' Internal helper: the results that would share each table
+#'
+#' @param results A list of results.
+#' @return A list of index vectors, one per table, in the order of each
+#'   table's first result in the list.
+#' @keywords internal
+.jst_table_share_groups <- function(results) {
+  keys <- vapply(seq_along(results), function(i) {
+    .jst_table_share_key(results[[i]], i)
+  }, character(1))
+  lapply(unique(keys), function(k) which(keys == k))
+}
+
+#' Internal helper: the results as typed, for the lines a message offers
+#'
+#' Read from the call: a list typed in the call gives each result as typed
+#' (\code{list(d1, m1)}: "d1" and "m1"), one result its expression; a name
+#' holding a list gives each by its place in it (\code{res[[2]]}); any other
+#' expression is offered with a line that keeps it first.
+#'
+#' @param x_sub The call's first argument as typed (substitute()).
+#' @param results The results it gave.
+#' @return A list: text (character, one per result, or NULL), names (the
+#'   list's names, "" for none), base (the name holding the list, or
+#'   NULL), expr (the expression to keep first, or NULL), and source (the
+#'   text, or NA where there is none, for the combining hint).
+#' @keywords internal
+.jst_table_elements <- function(x_sub, results) {
+  n   <- length(results)
+  nms <- names(results); if (is.null(nms)) nms <- rep("", n)
+  dp  <- function(e) paste(deparse(e, width.cutoff = 500L), collapse = " ")
+  is_list_call <- is.call(x_sub) &&
+    (identical(x_sub[[1L]], as.name("list")) || identical(x_sub[[1L]], quote(base::list)))
+  if (is_list_call && length(x_sub) - 1L == n) {
+    txt <- vapply(as.list(x_sub)[-1L], dp, character(1), USE.NAMES = FALSE)
+    return(list(text = txt, names = nms, base = NULL, expr = NULL,
+                source = stats::setNames(txt, nms)))
+  }
+  if (n == 1L && !is_list_call) {
+    txt <- dp(x_sub)
+    return(list(text = txt, names = nms, base = NULL, expr = NULL,
+                source = stats::setNames(txt, nms)))
+  }
+  if (is.symbol(x_sub)) {
+    nm <- as.character(x_sub)
+    return(list(text = NULL, names = nms, base = nm, expr = NULL,
+                source = stats::setNames(paste0(nm, "[[", seq_len(n), "]]"), nms)))
+  }
+  list(text = NULL, names = nms, base = NULL, expr = dp(x_sub),
+       source = stats::setNames(rep(NA_character_, n), nms))
+}
+
+#' Internal helper: names for the tables a message offers lines to make
+#'
+#' t1, t2, ... unless one of them names an object in the workspace, which
+#' an offered line would replace: then tab1, tab2, ..., then table1, ....
+#'
+#' @param k The number of names.
+#' @param env The caller's environment.
+#' @param stem The stems to try, in order.
+#' @return Character, k names.
+#' @keywords internal
+.jst_table_line_names <- function(k, env, stem = c("t", "tab", "table")) {
+  # The caller's frame and the workspace: the lines are pasted at the
+  # console, where a name in either would be replaced.
+  taken <- function(nm) {
+    exists(nm, envir = env, inherits = FALSE) ||
+      exists(nm, envir = globalenv(), inherits = FALSE)
+  }
+  for (p in stem) {
+    cand <- if (k == 0L) p else paste0(p, seq_len(k))
+    if (!any(vapply(cand, taken, logical(1)))) return(cand)
+  }
+  paste0(stem[length(stem)], "_", seq_len(max(k, 1L)))
+}
+
+#' Internal helper: the stop for results that cannot share a table
+#'
+#' Ruling R56 (Session 406): one jtable() call makes one table, so the user
+#' decides what goes together, and a list that cannot make one table stops.
+#' The stop names what keeps the results apart, then gives the lines that
+#' make each table -- the results that can share one grouped, in the order
+#' of each table's first result -- and the line that writes them to one
+#' file. Before it says so, each line's table is built (and discarded), so
+#' a result that cannot make a table at all stops in its own words, and no
+#' offered line stops again (ruling R23). style = goes on every line, a
+#' table type's setting on the lines of the tables that take it, and the
+#' file, overwrite =, open =, landscape = and print = on the line that
+#' writes; headings =, markers =, title = and note = name one table, and a
+#' sentence says to put them on its line.
+#'
+#' @param results A list of results.
+#' @param groups The tables' results (\code{.jst_table_share_groups()}).
+#' @param x_sub The call's first argument as typed.
+#' @param env The caller's environment.
+#' @param st The call's style.
+#' @param over_q,over_vals The call's style settings: as typed (quosures)
+#'   and evaluated.
+#' @param given Logical, named headings, markers, title, note: which of
+#'   them the call gave.
+#' @param mc The matched call.
+#' @keywords internal
+.jst_table_split_stop <- function(results, groups, x_sub, env, st, over_q,
+                                  over_vals, given, mc) {
+  types  <- vapply(results, .jst_table_type_of, character(1))
+  gtypes <- vapply(groups, function(g) types[g[1L]], character(1))
+  takes  <- function(t, k) k %in% names(.jst_style_spec[[t]])
+  sec_keys <- setdiff(names(over_q), "landscape")
+  for (k in sec_keys) {
+    if (!any(vapply(gtypes, takes, logical(1), k = k))) {
+      owners <- names(Filter(function(s) k %in% names(s),
+                             .jst_style_spec[names(.jst_style_type_nouns)]))
+      .jst_stop(k, " = is a setting of ",
+                .jst_and_list(unname(.jst_style_type_nouns[owners])),
+                ", and none of these results makes one.", fn = "jtable")
+    }
+  }
+  # Each table is built first: a result that cannot make one stops here,
+  # in its own words.
+  keeps <- lapply(gtypes, function(t) sec_keys[vapply(sec_keys, takes, logical(1), t = t)])
+  for (j in seq_along(groups)) {
+    stj <- st
+    if (length(keeps[[j]])) {
+      stj <- .jst_style_object(st$name, st$path,
+                               c(list(.jst_style_call_layer(over_vals[keeps[[j]]],
+                                                            gtypes[j], "jtable")),
+                                 st$layers), st$skipped)
+    }
+    .jst_table_builder(gtypes[j])(results[groups[[j]]], stj)
+  }
+
+  # What keeps the results apart.
+  fns <- vapply(results, .jst_table_result_fn, character(1))
+  lead <- if (length(unique(types)) > 1L) {
+    paste0("results of different kinds (", .jst_and_list(unique(fns)),
+           ") cannot share a table.")
+  } else {
+    t <- types[1L]
+    if (t %in% c("regression", "logistic")) {
+      outs <- vapply(results, function(r) {
+        unname(attr(r$coefficients_raw, "outcome")["name"])
+      }, character(1))
+      paste0("models of different outcomes (", .jst_and_list(unique(outs)),
+             ") cannot share a table.")
+    } else if (t %in% c("ttest", "anova")) {
+      fn   <- fns[1L]
+      grps <- vapply(results, function(r) as.character(.jst_apa_model(r)$group),
+                     character(1))
+      if (length(unique(grps)) > 1L) {
+        paste0(fn, " results of different grouping variables (",
+               .jst_and_list(unique(grps)), ") cannot share a table.")
+      } else {
+        sets <- vapply(results, function(r) {
+          tf <- .jst_apa_terms(r)
+          .jst_and_list(.jst_table_cat_names(tf$group_code, tf$group_label))
+        }, character(1))
+        paste0("the ", fn, " results compare different groups of ", grps[1L],
+               " (", paste(unique(sets), collapse = "; "),
+               "), so they cannot share a table.")
+      }
+    } else if (identical(t, "crosstab")) {
+      vname <- function(r) unname(attr(r$col_categories, "variable")["name"])
+      cvars <- vapply(results, vname, character(1))
+      if (length(unique(cvars)) > 1L) {
+        paste0("jcrosstab() results with different column variables (",
+               .jst_and_list(unique(cvars)), ") cannot share a table.")
+      } else {
+        sets <- vapply(results, function(r) {
+          .jst_and_list(.jst_table_cat_names(r$col_categories$code,
+                                             r$col_categories$label))
+        }, character(1))
+        paste0("the jcrosstab() results hold different categories of ",
+               cvars[1L], " (", paste(unique(sets), collapse = "; "),
+               "), so they cannot share a table.")
+      }
+    } else {
+      paste0("each jcorr() result is a table of its own.\n",
+             "To correlate more variables in one table, name them in one ",
+             "jcorr() call.")
+    }
+  }
+
+  # The lines: each table's, then the one that writes them.
+  el  <- .jst_table_elements(x_sub, results)
+  nm  <- .jst_table_line_names(length(groups), env)
+  dp  <- function(e) paste(deparse(e, width.cutoff = 500L), collapse = " ")
+  pre <- NULL; base <- el$base
+  if (!is.null(el$expr)) {
+    base <- .jst_table_line_names(0L, env, stem = c("res", "results", "res_list"))
+    pre  <- paste0("  ", base, " <- ", el$expr, "\n")
+  }
+  piece <- function(g) {
+    if (!is.null(el$text)) {
+      if (length(g) == 1L && !nzchar(el$names[g])) return(el$text[g])
+      return(paste0("list(", paste(ifelse(nzchar(el$names[g]),
+                                          paste0("\"", el$names[g], "\" = ", el$text[g]),
+                                          el$text[g]), collapse = ", "), ")"))
+    }
+    if (length(g) == 1L && !nzchar(el$names[g])) return(paste0(base, "[[", g, "]]"))
+    paste0(base, "[c(", paste(g, collapse = ", "), ")]")
+  }
+  style_arg <- if (!is.null(mc$style)) paste0(", style = ", dp(mc$style))
+  lines <- vapply(seq_along(groups), function(j) {
+    sets <- vapply(keeps[[j]], function(k) {
+      paste0(", ", k, " = ", dp(rlang::quo_get_expr(over_q[[k]])))
+    }, character(1))
+    paste0("  ", nm[j], " <- jtable(", piece(groups[[j]]), style_arg,
+           paste(sets, collapse = ""), ")")
+  }, character(1))
+  wr <- c(paste0("file = ", if (is.null(mc$file)) "\"Tables.docx\"" else dp(mc$file)),
+          if (!is.null(mc$overwrite)) paste0("overwrite = ", dp(mc$overwrite)),
+          if (!is.null(mc$open)) paste0("open = ", dp(mc$open)),
+          if (!is.null(over_q$landscape)) {
+            paste0("landscape = ", dp(rlang::quo_get_expr(over_q$landscape)))
+          },
+          if (!is.null(mc$print)) paste0("print = ", dp(mc$print)))
+  last <- paste0("  jtable(list(", paste(nm, collapse = ", "), "), ",
+                 paste(wr, collapse = ", "), ")")
+  gv <- names(given)[given]
+  tail <- if (length(gv)) {
+    paste0("\n", .jst_and_list(paste0(gv, " =")), " ",
+           .jst_plural(length(gv), "names", "name"), " one table: add ",
+           .jst_plural(length(gv), "it", "them"), " to that table's line.")
+  }
+  .jst_stop(lead, "\n",
+            "Make each table in a call of its own, then give the tables ",
+            "together to write them to one file:\n",
+            pre, paste(lines, collapse = "\n"), "\n", last, tail, fn = "jtable")
+}
+
+#' Internal helper: what a table holds, for jtable()'s report
+#'
+#' @param results The results the table was built from.
+#' @param type Its table type.
+#' @param headings The headings given, or NULL.
+#' @return Character(1), e.g. "4 models side by side".
+#' @keywords internal
+.jst_table_summary <- function(results, type, headings = NULL) {
+  cnt  <- function(k, noun) paste(k, .jst_plural(k, noun))
+  vars <- unique(unlist(lapply(results, .jst_table_result_vars)))
+  nh   <- if (length(headings)) length(headings) else {
+    rn <- names(results); if (is.null(rn)) 0L else sum(nzchar(rn))
+  }
+  switch(type,
+    descriptives = , frequencies = paste0(
+      cnt(length(vars), "variable"),
+      if (nh > 0L) paste0(" under ", cnt(nh, "heading"))),
+    regression = , logistic = if (length(results) == 1L) "1 model" else
+      paste(length(results), "models side by side"),
+    correlation = cnt(length(vars), "variable"),
+    ttest = , anova = paste0(cnt(length(results), "outcome"), " by ",
+                             .jst_apa_name(results[[1L]], "group")),
+    crosstab = paste0(cnt(length(results), "variable"), " by ",
+                      unname(attr(results[[1L]]$col_categories, "variable")["name"])),
+    reliability = if (length(results) == 1L) paste0("1 scale of ", cnt(length(vars), "item"))
+      else paste0(length(results), " scales, ", cnt(length(vars), "item")))
+}
+
+#' Internal helper: the overwrite question, the file, and the report
+#'
+#' What every jtable() call does once its tables are built (Session 406,
+#' ruling R57): the overwrite question (after every check that can stop
+#' the call), the file written, then the report -- each table's number,
+#' title, contents and page, and where the file went -- printed unless
+#' print = FALSE or the level is silent; the replica of a table prints
+#' only with print(). Then the file opened, under open = TRUE.
+#'
+#' @param tables A list of jst_table.
+#' @param style The document's style.
+#' @param out_path The file to write, or NULL.
+#' @param overwrite,open,print The call's.
+#' @param landscape The writing call's page setting, or NULL.
+#' @param hint Logical; TRUE for a call that writes built tables, whose
+#'   report carries the combining hint at joutput("full").
+#' @param how NULL, or two lines for a call that writes no file: the call
+#'   with file = added, and the call as typed (offered at joutput("full")).
+#' @return TRUE when the file was written, invisibly.
+#' @keywords internal
+.jst_table_finish <- function(tables, style, out_path, overwrite, open, print,
+                              landscape = NULL, hint = FALSE, how = NULL) {
+  existed <- !is.null(out_path) && file.exists(out_path)
+  write <- !is.null(out_path) &&
+    .jst_table_overwrite_gate(out_path, overwrite, ask = interactive())
+  if (write) .jst_docx_pack(.jst_docx_parts(tables, style, landscape), out_path)
+  if (.jst_print_on(print)) {
+    .jst_table_report(tables, .jst_docx_layout(tables, style, landscape),
+                      path = if (write) out_path, replaced = existed && write,
+                      asked = !is.null(out_path), hint = hint, how = how)
+  }
+  if (write) .jst_table_open(out_path, open)
+  invisible(write)
+}
+
+#' Internal helper: jtable()'s report
+#'
+#' Ruling R57 (Session 406): what a jtable() call prints in place of the
+#' table -- for each table, "Table n." and its title, then an indented
+#' line saying what it holds and the page it is on (the page turned, the
+#' text stepped down, long labels wrapped, as the Word file has them); then
+#' where the file went ("Table written to <path>", "3 tables written to
+#' <path>", replacing a file that was there), or, when no file was asked
+#' for, that none was written -- at joutput("full") with the lines that
+#' write the table and show it. A call that writes built tables adds, at
+#' joutput("full"), the tables that could have been one.
+#'
+#' @param tables A list of jst_table.
+#' @param lay Their layout (\code{.jst_docx_layout()}).
+#' @param path The file written, or NULL.
+#' @param replaced Logical; the file replaced one that was there.
+#' @param asked Logical; the call gave file = (the overwrite gate speaks
+#'   for a declined write).
+#' @param hint,how As \code{.jst_table_finish()}.
+#' @keywords internal
+.jst_table_report <- function(tables, lay, path = NULL, replaced = FALSE,
+                              asked = FALSE, hint = FALSE, how = NULL) {
+  for (i in seq_along(tables)) {
+    tbl <- tables[[i]]
+    .jst_msg_out(paste0("Table ", i, ". ",
+                        .jst_table_strip_markup(tbl$caption$title)))
+    .jst_msg_out(paste0("  ", .jst_table_shape(tbl), ", ",
+                        .jst_table_page_text(tbl, lay[[i]]), "."))
+  }
+  if (!is.null(path)) {
+    .jst_msg_out(paste0(if (length(tables) == 1L) "Table" else
+                          paste(length(tables), "tables"),
+                        " written to ", .jst_norm_path(path)))
+    if (replaced) .jst_msg_out("It replaced the file that was there.")
+  } else if (!asked) {
+    .jst_msg_out("No file was written.")
+    if (length(how) == 2L) {
+      .jst_advisory_note(
+        "Note: to write the table to a Word file, add file = to the call:\n",
+        "  ", how[1L], "\n",
+        "To see the table here, keep it with <- and print it:\n",
+        "  t1 <- ", how[2L], "\n",
+        "  print(t1)")
+    }
+  }
+  if (hint) .jst_table_combine_hint(tables)
+  cat("\n")
+}
+
+#' Internal helper: what a table holds, in a few words
+#'
+#' The summary jtable() stored when it built the table; for a table built
+#' before Session 406, its rows counted.
+#'
+#' @param tbl A jst_table.
+#' @return Character(1).
+#' @keywords internal
+.jst_table_shape <- function(tbl) {
+  if (!is.null(tbl$summary)) return(tbl$summary)
+  n <- sum(vapply(tbl$rows, function(r) !identical(r$kind, "heading"), logical(1)))
+  paste(n, .jst_plural(n, "row"))
+}
+
+#' Internal helper: a table's page, in a few words
+#'
+#' The orientation, then what the fit did: the text stepped down to fit
+#' the page, long labels wrapped onto two lines.
+#'
+#' @param tbl A jst_table.
+#' @param L Its layout (one element of \code{.jst_docx_layout()}).
+#' @return Character(1), e.g. "on a landscape page, its text at 10 pt".
+#' @keywords internal
+.jst_table_page_text <- function(tbl, L) {
+  out <- paste0("on a ", if (L$landscape) "landscape" else "portrait", " page")
+  if (!is.null(L$fit$size)) {
+    if (L$fit$size < L$size0) {
+      out <- paste0(out, ", its text at ", format(L$fit$size), " pt")
+    }
+    w <- .jst_docx_widths(tbl, L$style, size = L$fit$size, pad = 60L)
+    if (L$fit$widths[1L] < w[1L]) out <- paste0(out, ", long labels on two lines")
+  }
+  out
+}
+
+#' Internal helper: the tables in a file that could have been one
+#'
+#' At joutput("full"), for a call that writes built tables (Session 406;
+#' Jeff: "the possibility of combining more than one result in the same
+#' table if the user doesn't specify a combined table when it's possible"):
+#' tables whose results share their columns (ruling R54) and hold no
+#' variable twice are named, with the line that makes them one table when
+#' every result's name is known. Tables kept apart on purpose are common,
+#' so the note is advisory.
+#'
+#' @param tables A list of jst_table.
+#' @keywords internal
+.jst_table_combine_hint <- function(tables) {
+  keys <- vapply(tables, function(t) if (is.null(t$share)) NA_character_ else t$share,
+                 character(1))
+  for (k in unique(keys[!is.na(keys)])) {
+    at <- which(keys == k)
+    if (length(at) < 2L || startsWith(k, "correlation\n")) next
+    type <- tables[[at[1L]]]$type
+    # Models of one outcome sit side by side whatever predictors they share;
+    # every other table holds each variable once.
+    vars <- unlist(lapply(tables[at], function(t) t$vars))
+    if (!type %in% c("regression", "logistic") && anyDuplicated(vars)) next
+    what <- switch(type,
+      descriptives = "are descriptives tables",
+      frequencies  = "are frequency tables",
+      regression   = , logistic = "hold models of one outcome",
+      ttest        = "hold t tests of one grouping variable",
+      anova        = "hold ANOVAs of one grouping variable",
+      crosstab     = "hold crosstabs of one column variable",
+      reliability  = "are reliability tables")
+    src <- unlist(lapply(tables[at], function(t) t$source))
+    line <- if (length(src) && !anyNA(src)) {
+      nms <- names(src); if (is.null(nms)) nms <- rep("", length(src))
+      paste0("\n  jtable(list(", paste(ifelse(nzchar(nms),
+                                              paste0("\"", nms, "\" = ", src), src),
+                                       collapse = ", "), "))")
+    }
+    .jst_advisory_note("Note: Tables ", .jst_and_list(as.character(at)), " ",
+                       what, " and could be one table",
+                       if (is.null(line)) "." else ":", line)
+  }
+  invisible(NULL)
 }
 
 #' Internal helper: the style a built table is drawn in
@@ -5139,12 +5767,19 @@ print.jst_table <- function(x, ...) {
 #' A style holds a table's look and a journal's or a report's conventions:
 #' the font, the caption's form, the rules, the decimals, and for each
 #' table type its columns and labels. \code{jstyle()} lists the styles
-#' jstats can find; \code{jstyle("myjournal")} prints every setting the
-#' style gives, marking each one it takes from another style; and
-#' \code{jstyle("apa", save.as = "myjournal")} saves a copy as a style
-#' file, myjournal.jstyle, every setting written out with a note on what
-#' it does, to edit in any text editor (the step SPSS calls "Save
-#' TableLook As").
+#' jstats can find; \code{jstyle("myjournal")} checks a style file and
+#' prints every setting the style gives, marking each one it takes from
+#' another style; and \code{jstyle("apa", save.as = "myjournal")} saves a
+#' copy as a style file, myjournal.jstyle, every setting written out with
+#' a note on what it does and what it takes, to edit in any text editor
+#' (the step SPSS calls "Save TableLook As").
+#'
+#' Given settings, \code{jstyle(save.as =)} writes a short file instead: the
+#' style it copies named on its based.on line, and only the settings given,
+#' which is all a small change needs. A general setting is given by its
+#' name; a table type's settings go in a list named for its section:
+#' \code{jstyle("apa", save.as = "myapa", font = "Arial", regression =
+#' list(fit.rows = c("r2", "n")))}.
 #'
 #' A style file is plain text: a setting is a name, an equals sign and a
 #' value; a \code{#} starts a note; the general settings come first, then
@@ -5152,9 +5787,10 @@ print.jst_table <- function(x, ...) {
 #' \code{[regression]}, \code{[logistic]}, \code{[correlation]},
 #' \code{[ttest]}, \code{[anova]}, \code{[crosstab]} and
 #' \code{[reliability]}. A setting the file leaves out comes from the style
-#' its \code{based.on} line names. jstats looks for a style named in a call
-#' in the style folder (\code{joptions(style.dir = )}), the working
-#' directory and your jstats folder, in that order.
+#' its \code{based.on} line names. \code{\link{jstyle_settings}} lists every
+#' setting and what it takes. jstats looks for a style named in a call in
+#' the style folder (\code{joptions(style.dir = )}), the working directory
+#' and your jstats folder, in that order.
 #'
 #' @param style The style's name in quotes, or a path to a style file;
 #'   NULL (the default) lists the styles, or with \code{save.as} copies
@@ -5166,16 +5802,51 @@ print.jst_table <- function(x, ...) {
 #' @param overwrite Logical. Replace a style file that exists? With FALSE
 #'   (the default) an interactive session asks, and one that cannot ask
 #'   stops.
-#' @param ... Not used. An input \code{jstyle()} does not take stops with
-#'   "unused input".
+#' @param ... Settings for a short copy, with \code{save.as}: a general
+#'   setting by its name (\code{font = "Arial"}), a table type's settings
+#'   in a list named for its section (\code{regression = list(fit.rows =
+#'   "r2")}). \code{\link{jstyle_settings}} lists them all. Any other input
+#'   stops with "unused input".
 #' @return Invisibly: the styles found (a data frame of name and path),
 #'   the style, or the path of the file written.
-#' @keywords internal
+#'
+#' @seealso \code{\link{jtable}} for the tables, \code{\link{jstyle_settings}}
+#'   for every setting a style holds.
+#'
+#' @examples
+#' # The styles jstats can find, and the folders it looks in
+#' jstyle()
+#'
+#' # Every setting of the built-in style
+#' jstyle("apa")
+#'
+#' # A complete copy to edit, and a short one holding two changes
+#' jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
+#' jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
+#'        font = "Arial", regression = list(fit.rows = c("r2", "n")))
+#'
+#' @export
 jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
   cl  <- sys.call()
   mc  <- match.call(expand.dots = TRUE)
   env <- parent.frame()
-  .jst_check_args(rlang::enquos(...), aliases = character(0),
+  # Settings for a short copy (Session 406): a general setting by its name,
+  # a table type's in a list named for its section. Taken out of the dots
+  # before the unused-input check; a name near a setting's gets that
+  # check's did-you-mean.
+  dots  <- rlang::enquos(...)
+  dn    <- names(dots); if (is.null(dn)) dn <- rep("", length(dots))
+  parts <- names(.jst_style_type_nouns)
+  gen_keys <- names(.jst_style_spec$general)
+  sec_only <- setdiff(unique(unlist(lapply(.jst_style_spec[parts], names))), gen_keys)
+  is_set  <- nzchar(dn) & dn %in% c(gen_keys, parts)
+  is_bare <- nzchar(dn) & dn %in% sec_only
+  near <- character(0)
+  for (nm in dn[nzchar(dn) & !is_set & !is_bare]) {
+    nr <- .jst_style_near(nm, c(gen_keys, parts, sec_only))
+    if (length(nr)) near[nm] <- nr
+  }
+  .jst_check_args(dots[!(is_set | is_bare)], aliases = near,
                   fn_name = "jstyle", positional = "refuse")
   .jst_word_args(cl, mc, env,
                  list(style = .jst_word_spec(c("apa", names(.jst_style_files())),
@@ -5183,6 +5854,19 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
   .jst_free_text_arg(substitute(style), env, cl, mc, "style", "a style name", "jstyle")
   .jst_free_text_arg(substitute(save.as), env, cl, mc, "save.as", "a name", "jstyle")
   .jst_check_flag(overwrite, "overwrite")
+  if (any(is_bare)) .jst_style_bare_stop(cl, dots[is_bare])
+  if (anyDuplicated(dn[is_set])) {
+    twice <- unique(dn[is_set][duplicated(dn[is_set])])
+    .jst_stop(.jst_and_list(paste0(twice, " =")), " ",
+              .jst_plural(length(twice), "is", "are"), " given twice.\n",
+              "Give each setting once.", fn = "jstyle")
+  }
+  given <- dots[is_set]
+  if (length(given) && is.null(save.as)) {
+    .jst_stop("a style's settings are written to a new style file, so they ",
+              "need save.as =, for example:\n",
+              "  ", .jst_call_with(cl, mc, "save.as", "mystyle"), fn = "jstyle")
+  }
 
   if (is.null(style) && is.null(save.as)) return(invisible(.jst_style_list_print()))
   st <- .jst_style_resolve(style, fn = "jstyle", cl = cl, mc = mc)
@@ -5190,18 +5874,236 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
     .jst_style_print(st)
     return(invisible(st))
   }
+  vals <- .jst_style_given(given)
   path <- .jst_style_save_path(save.as)
   write <- .jst_table_overwrite_gate(path, overwrite, ask = interactive(),
                                      fn = "jstyle", noun = "style")
   if (!write) return(invisible(NULL))
-  lines <- .jst_style_file_lines(st, sub("\\.jstyle$", "", basename(path),
-                                         ignore.case = TRUE))
+  name <- sub("\\.jstyle$", "", basename(path), ignore.case = TRUE)
+  lines <- if (length(vals)) {
+    src <- if (is.null(style)) getOption(".jst_options_style", .jst_options_defaults$style)
+           else style
+    based <- if (grepl("[/\\\\]", src)) .jst_norm_path(st$path) else st$name
+    .jst_style_short_lines(name, based, vals)
+  } else .jst_style_file_lines(st, name)
   con <- file(path, open = "wb")
   writeBin(charToRaw(enc2utf8(paste0(paste(lines, collapse = "\n"), "\n"))), con)
   close(con)
   .jst_msg_out(paste0("Style written to ", .jst_norm_path(path)))
   cat("\n")
   invisible(path)
+}
+
+#' Internal helper: a table type's setting given to jstyle() bare
+#'
+#' A setting of a table type's section goes in a list named for its
+#' section (Session 406), since several sections can hold one name. The
+#' stop gives the call rewritten: each such setting moved into a list for
+#' the first section whose check takes its value; a value no section takes
+#' stops with what the first section's setting takes.
+#'
+#' @param cl The call as typed.
+#' @param bare The quosures given bare, named.
+#' @keywords internal
+.jst_style_bare_stop <- function(cl, bare) {
+  parts <- names(.jst_style_type_nouns)
+  moved <- list()
+  owners_of <- list()
+  for (k in names(bare)) {
+    owners <- parts[vapply(parts, function(p) k %in% names(.jst_style_spec[[p]]),
+                           logical(1))]
+    owners_of[[k]] <- owners
+    val <- rlang::eval_tidy(bare[[k]])
+    fits <- owners[vapply(owners, function(p) {
+      !inherits(tryCatch(.jst_style_check_value(k, .jst_style_spec[[p]][[k]], val,
+                                                p, "jstyle"),
+                         error = function(e) e), "error")
+    }, logical(1))]
+    if (!length(fits)) {
+      .jst_style_check_value(k, .jst_style_spec[[owners[1L]]][[k]], val,
+                             owners[1L], "jstyle")
+    }
+    sec <- fits[1L]
+    moved[[sec]] <- c(moved[[sec]], stats::setNames(list(rlang::quo_get_expr(bare[[k]])), k))
+  }
+  items <- as.list(cl)
+  keep  <- !(names(items) %in% names(bare)) | seq_along(items) == 1L
+  items <- items[keep]
+  for (sec in names(moved)) {
+    old <- items[[sec]]
+    add <- as.call(c(as.name("list"), moved[[sec]]))
+    if (is.call(old) && identical(old[[1L]], as.name("list"))) {
+      add <- as.call(c(as.list(old), moved[[sec]]))
+    }
+    items[[sec]] <- add
+  }
+  ks <- names(bare)
+  many <- vapply(owners_of, length, integer(1)) > 1L
+  lead <- if (length(ks) == 1L) {
+    paste0(ks, " = is a setting of ",
+           .jst_and_list(unname(.jst_style_type_nouns[owners_of[[1L]]])),
+           ", so it goes in a list named for its section")
+  } else {
+    paste0(.jst_and_list(paste0(ks, " =")), " are settings of a table type, so ",
+           "each goes in a list named for its section")
+  }
+  .jst_stop(lead, if (any(many)) ", for example:\n" else ":\n",
+            "  ", .jst_term_text(as.call(items)), fn = "jstyle")
+}
+
+#' Internal helper: the settings given to jstyle(save.as =), checked
+#'
+#' Each general setting, and each setting in a section's list, checked as
+#' a file's value is; a general setting may be given in a section's list,
+#' as a file may set one in a section. A color is kept as it was typed (a
+#' name reads as itself in the file), every other value as the file writes
+#' it.
+#'
+#' @param given Named quosures: general settings and section lists.
+#' @return A named list of parts (general first, then the sections in the
+#'   file's order), each a named list of the values' text.
+#' @keywords internal
+.jst_style_given <- function(given) {
+  parts <- names(.jst_style_type_nouns)
+  out <- list()
+  txt <- function(k, sp, val, part) {
+    v <- .jst_style_check_value(k, sp, val, part, "jstyle")
+    if (identical(sp$kind, "color") && is.character(val)) trimws(val)
+    else .jst_style_value_out(v, sp)
+  }
+  for (k in names(given)) {
+    val <- rlang::eval_tidy(given[[k]])
+    if (k %in% parts) {
+      if (!is.list(val) || !length(val) || is.null(names(val)) ||
+          any(!nzchar(names(val)))) {
+        .jst_stop(k, " = takes a list of the section's settings, each named, ",
+                  "for example:\n",
+                  "  ", k, " = list(", .jst_style_example_setting(k), ")",
+                  fn = "jstyle")
+      }
+      if (anyDuplicated(names(val))) {
+        .jst_stop(k, " = names ", names(val)[duplicated(names(val))][1L],
+                  " twice.\nGive each setting once.", fn = "jstyle")
+      }
+      allowed <- c(names(.jst_style_spec[[k]]), names(.jst_style_spec$general))
+      for (s in names(val)) {
+        if (!s %in% allowed) {
+          nr <- .jst_style_near(s, allowed)
+          .jst_stop(s, " is not a setting of [", k, "].",
+                    if (length(nr)) paste0("\nDid you mean ", nr, "?")
+                    else paste0("\n", .jst_style_settings_line(k)), fn = "jstyle")
+        }
+        sp <- if (s %in% names(.jst_style_spec[[k]])) .jst_style_spec[[k]][[s]]
+              else .jst_style_spec$general[[s]]
+        out[[k]][[s]] <- txt(s, sp, val[[s]], k)
+      }
+    } else {
+      out$general[[k]] <- txt(k, .jst_style_spec$general[[k]], val, "general")
+    }
+  }
+  out[intersect(c("general", parts), names(out))]
+}
+
+#' Internal helper: one setting of a section, for an example line
+#'
+#' @param sec A table type.
+#' @return Character(1): a setting and its apa value as R code.
+#' @keywords internal
+.jst_style_example_setting <- function(sec) {
+  k  <- if ("columns" %in% names(.jst_style_spec[[sec]])) "columns"
+        else names(.jst_style_spec[[sec]])[1L]
+  v  <- .jst_style_apa[[sec]][[k]]
+  paste0(k, " = ", paste(deparse(v), collapse = ""))
+}
+
+#' Internal helper: the lines of a short style file
+#'
+#' What jstyle(save.as =) writes when it is given settings (Session 406;
+#' Jeff, Session 402: "if only the changes are listed, then it writes only
+#' the changes with the 'based on' providing all other specs"): a header
+#' saying so, the two stamps, based.on naming the style copied, then the
+#' settings given -- the general ones first, then each section's under its
+#' heading -- each after the note on what it does and what it takes.
+#'
+#' @param name The new file's style name.
+#' @param based The style copied: its name, or its path when it was given
+#'   by path.
+#' @param vals The settings (\code{.jst_style_given()}).
+#' @keywords internal
+.jst_style_short_lines <- function(name, based, vals) {
+  out <- c(paste0("# ", name, ".jstyle: a jstats table style, based on ",
+                  sub("\\.jstyle$", "", basename(based), ignore.case = TRUE), "."),
+           paste0("# It holds only the settings that differ; every other ",
+                  "setting comes from"),
+           "# the style based.on names. ?jstyle_settings lists every setting and what",
+           "# it takes. Change only the values after the = signs, or add a setting",
+           paste0("# from that list. jstyle(\"", name, "\") checks the file and ",
+                  "names any value"),
+           "# it cannot use.",
+           "",
+           paste0("format     = ", .jst_style_format),
+           paste0("written.by = jstats ", .jst_jstats_version()),
+           paste0("based.on   = ", if (grepl("#", based)) paste0("\"", based, "\"") else based))
+  for (part in names(vals)) {
+    out <- c(out, "", if (!identical(part, "general")) paste0("[", part, "]"))
+    for (k in names(vals[[part]])) {
+      sp <- if (!identical(part, "general") && k %in% names(.jst_style_spec[[part]]))
+              .jst_style_spec[[part]][[k]] else .jst_style_spec$general[[k]]
+      out <- c(out, paste0("# ", sp$about),
+               .jst_style_note_lines(.jst_style_takes(sp, part)),
+               paste0(k, " = ", vals[[part]][[k]]))
+    }
+  }
+  out
+}
+
+#' Internal helper: a style file's "takes" note, set to the file's width
+#'
+#' "# takes: ..." and, where the text runs past 76 columns, continuation
+#' lines under it ("#   ..."), broken between words. Set by hand: the wrap
+#' helpers belong to the message layer and follow the console's width,
+#' which a file must not (as the orientation text, Session 357).
+#'
+#' @param text Character(1), what the setting takes.
+#' @param width The widest line.
+#' @return Character, the comment lines.
+#' @keywords internal
+.jst_style_note_lines <- function(text, width = 76L) {
+  words <- strsplit(text, " ", fixed = TRUE)[[1L]]
+  out <- character(0); cur <- "# takes:"
+  for (w in words) {
+    if (nchar(cur) + 1L + nchar(w) > width && !grepl(":$", cur)) {
+      out <- c(out, cur); cur <- paste0("#  ", " ", w)
+    } else {
+      cur <- paste(cur, w)
+    }
+  }
+  c(out, cur)
+}
+
+#' Internal helper: what a style setting takes, in words
+#'
+#' For the note on each setting in a style file and for the settings help
+#' page (Session 406: a person, or an AI assistant, editing a file reads
+#' there what a value may be).
+#'
+#' @param sp The setting's entry in \code{.jst_style_spec}.
+#' @param part Its part: "general" or a table type.
+#' @return Character(1).
+#' @keywords internal
+.jst_style_takes <- function(sp, part = "general") {
+  switch(sp$kind,
+    text    = if (isTRUE(sp$empty)) "any text, or nothing" else "any text",
+    choice  = paste0("one of ", paste(sp$choices, collapse = " | ")),
+    number  = paste0("a number from ", sp$min, " to ", sp$max),
+    integer = paste0("a whole number from ", sp$min, " to ", sp$max),
+    color   = paste0("a color name such as lightblue, or six hex digits such as ",
+                     "ADD8E6", if (isTRUE(sp$none)) "; or none"),
+    columns = paste0("one or more of ", paste(sp$cols, collapse = ", "),
+                     ", in order, separated by commas",
+                     if (isTRUE(sp$none)) "; or none"),
+    stars   = "one to three p-values between 0 and 1, largest first",
+    "")
 }
 
 #' Internal helper: where jstyle(save.as =) writes
@@ -5358,8 +6260,11 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
 
 #' Internal helper: the lines of a full style file
 #'
-#' Every setting of every part, each after a line saying what it does, the
-#' two stamps and based.on at the top: the file jstyle(save.as =) writes.
+#' Every setting of every part, each after a line saying what it does and
+#' one saying what it takes (Session 406), the two stamps and based.on at
+#' the top: the file jstyle(save.as =) writes when it is given no settings.
+#' The header says to change values only, so the file can be handed to a
+#' person or an AI assistant with a request.
 #'
 #' @param st The style copied.
 #' @param name The new file's style name.
@@ -5375,11 +6280,15 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
              anova        = "An ANOVA table, from jaov() results.",
              crosstab     = "A crosstab, from jcrosstab() results.",
              reliability  = "A reliability table, from jalpha() results.")
+  # The header tells whoever edits the file -- a person, or an AI
+  # assistant given the file's text -- what may change (Session 406).
   out <- c(paste0("# ", name, ".jstyle: a jstats table style."),
-           "# Change a value after its = sign and save the file;",
-           paste0("# jstyle(\"", name, "\") prints the settings jstats reads from it."),
-           "# A line that starts with # is a note. A setting the file leaves out",
-           "# comes from the style based.on names.")
+           "# Every setting jstats has is below, each after a note saying what it",
+           "# does and what it takes. Change only the values after the = signs; do",
+           "# not add, rename or remove a setting or a section. A line that starts",
+           paste0("# with # is a note. jstyle(\"", name, "\") checks the file and ",
+                  "names any value"),
+           "# it cannot use.")
   out <- c(out, "",
            paste0("format     = ", .jst_style_format),
            paste0("written.by = jstats ", .jst_jstats_version()),
@@ -5390,9 +6299,113 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
     spec <- .jst_style_spec[[part]]
     for (k in names(spec)) {
       out <- c(out, paste0("# ", spec[[k]]$about),  # one comment line per element
+               .jst_style_note_lines(.jst_style_takes(spec[[k]], part)),
                paste0(k, " = ", .jst_style_value_out(.jst_style_key(st, part, k),
                                                      spec[[k]])))
     }
+  }
+  out
+}
+
+
+# -----------------------------------------------------------------------------
+# 9. The settings help page (Session 406)
+# -----------------------------------------------------------------------------
+
+#' The settings of a table style
+#'
+#' @description
+#' Every setting a jstats table style holds: the general settings, which
+#' set the look of every table, then one section per table type, which set
+#' that table's columns, labels and notes. A style file (see
+#' \code{\link{jstyle}}) sets any of them; a setting it leaves out comes
+#' from the style its based.on line names, and in the end from the
+#' built-in apa style, whose value each entry gives. A table type's setting
+#' can also be given in a \code{\link{jtable}} call, for that table only.
+#'
+#' This page is made from the list jstats checks every style against, so
+#' it names exactly what jstats accepts. A Greek letter in a label is
+#' written in a style file as the letter itself; this page names it.
+#'
+#' @eval .jst_style_settings_rd()
+#' @seealso \code{\link{jstyle}} to list, print and copy styles;
+#'   \code{\link{jtable}} for the tables.
+#' @name jstyle_settings
+NULL
+
+#' Internal helper: the settings help page's sections
+#'
+#' Generated from \code{.jst_style_spec} and \code{.jst_style_apa} when the
+#' help is built (Session 402: "?jstyle_keys GENERATED from .jst_style_spec
+#' when the help is built"; named jstyle_settings at Session 406), so the
+#' page cannot drift from what jstats accepts: an example of the file's
+#' form, then one section per part, each setting with what it does, what
+#' it takes and apa's value. The text is plain ASCII: a Greek letter in a
+#' value is written with \code{\\eqn}, its name the text form.
+#'
+#' @return Character: roxygen \code{@rawRd} tags.
+#' @keywords internal
+.jst_style_settings_rd <- function() {
+  esc <- function(x) {
+    x <- gsub("\\", "\\\\", x, fixed = TRUE)
+    x <- gsub("%", "\\%", x, fixed = TRUE)
+    x <- gsub("{", "\\{", x, fixed = TRUE)
+    gsub("}", "\\}", x, fixed = TRUE)
+  }
+  greek <- function(x) {
+    map <- c("\u03b7\u00b2" = "\\eqn{\\eta^2}{eta^2}",
+             "\u03c7\u00b2" = "\\eqn{\\chi^2}{chi^2}",
+             "\u03b2"       = "\\eqn{\\beta}{beta}",
+             "\u03b1"       = "\\eqn{\\alpha}{alpha}")
+    for (g in names(map)) x <- gsub(g, map[[g]], x, fixed = TRUE)
+    x
+  }
+  ascii <- function(x) !grepl("[^\001-\177]", x, perl = TRUE)
+  value <- function(v, sp) {
+    t <- .jst_style_value_out(v, sp)
+    if (identical(t, "\"\"")) return("nothing")
+    if (ascii(t)) paste0("\\code{", esc(t), "}") else greek(esc(t))
+  }
+  # A note's lines read as one sentence; a line that opens on a choice's
+  # name ("journal: ...") is a choice of its own, set off with "|".
+  about <- function(a) {
+    if (length(a) > 1L) {
+      sep <- ifelse(grepl("^[a-z]+: ", a[-1L]), " | ", " ")
+      a <- paste0(a[1L], paste0(sep, a[-1L], collapse = ""))
+    }
+    sub("[.]$", "", a)
+  }
+  sec <- function(title, part) {
+    spec  <- .jst_style_spec[[part]]
+    items <- vapply(names(spec), function(k) {
+      sp <- spec[[k]]
+      paste0("\\item{\\code{", k, "}}{", esc(about(sp$about)),
+             ". Takes ", esc(.jst_style_takes(sp, part)), ". In apa: ",
+             value(.jst_style_apa[[part]][[k]], sp), ".}")
+    }, character(1))
+    paste0("@rawRd \\section{", title, "}{\n\\describe{\n",
+           paste(items, collapse = "\n"), "\n}\n}")
+  }
+  form <- paste0(
+    "@rawRd \\section{In a style file}{\n",
+    "A setting is its name, an equals sign and a value; a list of values is ",
+    "separated by commas; a \\code{#} starts a note. The general settings come ",
+    "first, then each table type's under its heading:\n",
+    "\\preformatted{\n",
+    "based.on = apa\n",
+    "font     = Arial\n\n",
+    "[regression]\n",
+    "fit.rows = r2, n\n",
+    "}\n",
+    "A general setting may also be set in a table type's section, for that ",
+    "table type only.\n}")
+  out <- c(form, sec("General settings", "general"),
+           vapply(names(.jst_style_type_nouns), function(p) {
+             sec(paste0("[", p, "]: ", .jst_style_type_nouns[[p]]), p)
+           }, character(1)))
+  out <- unname(out)
+  if (!all(ascii(out))) {
+    stop(".jst_style_settings_rd(): text beyond ASCII", call. = FALSE)
   }
   out
 }

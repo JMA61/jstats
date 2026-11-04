@@ -4,24 +4,31 @@
 \alias{.jst_docx_document}
 \title{Internal helper: the body of a document holding tables}
 \usage{
-.jst_docx_document(tables, style)
+.jst_docx_document(tables, style, landscape = NULL)
 }
 \arguments{
 \item{tables}{A list of jst_table.}
 
 \item{style}{The style list.}
+
+\item{landscape}{NULL, or "auto", "yes" or "no" for every page (the
+writing call's setting).}
 }
 \value{
-A list: xml (the document part) and landscape (logical).
+A list: xml (the document part) and landscape (logical, one per
+table).
 }
 \description{
 Each table's caption, table and notes (paragraphs or rows by the style),
 two empty paragraphs between tables (Jeff, Session 401), and the
-section properties: the page, landscape when the style -- or the call,
-since Session 403 -- says so, or when auto finds a table that cannot fit
-the portrait text width at the style's size with half its padding and
-its labels on two lines (ruling R55, Session 404; until Session 405, any
-table wider than portrait at its natural width); a table wider than the
-page fitted to it (\code{.jst_docx_fit()}).
+section properties. Since Session 406 each table has the page it needs
+(\code{.jst_docx_layout()}): where the orientation changes between two
+tables, the second empty paragraph ends a section, and Word starts the
+next table on a new page turned its own way; tables in a row with the
+same orientation share pages. Until then one orientation served the
+whole document: landscape when the style -- or the call, since Session
+403 -- said so, or when auto found any table that could not fit the
+portrait text width at the style's size with half its padding and its
+labels on two lines (ruling R55, Session 404).
 }
 \keyword{internal}

@@ -20,8 +20,11 @@ given with a folder.}
 (the default) an interactive session asks, and one that cannot ask
 stops.}
 
-\item{...}{Not used. An input \code{jstyle()} does not take stops with
-"unused input".}
+\item{...}{Settings for a short copy, with \code{save.as}: a general
+setting by its name (\code{font = "Arial"}), a table type's settings
+in a list named for its section (\code{regression = list(fit.rows =
+"r2")}). \code{\link{jstyle_settings}} lists them all. Any other input
+stops with "unused input".}
 }
 \value{
 Invisibly: the styles found (a data frame of name and path),
@@ -31,22 +34,46 @@ the style, or the path of the file written.
 A style holds a table's look and a journal's or a report's conventions:
 the font, the caption's form, the rules, the decimals, and for each
 table type its columns and labels. \code{jstyle()} lists the styles
-jstats can find; \code{jstyle("myjournal")} prints every setting the
-style gives, marking each one it takes from another style; and
-\code{jstyle("apa", save.as = "myjournal")} saves a copy as a style
-file, myjournal.jstyle, every setting written out with a note on what
-it does, to edit in any text editor (the step SPSS calls "Save
-TableLook As").
+jstats can find; \code{jstyle("myjournal")} checks a style file and
+prints every setting the style gives, marking each one it takes from
+another style; and \code{jstyle("apa", save.as = "myjournal")} saves a
+copy as a style file, myjournal.jstyle, every setting written out with
+a note on what it does and what it takes, to edit in any text editor
+(the step SPSS calls "Save TableLook As").
 }
 \details{
+Given settings, \code{jstyle(save.as =)} writes a short file instead: the
+style it copies named on its based.on line, and only the settings given,
+which is all a small change needs. A general setting is given by its
+name; a table type's settings go in a list named for its section:
+\code{jstyle("apa", save.as = "myapa", font = "Arial", regression =
+list(fit.rows = c("r2", "n")))}.
+
 A style file is plain text: a setting is a name, an equals sign and a
 value; a \code{#} starts a note; the general settings come first, then
 one section per table type, \code{[descriptives]}, \code{[frequencies]},
 \code{[regression]}, \code{[logistic]}, \code{[correlation]},
 \code{[ttest]}, \code{[anova]}, \code{[crosstab]} and
 \code{[reliability]}. A setting the file leaves out comes from the style
-its \code{based.on} line names. jstats looks for a style named in a call
-in the style folder (\code{joptions(style.dir = )}), the working
-directory and your jstats folder, in that order.
+its \code{based.on} line names. \code{\link{jstyle_settings}} lists every
+setting and what it takes. jstats looks for a style named in a call in
+the style folder (\code{joptions(style.dir = )}), the working directory
+and your jstats folder, in that order.
 }
-\keyword{internal}
+\examples{
+# The styles jstats can find, and the folders it looks in
+jstyle()
+
+# Every setting of the built-in style
+jstyle("apa")
+
+# A complete copy to edit, and a short one holding two changes
+jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
+jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
+       font = "Arial", regression = list(fit.rows = c("r2", "n")))
+
+}
+\seealso{
+\code{\link{jtable}} for the tables, \code{\link{jstyle_settings}}
+for every setting a style holds.
+}

@@ -124,6 +124,16 @@
 #'     from \code{jt()}, \code{jlm()}, etc.
 #' }
 #'
+#' \strong{Publication tables}
+#' \itemize{
+#'   \item \code{\link{jtable}} -- publication tables from saved results,
+#'     written to a Word file
+#'   \item \code{\link{jstyle}} -- list, print, and check table styles,
+#'     and save a copy, or a short style holding only the settings that
+#'     differ; \code{\link{jstyle_settings}} lists every setting a style
+#'     holds
+#' }
+#'
 #' \strong{Package and assistant support}
 #' \itemize{
 #'   \item \code{\link{jupdate}} -- update jstats to the latest version
@@ -870,7 +880,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' emission (console print, AGENTS.md block, SKILL.md) so a saved copy can
 #' be recognized as stale after a package update.
 #' @keywords internal
-.jst_orientation_version <- "3.8"
+.jst_orientation_version <- "3.9"
 
 #' Internal helper: the installed jstats version as a string
 #'
@@ -992,8 +1002,11 @@ jai <- function(setup = NULL, path = NULL, ...) {
     "  instead. For anything not listed, check `help(\"jstats\")` for the full",
     "  function list before reaching for another package.",
     "",
-    "- Analysis functions print their results directly; nothing needs to be",
-    "  stored. The few functions that change data, such as `jdeclare_missing()` and",
+    "- Analysis functions print their results directly. Keep a result with",
+    "  `<-` (`m1 <- jlm(...)`) to make a publication table of it with",
+    "  `jtable()`, or to pass it to another package: jstats results work with",
+    "  `tidy()` and `glance()`, so packages such as modelsummary read them.",
+    "  The few functions that change data, such as `jdeclare_missing()` and",
     "  `jconvert()`, take `modify = TRUE` to apply the change directly",
     "  (`jdeclare_missing(df, ..., modify = TRUE)`) -- the form jstats teaches.",
     "  They also return the changed data frame, so assigning back",
@@ -1001,7 +1014,22 @@ jai <- function(setup = NULL, path = NULL, ...) {
     "  translates missing-value codes between software conventions -- it is for",
     "  moving data to other software or to plain base-R form, and is never a",
     "  prerequisite for analysis in jstats, which reads labelled data directly.",
-    "  Save data across sessions with `jsave()`.",
+    "  Save data across sessions with `jsave()`, and a kept result or table",
+    "  with base R's `saveRDS()` (read it back with `readRDS()`).",
+    "",
+    "- Publication tables come from `jtable()` on kept results:",
+    "  `jtable(m1, file = \"Table1.docx\")` writes a Word file. One call makes",
+    "  one table; to put several in one file, build each and give them",
+    "  together: `jtable(list(t1, t2), file = \"Tables.docx\")`. `jtable()`",
+    "  reports what it made, and `print(t1)` shows a table in the console. A",
+    "  table's look and conventions come from a style: the built-in `\"apa\"`,",
+    "  or a `.jstyle` text file. `jstyle(\"apa\", save.as = \"myjournal\")`",
+    "  writes a copy holding every setting, each with a note on what it",
+    "  takes; `jstyle(\"myjournal\")` checks a file and prints its settings;",
+    "  `?jstyle_settings` lists them all. To change a style, edit values only",
+    "  -- never add, rename or remove a setting or a section -- give colors",
+    "  by name (`lightblue`) or six hex digits (`ADD8E6`), then run",
+    "  `jstyle(\"myjournal\")`, which names any value it cannot use.",
     "",
     "- Detailed help and worked examples for each function are available via",
     "  `?jdesc`, `?jdeclare_missing`, and so on.",
@@ -1520,13 +1548,17 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' the dataset names load-bearing -- and the S209 closing sentence, which
 #' pairs the anti-guessing warning with the remedy: warned but not told
 #' what to do, the S209 run avoided jstats entirely and reached for haven.
+#' Session 406 (orientation v3.9) added jtable and jstyle with the phrase
+#' naming tables and styles, so a request about a table's look loads the
+#' skill.
 #' @keywords internal
 .jst_skill_description <- function() {
   paste(
     c("Use with the jstats R package or its example datasets community",
       "and clinic. jstats functions include jload, jdesc, jfreq, jscreen,",
       "jt, jaov, jcorr, jlm, jlogistic, jcrosstab, jalpha, jdeclare_missing,",
-      "juse, jsave, jconvert. Load this skill before writing jstats code;",
+      "juse, jsave, jconvert, jtable, jstyle (publication tables in Word and",
+      ".jstyle table styles). Load this skill before writing jstats code;",
       "its syntax is newer than model training data and must not be",
       "guessed."),
     collapse = " ")

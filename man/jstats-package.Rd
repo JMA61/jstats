@@ -131,6 +131,16 @@ and boxplots from a data frame, plus plots of result objects
 from \code{jt()}, \code{jlm()}, etc.
 }
 
+\strong{Publication tables}
+\itemize{
+\item \code{\link{jtable}} -- publication tables from saved results,
+written to a Word file
+\item \code{\link{jstyle}} -- list, print, and check table styles,
+and save a copy, or a short style holding only the settings that
+differ; \code{\link{jstyle_settings}} lists every setting a style
+holds
+}
+
 \strong{Package and assistant support}
 \itemize{
 \item \code{\link{jupdate}} -- update jstats to the latest version

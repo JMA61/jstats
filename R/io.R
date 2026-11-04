@@ -1159,6 +1159,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # Ensure result is a data frame
   if (!is.data.frame(df)) {
+    # A saved result or a built table (Session 406): read back with base
+    # R, in a line that runs.
+    if (ext == "rds" && !is.null(.jst_result_noun(df))) {
+      shown <- sub("^\\./", "", gsub("\\", "/", resolved_path, fixed = TRUE))
+      obj   <- tools::file_path_sans_ext(basename(shown))
+      if (!identical(make.names(obj), obj)) obj <- "result"
+      .jst_stop(basename(shown), " holds ", .jst_result_noun(df),
+                ", not a data frame.\n",
+                "jload() loads data frames; read it back with base R:\n",
+                "  ", obj, " <- readRDS(\"", shown, "\")")
+    }
     if (ext == "rds") {
       .jst_stop(
         "The .rds file does not contain a data frame.\n",
@@ -7085,6 +7096,14 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
       .jst_stop("'", data_str, "' is NULL.\n",
                 .jst_jsave_example_lines(match.call(), parent.frame()))
     }
+    # A saved result or a built table (Session 406): jsave() keeps data
+    # frames, and base R keeps any other R object, so the stop gives
+    # saveRDS() and readRDS() as lines that run.
+    if (!is.null(.jst_result_noun(val))) {
+      .jst_result_save_stop(data_sub, val,
+                            if (missing(file)) NULL
+                            else tryCatch(file, error = function(e) NULL))
+    }
     # The resolver's sentence for the same input (S334 item, Session 351):
     # "'z' is a integer" pasted an article before the class.
     if (!is.data.frame(val) && !is.character(val)) {
@@ -8103,4 +8122,54 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE, ...) {
   }
 
   invisible(NULL)
+}
+
+
+#' Internal helper: what a saved result or a built table is, in words
+#'
+#' For the stops of jsave() and jload() given one (Session 406): "a jlm()
+#' result", "a table jtable() built", "a set of tables jtable() put
+#' together".
+#'
+#' @param x Any object.
+#' @return Character(1), or NULL for anything else.
+#' @keywords internal
+.jst_result_noun <- function(x) {
+  if (inherits(x, "jst_tables")) return("a set of tables jtable() put together")
+  if (inherits(x, "jst_table")) return("a table jtable() built")
+  fn <- .jst_table_result_fn(x)
+  if (is.na(fn)) NULL else paste0("a ", fn, " result")
+}
+
+#' Internal helper: jsave() given a saved result or a built table
+#'
+#' Session 406 (the (Session 128) item, decided at Capability Slate T's
+#' build 5: no jstats verb, since base R keeps any R object): jsave()
+#' saves data frames, so it stops, and gives the base R lines that keep the
+#' object and read it back -- named as typed, the file the call gave with
+#' .rds in place of its extension, else the object's name with .rds; a
+#' built table first gets the line that writes it to Word.
+#'
+#' @param data_sub The data argument as typed.
+#' @param val Its value.
+#' @param file The call's file, or NULL.
+#' @keywords internal
+.jst_result_save_stop <- function(data_sub, val, file = NULL) {
+  shown <- paste(deparse(data_sub, width.cutoff = 500L), collapse = " ")
+  lhs   <- if (is.symbol(data_sub)) shown else "result"
+  rds   <- if (is.character(file) && length(file) == 1L && !is.na(file) &&
+               nzchar(trimws(file))) {
+    paste0(tools::file_path_sans_ext(gsub("\\", "/", file, fixed = TRUE)), ".rds")
+  } else paste0(lhs, ".rds")
+  word <- if (inherits(val, c("jst_table", "jst_tables"))) {
+    paste0("To write it to a Word file:\n",
+           "  jtable(", shown, ", file = \"",
+           tools::file_path_sans_ext(basename(rds)), ".docx\")\n")
+  }
+  .jst_stop("'", shown, "' is ", .jst_result_noun(val), ", not a data frame.\n",
+            word,
+            "To keep it for a later session, save it with base R:\n",
+            "  saveRDS(", shown, ", \"", rds, "\")\n",
+            "Then read it back with:\n",
+            "  ", lhs, " <- readRDS(\"", rds, "\")", fn = "jsave")
 }

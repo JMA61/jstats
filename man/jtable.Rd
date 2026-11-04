@@ -3,6 +3,7 @@
 \name{jtable}
 \alias{jtable}
 \alias{print.jst_table}
+\alias{print.jst_tables}
 \title{Make a publication table from a saved result}
 \usage{
 jtable(
@@ -20,21 +21,23 @@ jtable(
 )
 
 \method{print}{jst_table}(x, ...)
+
+\method{print}{jst_tables}(x, ...)
 }
 \arguments{
 \item{x}{A saved result -- what an analysis function returns, kept with
-\code{<-} -- or a list of them. Results share a table when they share
-its columns: a list of \code{jdesc()} results, or of \code{jfreq()}
-results, stacks into one table, each result's variables under its name
-in the list when the list is named; a list of \code{jlm()} results, or
-of \code{jlogistic()} results, with one outcome puts the models side by
-side, headed "Model 1", "Model 2", ... or by the list's names; a list of
-\code{jt()}, \code{jaov()} or \code{jcrosstab()} results with one
+\code{<-} -- or a list of them that share one table: a list of
+\code{jdesc()} results, or of \code{jfreq()} results, stacks into one
+table, each result's variables under its name in the list when the
+list is named; a list of \code{jlm()} results, or of
+\code{jlogistic()} results, with one outcome puts the models side by
+side, headed "Model 1", "Model 2", ... or by the list's names; a list
+of \code{jt()}, \code{jaov()} or \code{jcrosstab()} results with one
 grouping variable stacks a row or a block per outcome; a list of
 \code{jalpha()} results stacks the scales, each under its name. A
-\code{jcorr()} result is a table of its own. A table \code{jtable()}
-has already built, or a list of them, goes to the file as it is, the
-tables in the order given and numbered so.}
+\code{jcorr()} result is a table of its own. Or a table \code{jtable()}
+has already built, or a list of them: they go to the file as they
+are, in the order given.}
 
 \item{headings}{A named list: each heading and the variables under it,
 bare or in quotes, e.g. \code{list("Dependent variable" = Wellbeing,
@@ -78,32 +81,33 @@ program your computer opens .docx files with; only in an interactive
 session, so a script or a rendered page opens nothing. Needs
 \code{file}.}
 
-\item{print}{Print the preview? NULL (the default) follows the
-\code{\link{joutput}} level: the preview prints unless the level is
-\code{"silent"}. TRUE prints it under any level; FALSE prints nothing
-and writes the file alone.}
+\item{print}{Print the report of what was made? NULL (the default)
+follows the \code{\link{joutput}} level: the report prints unless the
+level is \code{"silent"}. TRUE prints it under any level; FALSE prints
+nothing.}
 
 \item{...}{A setting of the table type's section of the style, for this
 table only, e.g. \code{columns = c("mean", "sd")} for a descriptives
 table, \code{missing.rows = "none"} for a frequency table or
 \code{fit.rows = c("r2", "delta.r2")} for a regression table: the
-call outranks the style file. The general settings (the font, the
-caption's form, the decimals) are the style file's, except
-\code{landscape = "yes"} or \code{"no"}, a page choice the call may
-make. Any other input stops with "unused input".}
+call outranks the style file. \code{\link{jstyle_settings}} lists
+every setting. The general settings (the font, the caption's form,
+the decimals) are the style file's, except \code{landscape = "yes"} or
+\code{"no"}, a page choice the call may make. Any other input stops
+with "unused input".}
 }
 \value{
-The table, invisibly: an object of class \code{jst_table},
-which prints its preview when typed.
+The table, invisibly: an object of class \code{jst_table}, which
+shows a facsimile of the Word table when printed. A call given two or
+more built tables returns them together (class \code{jst_tables}),
+which prints each one, numbered as in the file.
 }
 \description{
-\code{jtable()} turns a saved analysis result into a publication table:
-it prints a preview in the console and, when \code{file} is given,
-writes the table to a Word file (.docx) that opens in Word, LibreOffice
-and Google Docs. The table's look and conventions come from a style --
-the built-in \code{"apa"} style, or a style file of your own (see
-\code{jstyle()}); the preview is a facsimile of the Word table, so what
-prints is what the file holds.
+\code{jtable()} turns a saved analysis result into a publication table
+and, when \code{file} is given, writes it to a Word file (.docx) that
+opens in Word, LibreOffice and Google Docs. The table's look and
+conventions come from a style -- the built-in \code{"apa"} style, or a
+style file of your own (see \code{\link{jstyle}}).
 }
 \details{
 A table is made from each kind of result: a descriptives table from one
@@ -129,5 +133,64 @@ variables of a descriptives or frequency table go under role headings
 when \code{headings} names them, and each specific note's variables are
 marked when \code{markers} names them. A filter the analysis applied
 (\code{\link{jsubset}}, \code{subset =}) is named in the general note.
+
+\strong{One call, one table.} The results given to one call make one
+table: results share a table when they share its columns (see
+\code{x}). Results that cannot share one -- results of different
+kinds, models of different outcomes, tests of different grouping
+variables -- stop, and the message gives the lines that make each
+table in a call of its own. To put several tables in one file, build
+each table, then give the tables together:
+\code{jtable(list(t1, t2, t3), file = "Tables.docx")}. The tables keep
+the order given and are numbered so.
+
+\strong{What prints.} \code{jtable()} reports what it made: each table's
+number and title, what it holds, the page it is on (a landscape page,
+the text stepped down to fit), and where the file was written. To see a
+table in the console, keep it with \code{<-} and print it:
+\code{print(t1)}, or type \code{t1}. The console shows a facsimile of
+the Word table, its numbers formatted by the style.
+
+\strong{The page.} Under the style's \code{landscape = "auto"} each
+table gets the page it needs: a table too wide for a portrait page sits
+on landscape pages of its own, and the tables around it stay portrait.
+\code{landscape = "yes"} or \code{"no"} in the call that writes a file
+sets every page.
+
+\strong{The analysis inside the call.} \code{jtable(jlm(Fear ~ Age,
+d))} runs the analysis without printing it and makes its table; errors
+and warnings still show.
+
+\strong{Keeping a result for a later session.} A saved result is an R
+object, which base R keeps in a file of its own:
+\code{saveRDS(m1, "m1.rds")}, then in a later session
+\code{m1 <- readRDS("m1.rds")}. A result made by an earlier version of
+jstats than the table needs stops, and says which version made it.
 }
-\keyword{internal}
+\examples{
+# Keep a result, make its table, and look at it in the console
+d1 <- jdesc(community, Age, Income, print = FALSE)
+t1 <- jtable(d1, title = "Descriptive Statistics for Study Variables")
+print(t1)
+
+# Two models of one outcome side by side, written to a Word file
+m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
+m2 <- jlm(WellbeingScore ~ Age + Volunteer, community, print = FALSE)
+t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
+             overwrite = TRUE)
+
+# Several tables in one file: build each, then give them together
+doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
+              overwrite = TRUE)
+print(doc)
+
+# Keep a result for a later session with base R
+path <- file.path(tempdir(), "m1.rds")
+saveRDS(m1, path)
+m1 <- readRDS(path)
+
+}
+\seealso{
+\code{\link{jstyle}} for styles, \code{\link{jstyle_settings}}
+for every setting a style holds.
+}

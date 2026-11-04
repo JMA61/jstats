@@ -4,12 +4,15 @@
 \alias{.jst_docx_parts}
 \title{Internal helper: the parts of a document file}
 \usage{
-.jst_docx_parts(tables, style)
+.jst_docx_parts(tables, style, landscape = NULL)
 }
 \arguments{
 \item{tables}{A list of jst_table.}
 
 \item{style}{The style list.}
+
+\item{landscape}{NULL, or the page setting for every page (the writing
+call's).}
 }
 \value{
 A named list of parts: path in the package, then the text.
