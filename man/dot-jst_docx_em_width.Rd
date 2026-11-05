@@ -4,12 +4,15 @@
 \alias{.jst_docx_em_width}
 \title{Internal helper: a text's width in ems, with a small allowance}
 \usage{
-.jst_docx_em_width(x)
+.jst_docx_em_width(x, font = NULL)
 }
 \arguments{
 \item{x}{Character(1).}
+
+\item{font}{Character(1), or NULL.}
 }
 \description{
-Internal helper: a text's width in ems, with a small allowance
+Measured in the face \code{font} names (\code{.jst_docx_font_widths()};
+Session 407), Times New Roman when it names none.
 }
 \keyword{internal}

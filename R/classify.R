@@ -719,6 +719,45 @@
              stringsAsFactors = FALSE, row.names = NULL)
 }
 
+#' Internal helper: a labelled variable as a factor of its codes
+#'
+#' The factor an analysis groups or tabulates a labelled variable by: one
+#' level for each distinct code the cases hold, in code order -- the
+#' order \code{.jst_group_codes()} gives -- each level named by the code's
+#' value label, else by the code itself, as \code{haven::as_factor()}
+#' names them. Where two codes would take one name (a label used for two
+#' codes, or a code that reads as another code's label) each of them is
+#' named in the "code: label" form, "1: Other" and "2: Other", so no two
+#' codes ever share a level. \code{haven::as_factor()} names its levels
+#' by label and merges codes whose labels match, so two codes labelled
+#' "Other" were one group in \code{jt()}, \code{jaov()}, \code{jcrosstab()}
+#' and \code{jdesc(by = )} and one bar in \code{jplot()} (the (S399)
+#' colliding-labels item; Session 407). A declared missing value still
+#' live on a \code{haven_labelled_spss} column is missing, not a level
+#' (\code{haven::as_factor()} makes it one; the callers' columns are
+#' masked by then, so none of them meets one); a labelled value no case
+#' holds is not a level either, where \code{haven::as_factor()} made one
+#' that every caller then dropped.
+#'
+#' @param x A haven-labelled variable, numeric- or character-backed.
+#' @return A factor, case for case with \code{x}.
+#' @keywords internal
+.jst_code_factor <- function(x) {
+  miss <- is.na(x)
+  raw  <- unclass(x)
+  attributes(raw) <- NULL
+  raw[miss] <- NA
+  codes <- sort(unique(raw[!miss]))
+  lab   <- .jst_value_label_of(codes, labelled::val_labels(x))
+  code_chr <- as.character(codes)
+  nm    <- ifelse(is.na(lab), code_chr, lab)
+  clash <- nm %in% nm[duplicated(nm)]
+  nm[clash] <- ifelse(is.na(lab[clash]), code_chr[clash],
+                      paste0(code_chr[clash], ": ", lab[clash]))
+  if (anyDuplicated(nm)) nm <- make.unique(nm, sep = " ")
+  factor(match(raw, codes), levels = seq_along(codes), labels = nm)
+}
+
 
 # -- Blank text cells ---------------------------------------------------------
 #

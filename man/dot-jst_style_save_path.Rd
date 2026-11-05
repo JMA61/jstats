@@ -17,6 +17,7 @@ A name with a folder is written where it says (the folder must exist); a
 bare name goes in the style folder when one is set, else in the per-user
 folder, which is created here, by the user's own call (CRAN's rule: a
 package writes there only when asked). The .jstyle extension is added
-when the name has none; "apa" is the built-in style's name.
+when the name has none; "apa" is the built-in style's name, and a name
+in \code{.jst_style_reserved} a built-in's still to come (Session 407).
 }
 \keyword{internal}

@@ -641,6 +641,60 @@
 #' @keywords internal
 .jst_style_builtin <- function() list(apa = .jst_style_apa)
 
+#' Internal helper: the names kept for built-in styles still to come
+#'
+#' A built-in's name wins over any file, so a file saved under the name of
+#' a built-in a later version adds would stop being read the day that
+#' version is installed, and a file based on it would change its base.
+#' \code{jstyle(save.as = )} refuses these names now, as it refuses
+#' "apa" (Session 407, the (S406) item: \code{report}, Capability Slate
+#' U's report style). A name moves from here to
+#' \code{.jst_style_builtin()} when its style ships.
+#' @keywords internal
+.jst_style_reserved <- c("report")
+
+#' Internal helper: style files named like a built-in style
+#'
+#' The \code{.jstyle} files in the folders searched whose name, the
+#' letters' case aside, is a built-in style's: never read, since the
+#' built-in's name always means the built-in (Session 407).
+#'
+#' @param name Character(1); a built-in style's name.
+#' @return Character; the files' paths, in the folders' order.
+#' @keywords internal
+.jst_style_shadowed <- function(name) {
+  out <- character(0)
+  for (d in .jst_style_dirs()) {
+    if (!dir.exists(d)) next
+    f  <- list.files(d, pattern = "\\.jstyle$", ignore.case = TRUE,
+                     full.names = TRUE)
+    nm <- sub("\\.jstyle$", "", basename(f), ignore.case = TRUE)
+    out <- c(out, f[tolower(nm) == tolower(name)])
+  }
+  out
+}
+
+#' Internal helper: the note for style files named like a built-in style
+#'
+#' Said where such a file is passed over: when a call names the built-in
+#' (or takes it as the session's style), and under \code{jstyle()}'s list
+#' of styles (Session 407, the (S406) item's lean, Jeff's default).
+#'
+#' @param name Character(1); the built-in style's name.
+#' @param paths Character; the files, from \code{.jst_style_shadowed()}.
+#' @return Character(1), the note, or NULL when there are no files.
+#' @keywords internal
+.jst_style_shadowed_note <- function(name, paths) {
+  if (!length(paths)) return(NULL)
+  one <- length(paths) == 1L
+  paste0(if (one) "This file is" else "These files are",
+         " not read, since \"", name, "\" always names jstats's built-in ",
+         "style:\n",
+         paste0("  ", .jst_norm_path(paths), collapse = "\n"), "\n",
+         "To use ", if (one) "it" else "one", ", rename it, for example to my",
+         name, ".jstyle, and use style = \"my", name, "\".")
+}
+
 #' Internal helper: the style a jtable() call uses
 #'
 #' Resolves \code{style =} into a STYLE (class "jst_style"): its layers,
@@ -781,6 +835,15 @@
   nm <- sub("\\.jstyle$", "", style, ignore.case = TRUE)
   if (!grepl("[/\\\\]", style) && tolower(nm) %in% names(builtin)) {
     b <- tolower(nm)
+    # A file of the built-in's name is passed over; said when the call
+    # itself names the built-in, not for each based.on that reaches it.
+    if (is.null(from)) {
+      note <- .jst_style_shadowed_note(b, .jst_style_shadowed(b))
+      if (!is.null(note)) {
+        .jst_msg(note)
+        cat("\n")
+      }
+    }
     return(.jst_style_object(b, NA_character_,
                              list(c(list(source = b), builtin[[b]]))))
   }
@@ -1772,10 +1835,13 @@
     italic = c(FALSE, .jst_tbl_head_italic(type, col_keys, col_labs)),
     stringsAsFactors = FALSE, row.names = NULL)
 
-  # A category's name: its value label, else its code.
-  cat_name <- function(code, label) {
-    ifelse(!is.na(label) & nzchar(label), label,
-           ifelse(is.na(code), key("missing.label"), as.character(code)))
+  # A category's name: its value label, else its code; a declared range,
+  # which has neither, the missing label. Named a block at a time, so a
+  # label two codes share shows each code (Session 407).
+  cat_names <- function(code, label) {
+    out <- .jst_table_cat_names(code, label)
+    out[is.na(out)] <- key("missing.label")
+    out
   }
   data_row <- function(label, indent, raw) {
     cells <- list(n             = .jst_tbl_count(raw$n, thou),
@@ -1806,9 +1872,11 @@
       cells = list(), raw = list())
     valid <- b$rows[b$rows$block == "valid", , drop = FALSE]
     miss  <- b$rows[b$rows$block == "missing", , drop = FALSE]
+    valid_names <- cat_names(valid$code, valid$label)
+    miss_names  <- cat_names(miss$code, miss$label)
     for (k in seq_len(nrow(valid))) {
       rows[[length(rows) + 1L]] <- data_row(
-        cat_name(valid$code[k], valid$label[k]), base + 1L,
+        valid_names[k], base + 1L,
         list(n = valid$count[k], percent = valid$total_pct[k],
              valid.percent = valid$valid_pct[k],
              cumulative = valid$cum_pct[k]))
@@ -1823,7 +1891,7 @@
       } else {
         for (k in seq_len(nrow(miss))) {
           rows[[length(rows) + 1L]] <- data_row(
-            cat_name(miss$code[k], miss$label[k]), base + 1L,
+            miss_names[k], base + 1L,
             list(n = miss$count[k], percent = miss$total_pct[k],
                  valid.percent = NA_real_, cumulative = NA_real_))
         }
@@ -2057,7 +2125,7 @@
       }
     }
     list(var_label = var_label, codes = codes, dummy = dums,
-         names = ifelse(!is.na(labs) & nzchar(labs), labs, codes))
+         names = .jst_table_cat_names(codes, labs))
   }
 
   # markers = marks a predictor's row: a term's, or a dummy-coded
@@ -2422,14 +2490,26 @@
 #'
 #' A category's name in a table is its value label, or its code where it
 #' has none -- never the string a result printed (the reference, 4.3).
+#' Where two codes given in one call would take one name -- a label used
+#' for two codes -- each of them is named "code: label" ("1: Other",
+#' "2: Other"), as the console shows them under value.id = "labels"
+#' (Session 407, the (S399) colliding-labels item). A code repeated in
+#' the vector is one code; an NA code takes no part.
 #'
 #' @param code The codes.
 #' @param label The value labels (NA where there is none).
 #' @return Character.
 #' @keywords internal
 .jst_table_cat_names <- function(code, label) {
-  ifelse(!is.na(label) & nzchar(as.character(label)), as.character(label),
-         as.character(code))
+  label <- as.character(label)
+  has   <- !is.na(label) & nzchar(label)
+  key   <- as.character(code)
+  out   <- ifelse(has, label, key)
+  seen  <- !is.na(code) & !duplicated(key)
+  twice <- out[seen][duplicated(out[seen])]
+  i     <- has & !is.na(code) & out %in% twice
+  out[i] <- paste0(key[i], ": ", label[i])
+  out
 }
 
 #' Internal helper: a variable's label, from a c(name = , label = ) pair
@@ -3781,6 +3861,51 @@
          "<w:r>", rpr, "<w:fldChar w:fldCharType=\"end\"/></w:r>")
 }
 
+#' Internal helper: the width a caption row needs to keep its title on one line
+#'
+#' Session 407 (Jeff: "Frequency Distributions should be on a single
+#' line"): under caption.position = row the caption is the table's first
+#' row, so it wraps at the table's width; this is the width at which it
+#' does not -- in apa's form the wider of the bold "Table 1" and the
+#' italic title, in the journal's and the report's their one line -- in
+#' the table's font at caption.size, with the cell margins. Zero for a
+#' caption set as a paragraph, which runs the page's width.
+#'
+#' @param tbl A jst_table.
+#' @param style The style list.
+#' @param number The table's number.
+#' @return Integer, dxa.
+#' @keywords internal
+.jst_docx_caption_width <- function(tbl, style, number) {
+  key <- function(k) .jst_style_key(style, tbl$type, k)
+  if (!identical(key("caption.position"), "row")) return(0L)
+  form <- key("caption.form"); size <- key("caption.size"); font <- key("font")
+  title <- tbl$caption$title
+  title <- if (is.null(title)) "" else .jst_table_strip_markup(title)
+  lab   <- paste0("Table ", number)
+  tw <- function(s, bold = FALSE) .jst_docx_text_width(s, size, font = font, bold = bold)
+  need <- if (identical(form, "apa")) max(tw(lab, TRUE), tw(title))
+          else if (identical(form, "report")) tw(paste0(lab, ": ", title), TRUE)
+          else tw(paste0(lab, "."), TRUE) + tw(paste0(" ", title))
+  as.integer(need + 2L * 108L)
+}
+
+#' Internal helper: a table's columns widened to a width, in proportion
+#'
+#' Each column's share of the extra width follows its own width; what the
+#' rounding leaves goes to the stub.
+#'
+#' @param w Integer, the column widths.
+#' @param to The width wanted, dxa; never narrower than \code{sum(w)}.
+#' @return Integer.
+#' @keywords internal
+.jst_docx_widen <- function(w, to) {
+  if (to <= sum(w)) return(as.integer(w))
+  out <- as.integer(floor(w * to / sum(w)))
+  out[1L] <- out[1L] + as.integer(to - sum(out))
+  out
+}
+
 #' Internal helper: the caption paragraphs of a table
 #'
 #' @param tbl A jst_table.
@@ -3836,10 +3961,15 @@
 #' @param size Points.
 #' @param digits Logical; TRUE for a number column (a digit is about half
 #'   an em), FALSE for text (a letter a little less).
+#' @param font Character(1), or NULL: the face measured in (Session 407).
+#' @param bold Logical; TRUE for bold text, which is up to about 8 percent
+#'   wider than the same text upright (Arial's bold; Times's about 6).
 #' @keywords internal
-.jst_docx_text_width <- function(s, size, digits = FALSE) {
+.jst_docx_text_width <- function(s, size, digits = FALSE, font = NULL,
+                                 bold = FALSE) {
   em <- size * 20
-  as.integer(ceiling(max(vapply(s, .jst_docx_em_width, numeric(1)), 0) * em))
+  as.integer(ceiling(max(vapply(s, .jst_docx_em_width, numeric(1), font = font),
+                         0) * em * (if (isTRUE(bold)) 1.08 else 1)))
 }
 
 # The advance widths of a serif text face, in thousandths of an em (the
@@ -3871,15 +4001,96 @@
                   c("\u2212", "\u2020", "\u2021", "\u00a7",
                     "\u03b2", "\u03b7", "\u03b1", "\u03c7", "\u2014")))
 
+# The same characters' advance widths in a sans serif face -- Arial's,
+# which Helvetica and Liberation Sans share -- and in Calibri (Carlito's,
+# which it shares), read from the fonts' own metrics at Session 407. Until
+# then every table was measured in Times whatever its font, and a table in
+# Arial, about a tenth wider, wrapped its labels in narrow columns (the
+# Session 407 walk: "How we contacted you" over two lines at 11 pt).
+.jst_docx_char_widths_sans <- c(a = 556, b = 556, c = 500, d = 556, e = 556,
+  f = 278, g = 556, h = 556, i = 222, j = 222, k = 500, l = 222, m = 833,
+  n = 556, o = 556, p = 556, q = 556, r = 333, s = 500, t = 278, u = 556,
+  v = 500, w = 722, x = 500, y = 500, z = 500, A = 667, B = 667, C = 722,
+  D = 722, E = 667, F = 611, G = 778, H = 722, I = 278, J = 500, K = 667,
+  L = 556, M = 833, N = 722, O = 778, P = 667, Q = 778, R = 722, S = 667,
+  T = 611, U = 722, V = 667, W = 944, X = 667, Y = 667, Z = 611, "0" = 556,
+  "1" = 556, "2" = 556, "3" = 556, "4" = 556, "5" = 556, "6" = 556, "7" = 556,
+  "8" = 556, "9" = 556, " " = 278, "." = 278, "," = 278, ":" = 278, ";" = 278,
+  "-" = 333, "(" = 333, ")" = 333, "[" = 278, "]" = 278, "/" = 278, "%" = 889,
+  "*" = 389, "=" = 584, "+" = 584, "<" = 584, ">" = 584, "'" = 191, "\"" = 355,
+  "&" = 667, "!" = 278, "?" = 556, "_" = 556, "#" = 556)
+.jst_docx_char_widths_sans <- c(
+  .jst_docx_char_widths_sans,
+  stats::setNames(c(584, 556, 556, 556, 575, 556, 578, 525, 1000),
+                  c("\u2212", "\u2020", "\u2021", "\u00a7",
+                    "\u03b2", "\u03b7", "\u03b1", "\u03c7", "\u2014")))
+.jst_docx_char_widths_calibri <- c(a = 479, b = 525, c = 423, d = 525, e = 498,
+  f = 305, g = 471, h = 525, i = 229, j = 239, k = 455, l = 229, m = 799,
+  n = 525, o = 527, p = 525, q = 525, r = 349, s = 391, t = 335, u = 525,
+  v = 452, w = 715, x = 433, y = 453, z = 395, A = 579, B = 544, C = 533,
+  D = 615, E = 488, F = 459, G = 631, H = 623, I = 252, J = 319, K = 520,
+  L = 420, M = 855, N = 646, O = 662, P = 517, Q = 673, R = 543, S = 459,
+  T = 487, U = 642, V = 567, W = 890, X = 519, Y = 487, Z = 468, "0" = 507,
+  "1" = 507, "2" = 507, "3" = 507, "4" = 507, "5" = 507, "6" = 507, "7" = 507,
+  "8" = 507, "9" = 507, " " = 226, "." = 252, "," = 250, ":" = 268, ";" = 268,
+  "-" = 306, "(" = 303, ")" = 303, "[" = 307, "]" = 307, "/" = 386, "%" = 715,
+  "*" = 498, "=" = 498, "+" = 498, "<" = 498, ">" = 498, "'" = 221, "\"" = 401,
+  "&" = 682, "!" = 326, "?" = 463, "_" = 498, "#" = 498)
+.jst_docx_char_widths_calibri <- c(
+  .jst_docx_char_widths_calibri,
+  stats::setNames(c(498, 498, 498, 498, 531, 537, 567, 426, 905),
+                  c("\u2212", "\u2020", "\u2021", "\u00a7",
+                    "\u03b2", "\u03b7", "\u03b1", "\u03c7", "\u2014")))
+# Any other font is measured generously: each character at the widest of
+# the three faces, plus a tenth, so a label does not wrap in a face jstats
+# has no metrics for (Verdana is wider still; Georgia and Cambria fit).
+.jst_docx_char_widths_other <- ceiling(
+  pmax(.jst_docx_char_widths,
+       .jst_docx_char_widths_sans[names(.jst_docx_char_widths)],
+       .jst_docx_char_widths_calibri[names(.jst_docx_char_widths)]) * 1.1)
+
+#' Internal helper: the advance widths a table's font is measured in
+#'
+#' Times New Roman's for that face and the faces that share its metrics
+#' (Times, Liberation Serif, Tinos), and for no font named (NULL: the
+#' measure until Session 407); Arial's for Arial, Helvetica, Liberation
+#' Sans and Arimo; Calibri's for Calibri and Carlito; for any other font the
+#' generous table. The name is compared without regard to case or outer
+#' spaces. The unknown-character width rides as the attribute "other": half
+#' an em in Times, as before, and each face's digit width elsewhere.
+#'
+#' @param font Character(1), or NULL.
+#' @return A named numeric vector, in thousandths of an em.
+#' @keywords internal
+.jst_docx_font_widths <- function(font = NULL) {
+  f <- if (is.null(font) || is.na(font)) "" else tolower(trimws(font))
+  w <- if (!nzchar(f) || f %in% c("times new roman", "times",
+                                   "liberation serif", "tinos")) {
+    structure(.jst_docx_char_widths, other = 500)
+  } else if (f %in% c("arial", "helvetica", "liberation sans", "arimo")) {
+    structure(.jst_docx_char_widths_sans, other = 556)
+  } else if (f %in% c("calibri", "carlito")) {
+    structure(.jst_docx_char_widths_calibri, other = 507)
+  } else {
+    structure(.jst_docx_char_widths_other, other = 612)
+  }
+  w
+}
+
 #' Internal helper: a text's width in ems, with a small allowance
 #'
+#' Measured in the face \code{font} names (\code{.jst_docx_font_widths()};
+#' Session 407), Times New Roman when it names none.
+#'
 #' @param x Character(1).
+#' @param font Character(1), or NULL.
 #' @keywords internal
-.jst_docx_em_width <- function(x) {
+.jst_docx_em_width <- function(x, font = NULL) {
   if (is.na(x) || !nzchar(x)) return(0)
+  tab <- .jst_docx_font_widths(font)
   ch <- strsplit(x, "", fixed = TRUE)[[1L]]
-  w  <- .jst_docx_char_widths[ch]
-  w[is.na(w)] <- ifelse(.jst_dw(ch[is.na(w)]) > 1L, 1000, 500)
+  w  <- tab[ch]
+  w[is.na(w)] <- ifelse(.jst_dw(ch[is.na(w)]) > 1L, 1000, attr(tab, "other"))
   sum(w) / 1000 * 1.06
 }
 
@@ -3960,7 +4171,7 @@
   note_row <- identical(key("note.position"), "row")
   margin   <- 108L
   total    <- sum(widths)
-  dec_tabs <- .jst_docx_decimal_tabs(tbl, widths, size, margin)
+  dec_tabs <- .jst_docx_decimal_tabs(tbl, widths, size, margin, font = key("font"))
 
   # Which rows draw which rules.
   draw_h <- !identical(rules, "none")              # the header's rules
@@ -4156,11 +4367,13 @@
 
 #' Internal helper: the column widths of a table, in dxa
 #'
-#' From the widest text each column holds at the style's size, plus the
-#' cell margins; a column of numbers at least as wide as its block, the
+#' From the widest text each column holds at the style's size, in the
+#' table's font and bold where the style sets it bold (Session 407), plus
+#' the cell margins; a column of numbers at least as wide as its block, the
 #' widest whole part beside the widest tail (Session 405); the stub from
-#' its labels and their indents; a spanner's label spread over its columns
-#' when it is wider than they are.
+#' every row's label, a heading row's too, each beside its indent (Session
+#' 407); a spanner's label spread over its columns when it is wider than
+#' they are.
 #'
 #' @param tbl A jst_table.
 #' @param style The style list.
@@ -4168,23 +4381,53 @@
 #' @param pad The twips added to each number column beside its margins
 #'   (120; a table fitted to the page gives up half of it first, Session
 #'   403).
+#' @param headings FALSE for the stub from the data rows alone: the width
+#'   at which no data label wraps, which the page fit and its report read
+#'   (a heading row spans the table, so in a table fitted to its page the
+#'   stub may narrow past it, and the heading runs on over the numbers).
 #' @return Integer vector, one per column.
 #' @keywords internal
-.jst_docx_widths <- function(tbl, style, size = NULL, pad = 120L) {
+.jst_docx_widths <- function(tbl, style, size = NULL, pad = 120L,
+                             headings = TRUE) {
   if (is.null(size)) size <- .jst_style_key(style, tbl$type, "size")
+  key  <- function(k) .jst_style_key(style, tbl$type, k)
+  font <- key("font")
   cols <- tbl$columns; nc <- nrow(cols)
   margin <- 108L
-  # The stub's width is its data rows' labels: a heading row spans the
-  # table, so its label never sets the stub (Session 403).
-  stub_text <- vapply(tbl$rows, function(r) {
-    if (identical(r$kind, "heading")) return("")
-    paste0(strrep("  ", r$indent),
-           if (isTRUE(r$markup)) .jst_table_strip_markup(r$label) else r$label,
+  label_of <- function(r) {
+    paste0(if (isTRUE(r$markup)) .jst_table_strip_markup(r$label) else r$label,
            paste(r$marks, collapse = ""), if (is.null(r$tail)) "" else r$tail)
-  }, character(1))
+  }
+  indent_of <- function(r) if (isTRUE(r$indent > 0L)) as.integer(r$indent) else 0L
+  # The stub's width is every row's label, each beside its indent: 180
+  # dxa a level, as the writer indents it (Session 407; measured until
+  # then as two spaces, about 125 dxa at 12 pt, and a short indented label
+  # in Arial wrapped). A heading row -- a variable's label over its
+  # categories, a role or a scale -- counts as the console's preview
+  # counts it (Session 407, Jeff: "the label 'How we contacted you' should
+  # define the width of that first column"; from Session 403 until then
+  # the data rows alone set it, the heading spanning the table). The page
+  # fit reads the data rows' width (headings = FALSE): a heading spans the
+  # table, so a fitted stub may narrow past it and the heading run on.
+  # A variable's label row takes variable.headings and a heading row
+  # group.headings, as the writer reads them: only the table types that
+  # have such rows have the settings.
+  bold_of <- function(r) {
+    emph <- if (identical(r$level, "variable")) key("variable.headings")
+            else if (identical(r$kind, "heading")) key("group.headings")
+            else "plain"
+    identical(emph, "bold")
+  }
+  stub_w <- vapply(tbl$rows, function(r) {
+    if (!headings && identical(r$kind, "heading")) return(0L)
+    .jst_docx_text_width(label_of(r), size, font = font, bold = bold_of(r)) +
+      180L * indent_of(r)
+  }, integer(1))
   w <- integer(nc)
   heads <- .jst_table_strip_markup(cols$label)
-  w[1L] <- max(.jst_docx_text_width(c(stub_text, heads[1L]), size)) + 2L * margin
+  hbold <- identical(key("header.bold"), "yes")
+  w[1L] <- max(stub_w, .jst_docx_text_width(heads[1L], size, font = font,
+                                            bold = hbold)) + 2L * margin
   # A spanning cell (a fit row's, across its model's columns, Session
   # 403): its whole part sets the first column's width with the other
   # cells', and its tail -- the df after an F -- the span's, below.
@@ -4204,14 +4447,18 @@
     # widest cell holds both is as wide as before.
     pl    <- .jst_tbl_plain_cell(cells, cols$kind[j])
     parts <- .jst_docx_num_parts(cells[!pl])
-    widest <- function(x) x[which.max(vapply(x, .jst_docx_em_width, numeric(1)))]
+    widest <- function(x) {
+      x[which.max(vapply(x, .jst_docx_em_width, numeric(1), font = font))]
+    }
     block <- .jst_docx_text_width(paste0(widest(parts$head), widest(parts$tail)),
-                                  size, digits = TRUE)
-    w[j] <- max(.jst_docx_text_width(cells, size, digits = TRUE), block,
-                .jst_docx_text_width(heads[j], size)) + 2L * margin + pad
+                                  size, digits = TRUE, font = font)
+    w[j] <- max(.jst_docx_text_width(cells, size, digits = TRUE, font = font), block,
+                .jst_docx_text_width(heads[j], size, font = font, bold = hbold)) +
+      2L * margin + pad
   }
   for (srow in tbl$spanners) for (sp in srow) {
-    need <- .jst_docx_text_width(sp$label, size) + 2L * margin
+    need <- .jst_docx_text_width(sp$label, size, font = font, bold = hbold) +
+      2L * margin
     have <- sum(w[sp$from:sp$to])
     if (need > have) {
       extra <- need - have
@@ -4223,7 +4470,7 @@
     s <- r$cells[[cols$key[from]]]
     if (is.null(s) || !nzchar(s)) next
     need <- w[from] + .jst_docx_text_width(.jst_docx_num_parts(s)$tail, size,
-                                           digits = TRUE)
+                                           digits = TRUE, font = font)
     have <- sum(w[from:to])
     if (need > have) w[to] <- w[to] + (need - have)
   }
@@ -4290,7 +4537,10 @@
   for (s in .jst_docx_fit_sizes(size0)) {
     w <- .jst_docx_widths(tbl, style, size = s, pad = 60L)
     room <- page_text - sum(w[-1L])
-    if (room >= .jst_docx_stub_floor(tbl, s, w[1L])) {
+    # The floor from the data rows' stub: a heading spans the table.
+    w1 <- .jst_docx_widths(tbl, style, size = s, pad = 60L, headings = FALSE)[1L]
+    if (room >= .jst_docx_stub_floor(tbl, s, w1,
+                                     font = .jst_style_key(style, tbl$type, "font"))) {
       w[1L] <- min(w[1L], room)
       return(mk(w, s))
     }
@@ -4321,14 +4571,16 @@
 #' an inch and a half. Half the stub's width is the ruling's measure; a
 #' label whose words cannot split into two lines that narrow sets the floor
 #' wider, the narrowest width at which it takes two lines, so no label
-#' wraps onto a third. A heading row spans the table and sets nothing.
+#' wraps onto a third. A heading row spans the table and sets nothing: the
+#' stub may narrow past it, and it runs on over the numbers.
 #'
 #' @param tbl A jst_table.
 #' @param size Points.
 #' @param w1 The stub's width at that size, unwrapped.
+#' @param font Character(1), or NULL: the face measured in (Session 407).
 #' @return Integer, dxa; never more than w1.
 #' @keywords internal
-.jst_docx_stub_floor <- function(tbl, size, w1) {
+.jst_docx_stub_floor <- function(tbl, size, w1, font = NULL) {
   em <- size * 20
   labs <- character(0); ind <- integer(0)
   for (r in tbl$rows) {
@@ -4337,7 +4589,7 @@
                            else r$label,
                            paste(r$marks, collapse = ""),
                            if (is.null(r$tail)) "" else r$tail))
-    ind  <- c(ind, as.integer(r$indent))
+    ind  <- c(ind, if (isTRUE(r$indent > 0L)) as.integer(r$indent) else 0L)
   }
   labs <- c(labs, .jst_table_strip_markup(tbl$columns$label[1L])); ind <- c(ind, 0L)
   need <- 0
@@ -4346,10 +4598,10 @@
     wd <- wd[nzchar(wd)]
     if (!length(wd)) next
     m <- length(wd)
-    two <- if (m == 1L) .jst_docx_em_width(wd) else {
+    two <- if (m == 1L) .jst_docx_em_width(wd, font) else {
       min(vapply(seq_len(m - 1L), function(k) {
-        max(.jst_docx_em_width(paste(wd[seq_len(k)], collapse = " ")),
-            .jst_docx_em_width(paste(wd[(k + 1L):m], collapse = " ")))
+        max(.jst_docx_em_width(paste(wd[seq_len(k)], collapse = " "), font),
+            .jst_docx_em_width(paste(wd[(k + 1L):m], collapse = " "), font))
       }, numeric(1)))
     }
     need <- max(need, two * em + 180 * ind[i])
@@ -4371,9 +4623,10 @@
 #' @param widths The column widths.
 #' @param size Points.
 #' @param margin The cell margin.
+#' @param font Character(1), or NULL: the face measured in (Session 407).
 #' @return Integer vector; NA for the stub.
 #' @keywords internal
-.jst_docx_decimal_tabs <- function(tbl, widths, size, margin) {
+.jst_docx_decimal_tabs <- function(tbl, widths, size, margin, font = NULL) {
   cols <- tbl$columns; nc <- nrow(cols)
   out  <- rep(NA_integer_, nc)
   for (j in seq_len(nc)[-1L]) {
@@ -4387,8 +4640,9 @@
     # (Session 405).
     spans <- vapply(tbl$rows, .jst_docx_spans_from, logical(1), j = j)
     pl <- .jst_tbl_plain_cell(cells, cols$kind[j])
-    tail_w <- .jst_docx_text_width(parts$tail[!spans & !pl], size, digits = TRUE)
-    head_w <- .jst_docx_text_width(parts$head[!pl], size, digits = TRUE)
+    tail_w <- .jst_docx_text_width(parts$tail[!spans & !pl], size, digits = TRUE,
+                                   font = font)
+    head_w <- .jst_docx_text_width(parts$head[!pl], size, digits = TRUE, font = font)
     # The block of numbers centered in the cell (Session 401: under a head
     # wider than its numbers, "Valid %", the block had sat at the right),
     # and short of the cell's right edge: a stop at or past it is no stop
@@ -4400,6 +4654,54 @@
                                          floor((inner + head_w - tail_w) / 2))))
   }
   out
+}
+
+#' Internal helper: a table's own font and size, on its runs
+#'
+#' Word takes a run's font from the document's defaults unless the run
+#' names one. A table whose style's font differs from the document's gets
+#' it on every run -- w:rFonts first in the run's properties, as Word's
+#' schema orders them, with East Asian text set in it as the defaults set
+#' it -- and on every paragraph mark; a table whose size differs gets it on
+#' the paragraph marks that carry none (its runs carry their size always),
+#' so an empty cell is as tall as the table's text. Session 407.
+#'
+#' @param xml Character; the table's paragraphs and table, as XML.
+#' @param font Character(1), or NULL to leave the font alone.
+#' @param size Points, or NULL to leave the paragraph marks' size alone.
+#' @return Character, as \code{xml}.
+#' @keywords internal
+.jst_docx_retype <- function(xml, font = NULL, size = NULL) {
+  if (is.null(font) && is.null(size)) return(xml)
+  rf <- if (!is.null(font)) {
+    f <- .jst_xml_esc(font)
+    paste0("<w:rFonts w:ascii=\"", f, "\" w:hAnsi=\"", f, "\" w:cs=\"", f,
+           "\" w:eastAsia=\"", f, "\"/>")
+  } else ""
+  sz <- if (!is.null(size)) {
+    paste0("<w:sz w:val=\"", size * 2, "\"/><w:szCs w:val=\"", size * 2, "\"/>")
+  } else ""
+  # The paragraph marks first: a mark's properties hold a size only where
+  # the table was fitted below its style's size, and keep it.
+  mark <- function(p) {
+    if (grepl("<w:rPr>", p, fixed = TRUE)) {
+      sub("<w:rPr>", paste0("<w:rPr>", rf), p, fixed = TRUE)
+    } else if (nzchar(rf) || nzchar(sz)) {
+      sub("</w:pPr>", paste0("<w:rPr>", rf, sz, "</w:rPr></w:pPr>"), p,
+          fixed = TRUE)
+    } else p
+  }
+  vapply(xml, function(x) {
+    m <- gregexpr("<w:pPr>.*?</w:pPr>", x, perl = TRUE)
+    regmatches(x, m) <- list(vapply(regmatches(x, m)[[1L]], mark, character(1),
+                                    USE.NAMES = FALSE))
+    if (nzchar(rf)) {
+      x <- gsub("<w:r><w:rPr>", paste0("<w:r><w:rPr>", rf), x, fixed = TRUE)
+      x <- gsub("<w:r>(?!<w:rPr>)", paste0("<w:r><w:rPr>", rf, "</w:rPr>"), x,
+                perl = TRUE)
+    }
+    x
+  }, character(1), USE.NAMES = FALSE)
 }
 
 #' Internal helper: the body of a document holding tables
@@ -4416,6 +4718,16 @@
 #' portrait text width at the style's size with half its padding and its
 #' labels on two lines (ruling R55, Session 404).
 #'
+#' Each table keeps its own style's font (Session 407, the (S406) item):
+#' the document's defaults are its style's -- the first table's, for
+#' built tables written together -- and a table whose style sets another
+#' font, or another size, has it written on its own runs and paragraph
+#' marks (\code{.jst_docx_retype()}). Until then the defaults alone carried
+#' the font, so the second table of a document written under two styles
+#' took the first one's font while its fills, rules and captions followed
+#' its own style. A table in the document's font and size is written as
+#' before.
+#'
 #' @param tables A list of jst_table.
 #' @param style The style list.
 #' @param landscape NULL, or "auto", "yes" or "no" for every page (the
@@ -4426,19 +4738,27 @@
 .jst_docx_document <- function(tables, style, landscape = NULL) {
   body <- character(0)
   lay  <- .jst_docx_layout(tables, style, landscape)
+  doc_font <- .jst_style_key(style, "general", "font")
+  doc_size <- as.numeric(.jst_style_key(style, "general", "size"))
   for (i in seq_along(tables)) {
     tbl <- tables[[i]]
     L   <- lay[[i]]
     tst <- L$style
     key <- function(k) .jst_style_key(tst, tbl$type, k)
+    one <- character(0)
     if (!identical(key("caption.position"), "row")) {
-      body <- c(body, .jst_docx_caption_pars(tbl, tst, i))
+      one <- c(one, .jst_docx_caption_pars(tbl, tst, i))
     }
-    body <- c(body, .jst_docx_table(tbl, tst, i, L$fit$widths, size = L$fit$size,
-                                    note_size = L$fit$note_size))
+    one <- c(one, .jst_docx_table(tbl, tst, i, L$fit$widths, size = L$fit$size,
+                                  note_size = L$fit$note_size))
     if (!identical(key("note.position"), "row")) {
-      body <- c(body, .jst_docx_note_pars(tbl, tst, size = L$fit$note_size))
+      one <- c(one, .jst_docx_note_pars(tbl, tst, size = L$fit$note_size))
     }
+    t_font <- key("font")
+    t_size <- as.numeric(key("size"))
+    body <- c(body, .jst_docx_retype(
+      one, font = if (!identical(t_font, doc_font)) t_font,
+      size = if (!identical(t_size, doc_size)) t_size))
     if (i < length(tables)) {
       # Two empty paragraphs between tables (Session 401); where the next
       # table needs the other page orientation, the second paragraph ends
@@ -4485,7 +4805,10 @@
 #' given -- the setting in the call that writes the document -- sets every
 #' page. Until Session 406 a document had one orientation, so one wide
 #' table turned every page. A table wider than its page is fitted to it
-#' (\code{.jst_docx_fit()}). The paper is the document style's.
+#' (\code{.jst_docx_fit()}). The paper is the document style's. A table
+#' narrower than its caption row's title widens to it, every column in
+#' proportion, as far as its page allows (Session 407), so the title keeps
+#' one line.
 #'
 #' @param tables A list of jst_table.
 #' @param style The document's style.
@@ -4498,7 +4821,8 @@
 .jst_docx_layout <- function(tables, style, landscape = NULL) {
   paper    <- .jst_style_key(style, "general", "paper")
   portrait <- .jst_docx_page(paper, FALSE)
-  lapply(tables, function(tbl) {
+  lapply(seq_along(tables), function(i) {
+    tbl   <- tables[[i]]
     tst   <- .jst_table_style(tbl, style)
     size0 <- .jst_style_key(tst, tbl$type, "size")
     land_key <- if (is.null(landscape)) .jst_style_key(tst, tbl$type, "landscape")
@@ -4506,13 +4830,21 @@
     nat <- .jst_docx_widths(tbl, tst)
     # The narrowest the table goes at the style's size: half its padding,
     # its labels on two lines.
-    w60 <- .jst_docx_widths(tbl, tst, size = size0, pad = 60L)
-    narrowest <- as.numeric(sum(w60[-1L]) + .jst_docx_stub_floor(tbl, size0, w60[1L]))
+    w60 <- .jst_docx_widths(tbl, tst, size = size0, pad = 60L, headings = FALSE)
+    narrowest <- as.numeric(sum(w60[-1L]) +
+      .jst_docx_stub_floor(tbl, size0, w60[1L],
+                           font = .jst_style_key(tst, tbl$type, "font")))
     land <- identical(land_key, "yes") ||
       (identical(land_key, "auto") && narrowest > portrait$text)
     page <- .jst_docx_page(paper, land)
     fit  <- if (sum(nat) > page$text) .jst_docx_fit(tbl, tst, page$text)
             else list(widths = nat, size = NULL, note_size = NULL)
+    # A caption row keeps its title on one line: the table widens to it,
+    # every column in proportion, as far as the page allows (Session 407).
+    cap <- .jst_docx_caption_width(tbl, tst, i)
+    if (cap > sum(fit$widths)) {
+      fit$widths <- .jst_docx_widen(fit$widths, min(cap, page$text))
+    }
     list(style = tst, landscape = land, page = page, fit = fit, natural = nat,
          size0 = size0)
   })
@@ -5488,7 +5820,8 @@ print.jst_tables <- function(x, ...) {
     if (L$fit$size < L$size0) {
       out <- paste0(out, ", its text at ", format(L$fit$size), " pt")
     }
-    w <- .jst_docx_widths(tbl, L$style, size = L$fit$size, pad = 60L)
+    w <- .jst_docx_widths(tbl, L$style, size = L$fit$size, pad = 60L,
+                          headings = FALSE)
     if (L$fit$widths[1L] < w[1L]) out <- paste0(out, ", long labels on two lines")
   }
   out
@@ -5798,7 +6131,9 @@ print.jst_tables <- function(x, ...) {
 #' @param save.as A name for the copy, in quotes: written as
 #'   \code{<name>.jstyle} in the style folder when one is set, else in
 #'   your jstats folder (\code{tools::R_user_dir("jstats")}), or to a path
-#'   given with a folder.
+#'   given with a folder. "apa" names the built-in style, and "report" one
+#'   a later version adds, so neither can be a copy's name; a file named
+#'   apa.jstyle is not read, and jstats says so.
 #' @param overwrite Logical. Replace a style file that exists? With FALSE
 #'   (the default) an interactive session asks, and one that cannot ask
 #'   stops.
@@ -6023,7 +6358,11 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
 #' the changes with the 'based on' providing all other specs"): a header
 #' saying so, the two stamps, based.on naming the style copied, then the
 #' settings given -- the general ones first, then each section's under its
-#' heading -- each after the note on what it does and what it takes.
+#' heading -- each after the note on what it does and what it takes. The
+#' header is the file's name on a line of its own, then one sentence a
+#' line, none wrapped (Session 407; Jeff: "each sentence should be on its
+#' own line ... Notepad and other text editors should easily be able to
+#' handle sentences that are relatively long without wrapping").
 #'
 #' @param name The new file's style name.
 #' @param based The style copied: its name, or its path when it was given
@@ -6031,15 +6370,21 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
 #' @param vals The settings (\code{.jst_style_given()}).
 #' @keywords internal
 .jst_style_short_lines <- function(name, based, vals) {
-  out <- c(paste0("# ", name, ".jstyle: a jstats table style, based on ",
-                  sub("\\.jstyle$", "", basename(based), ignore.case = TRUE), "."),
-           paste0("# It holds only the settings that differ; every other ",
-                  "setting comes from"),
-           "# the style based.on names. ?jstyle_settings lists every setting and what",
-           "# it takes. Change only the values after the = signs, or add a setting",
-           paste0("# from that list. jstyle(\"", name, "\") checks the file and ",
-                  "names any value"),
-           "# it cannot use.",
+  # The style copied, by name: apa named as the built-in, since no file
+  # holds it (Session 407; Jeff: "there really isn't an apa.jstyle file
+  # since it's built in").
+  base <- sub("\\.jstyle$", "", basename(based), ignore.case = TRUE)
+  builtin <- !grepl("[/\\\\]", based) && tolower(base) %in% names(.jst_style_builtin())
+  out <- c(paste0("# ", name, ".jstyle:"),
+           paste0("# A jstats table style, based on ", base,
+                  if (builtin) ", the style built into jstats", "."),
+           paste0("# It lists only the settings that differ from ", base,
+                  "; any setting not listed here takes ", base, "'s value."),
+           "# ?jstyle_settings lists every setting and what it takes.",
+           paste0("# Change only the values after the = signs, or add a setting ",
+                  "from that list."),
+           paste0("# jstyle(\"", name, "\") checks the file and names any value ",
+                  "it cannot use."),
            "",
            paste0("format     = ", .jst_style_format),
            paste0("written.by = jstats ", .jst_jstats_version()),
@@ -6049,7 +6394,7 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
     for (k in names(vals[[part]])) {
       sp <- if (!identical(part, "general") && k %in% names(.jst_style_spec[[part]]))
               .jst_style_spec[[part]][[k]] else .jst_style_spec$general[[k]]
-      out <- c(out, paste0("# ", sp$about),
+      out <- c(out, paste0("# ", .jst_style_about_lines(sp$about)),
                .jst_style_note_lines(.jst_style_takes(sp, part)),
                paste0(k, " = ", vals[[part]][[k]]))
     }
@@ -6057,28 +6402,35 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
   out
 }
 
-#' Internal helper: a style file's "takes" note, set to the file's width
+#' Internal helper: a style file's "takes" note
 #'
-#' "# takes: ..." and, where the text runs past 76 columns, continuation
-#' lines under it ("#   ..."), broken between words. Set by hand: the wrap
-#' helpers belong to the message layer and follow the console's width,
-#' which a file must not (as the orientation text, Session 357).
+#' "# takes: ..." on one line, however long (Session 407: until then
+#' broken at 76 columns onto lines opening "#   ", which Jeff found hard to
+#' read; a text editor shows a long line whole).
 #'
 #' @param text Character(1), what the setting takes.
-#' @param width The widest line.
-#' @return Character, the comment lines.
+#' @return Character(1), the comment line.
 #' @keywords internal
-.jst_style_note_lines <- function(text, width = 76L) {
-  words <- strsplit(text, " ", fixed = TRUE)[[1L]]
-  out <- character(0); cur <- "# takes:"
-  for (w in words) {
-    if (nchar(cur) + 1L + nchar(w) > width && !grepl(":$", cur)) {
-      out <- c(out, cur); cur <- paste0("#  ", " ", w)
-    } else {
-      cur <- paste(cur, w)
-    }
-  }
-  c(out, cur)
+.jst_style_note_lines <- function(text) {
+  paste0("# takes: ", text)
+}
+
+#' Internal helper: a setting's note, one line per choice
+#'
+#' A setting's \code{about} is held in lines; a line that opens on a
+#' choice's name ("journal: ...") is a choice of its own, and any other
+#' continues the line before it. The style file shows each choice on its
+#' own line and the rest unwrapped (Session 407); the settings help page
+#' joins the choices with "|".
+#'
+#' @param a Character, the setting's about.
+#' @return Character, one element per line.
+#' @keywords internal
+.jst_style_about_lines <- function(a) {
+  if (length(a) < 2L) return(a)
+  starts <- c(TRUE, grepl("^[a-z]+: ", a[-1L]))
+  vapply(split(a, cumsum(starts)), paste, character(1), collapse = " ",
+         USE.NAMES = FALSE)
 }
 
 #' Internal helper: what a style setting takes, in words
@@ -6112,7 +6464,8 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
 #' bare name goes in the style folder when one is set, else in the per-user
 #' folder, which is created here, by the user's own call (CRAN's rule: a
 #' package writes there only when asked). The .jstyle extension is added
-#' when the name has none; "apa" is the built-in style's name.
+#' when the name has none; "apa" is the built-in style's name, and a name
+#' in \code{.jst_style_reserved} a built-in's still to come (Session 407).
 #'
 #' @param save.as The name given.
 #' @return The path to write.
@@ -6144,6 +6497,13 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
     .jst_stop("\"", base, "\" is the name of jstats's built-in style.\n",
               "Give the copy another name, for example:\n",
               "  jstyle(\"apa\", save.as = \"myjournal\")", fn = "jstyle")
+  }
+  if (tolower(base) %in% .jst_style_reserved) {
+    .jst_stop("\"", base, "\" is the name of a built-in style a later ",
+              "version of jstats adds.\n",
+              "Give the copy another name, for example:\n",
+              "  jstyle(\"apa\", save.as = \"my", tolower(base), "\")",
+              fn = "jstyle")
   }
   if (grepl("[/\\\\]", nm)) {
     if (!dir.exists(dirname(nm))) {
@@ -6188,6 +6548,14 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
                         if (!dir.exists(dirs[[i]])) ", not created yet", ")"))
   }
   cat("\n")
+  # A file of a built-in's name is left out of the list above (Session 407).
+  for (b in names(.jst_style_builtin())) {
+    note <- .jst_style_shadowed_note(b, .jst_style_shadowed(b))
+    if (!is.null(note)) {
+      .jst_msg(note)
+      cat("\n")
+    }
+  }
   invisible(df)
 }
 
@@ -6264,7 +6632,8 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
 #' one saying what it takes (Session 406), the two stamps and based.on at
 #' the top: the file jstyle(save.as =) writes when it is given no settings.
 #' The header says to change values only, so the file can be handed to a
-#' person or an AI assistant with a request.
+#' person or an AI assistant with a request: the file's name on a line of
+#' its own, then one sentence a line, none wrapped (Session 407).
 #'
 #' @param st The style copied.
 #' @param name The new file's style name.
@@ -6282,13 +6651,15 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
              reliability  = "A reliability table, from jalpha() results.")
   # The header tells whoever edits the file -- a person, or an AI
   # assistant given the file's text -- what may change (Session 406).
-  out <- c(paste0("# ", name, ".jstyle: a jstats table style."),
-           "# Every setting jstats has is below, each after a note saying what it",
-           "# does and what it takes. Change only the values after the = signs; do",
-           "# not add, rename or remove a setting or a section. A line that starts",
-           paste0("# with # is a note. jstyle(\"", name, "\") checks the file and ",
-                  "names any value"),
-           "# it cannot use.")
+  out <- c(paste0("# ", name, ".jstyle:"),
+           "# A jstats table style.",
+           paste0("# Every setting jstats has is below, each after a note saying ",
+                  "what it does and what it takes."),
+           paste0("# Change only the values after the = signs; do not add, rename ",
+                  "or remove a setting or a section."),
+           "# A line that starts with # is a note.",
+           paste0("# jstyle(\"", name, "\") checks the file and names any value ",
+                  "it cannot use."))
   out <- c(out, "",
            paste0("format     = ", .jst_style_format),
            paste0("written.by = jstats ", .jst_jstats_version()),
@@ -6298,7 +6669,7 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
              paste0("# ", heads[[part]]))
     spec <- .jst_style_spec[[part]]
     for (k in names(spec)) {
-      out <- c(out, paste0("# ", spec[[k]]$about),  # one comment line per element
+      out <- c(out, paste0("# ", .jst_style_about_lines(spec[[k]]$about)),
                .jst_style_note_lines(.jst_style_takes(spec[[k]], part)),
                paste0(k, " = ", .jst_style_value_out(.jst_style_key(st, part, k),
                                                      spec[[k]])))
@@ -6353,10 +6724,12 @@ NULL
     gsub("}", "\\}", x, fixed = TRUE)
   }
   greek <- function(x) {
-    map <- c("\u03b7\u00b2" = "\\eqn{\\eta^2}{eta^2}",
-             "\u03c7\u00b2" = "\\eqn{\\chi^2}{chi^2}",
-             "\u03b2"       = "\\eqn{\\beta}{beta}",
-             "\u03b1"       = "\\eqn{\\alpha}{alpha}")
+    # Named with names<-, never inside c(): a name written in a call is
+    # made in the session's own encoding, and a non-UTF-8 install warned
+    # "unable to translate" for each (the S390 rule; Session 407).
+    map <- c("\\eqn{\\eta^2}{eta^2}", "\\eqn{\\chi^2}{chi^2}",
+             "\\eqn{\\beta}{beta}", "\\eqn{\\alpha}{alpha}")
+    names(map) <- c("\u03b7\u00b2", "\u03c7\u00b2", "\u03b2", "\u03b1")
     for (g in names(map)) x <- gsub(g, map[[g]], x, fixed = TRUE)
     x
   }
@@ -6369,11 +6742,7 @@ NULL
   # A note's lines read as one sentence; a line that opens on a choice's
   # name ("journal: ...") is a choice of its own, set off with "|".
   about <- function(a) {
-    if (length(a) > 1L) {
-      sep <- ifelse(grepl("^[a-z]+: ", a[-1L]), " | ", " ")
-      a <- paste0(a[1L], paste0(sep, a[-1L], collapse = ""))
-    }
-    sub("[.]$", "", a)
+    sub("[.]$", "", paste(.jst_style_about_lines(a), collapse = " | "))
   }
   sec <- function(title, part) {
     spec  <- .jst_style_spec[[part]]

@@ -388,7 +388,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     if (is_labelled_by) {
       original_codes  <- .jst_group_codes(by_var)
       by_val_labels   <- labelled::val_labels(by_var)
-      data[[by_name]] <- haven::as_factor(by_var)
+      data[[by_name]] <- .jst_code_factor(by_var)
     } else if (!is.factor(data[[by_name]])) {
       data[[by_name]] <- .jst_text_factor(data[[by_name]])
     }
@@ -874,11 +874,46 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   v
 }
 
+#' Internal helper: the display string of each of jfreq()'s categories
+#'
+#' Every category of a labelled variable -- the codes the cases hold and
+#' the labelled values no case holds -- formatted under the call's value.id
+#' mode in ONE call to \code{.jst_format_value_labels()}, so that a label
+#' two codes share shows each code under "labels" ("1: Other", "2:
+#' Other"). The strings are the levels jfreq() tabulates by, one per code,
+#' so they must differ: where the 40-column cap still cuts two alike (two
+#' long text codes under "values", say) those two are shown whole, and
+#' as a last resort numbered. Until Session 407 the rows were the
+#' distinct display strings, so two codes that printed alike were counted
+#' as one row (the (S399) colliding-labels item).
+#'
+#' @param codes The categories' codes, distinct; numeric or character.
+#' @param val_labels The variable's value labels, or NULL.
+#' @param mode The resolved value.id mode.
+#' @return Character, one distinct string per code.
+#' @keywords internal
+.jst_freq_displays <- function(codes, val_labels, mode) {
+  out   <- .jst_format_value_labels(codes, val_labels, mode)
+  clash <- out %in% out[duplicated(out)]
+  if (any(clash)) {
+    whole <- as.character(codes[clash])
+    if (!mode %in% c("values", "legend", "legend.bottom")) {
+      lab   <- .jst_value_label_of(codes[clash], val_labels)
+      whole <- ifelse(is.na(lab), whole, paste0(whole, ": ", lab))
+    }
+    out[clash] <- whole
+  }
+  if (anyDuplicated(out)) out <- make.unique(out, sep = " ")
+  out
+}
+
 #' Internal helper: the code and the label behind each of jfreq()'s Valid rows
 #'
-#' jfreq() tabulates a factor of display strings: a labelled variable's
-#' values formatted under the call's value.id mode ("1: Male", "Male" or
-#' "1") and capped at 40 columns, a numeric variable's numbers as text.
+#' jfreq() tabulates the codes, each row under its display string: a
+#' labelled variable's values formatted under the call's value.id mode
+#' ("1: Male", "Male" or "1") and capped at 40 columns, one string per
+#' code since Session 407 (\code{.jst_freq_displays()}), a numeric
+#' variable's numbers as text.
 #' The stored Value column is that string. This returns, for each row,
 #' the value itself and its label whole (Session 399, Capability Slate
 #' T's build 0), from the map the tabulating branch kept: each display
@@ -1299,9 +1334,10 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     if (haven::is.labelled(temp_var) && typeof(temp_var) == "character") {
       codes_chr   <- as.character(unclass(temp_var))
       val_labs    <- labelled::val_labels(temp_var)
-      display_str <- .jst_format_value_labels(codes_chr, val_labs, value_mode)
-      # Dedup on the underlying code (not the display string): under "values"/
-      # "labels" two distinct codes could in principle share a display string.
+      # Tabulated on the codes, each displayed under its own string (Session
+      # 407): until then the rows were the distinct DISPLAY strings, so two
+      # codes that printed alike -- a repeated label under value.id =
+      # "labels", two long labels cut alike -- were counted as one row.
       uniq        <- !is.na(codes_chr) & !duplicated(codes_chr)
       sort_codes  <- codes_chr[uniq]
       # A labeled value no case holds takes a zero row (Session 348, ruling
@@ -1309,11 +1345,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       empty_chr   <- .jst_freq_empty_labels(val_labs, sort_codes, mi,
                                             text = TRUE)
       all_codes   <- c(sort_codes, empty_chr)
-      all_disp    <- c(display_str[uniq],
-                       .jst_format_value_labels(empty_chr, val_labs,
-                                                value_mode))
-      keep        <- !duplicated(all_disp)
-      all_codes   <- all_codes[keep]; all_disp <- all_disp[keep]
+      all_codes   <- all_codes[!duplicated(all_codes)]
+      all_disp    <- .jst_freq_displays(all_codes, val_labs, value_mode)
+      display_str <- all_disp[match(codes_chr, all_codes)]
       # The blank category first, as in a plain text variable (S340).
       sort_levels <- all_disp[order(all_codes != .jst_blank_label,
                                     all_codes)]
@@ -1328,7 +1362,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       # The shared formatter renders an unlabelled code as a bare code rather
       # than the "3: 3" haven::as_factor would produce (Decision 7 Notes,
       # fix (b) in the valid-row context), and applies the value.id mode.
-      display_str <- .jst_format_value_labels(codes, val_labs, value_mode)
+      # Tabulated on the codes, as the text branch above (Session 407).
       uniq        <- !is.na(codes) & !duplicated(codes)
       sort_codes  <- codes[uniq]
       # A labeled value no case holds takes a zero row (Session 348, ruling
@@ -1336,11 +1370,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       # among the values present -- as a factor's empty level always has.
       empty_num   <- .jst_freq_empty_labels(val_labs, sort_codes, mi)
       all_codes   <- c(sort_codes, empty_num)
-      all_disp    <- c(display_str[uniq],
-                       .jst_format_value_labels(empty_num, val_labs,
-                                                value_mode))
-      keep        <- !duplicated(all_disp)
-      all_codes   <- all_codes[keep]; all_disp <- all_disp[keep]
+      all_codes   <- all_codes[!duplicated(all_codes)]
+      all_disp    <- .jst_freq_displays(all_codes, val_labs, value_mode)
+      display_str <- all_disp[match(codes, all_codes)]
       sort_levels <- all_disp[order(all_codes)]
       temp_var    <- factor(display_str, levels = sort_levels)
       lvl_map     <- list(level = all_disp, code = all_codes,

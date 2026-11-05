@@ -18,9 +18,11 @@ A list: \code{code} (numeric or character) and \code{label}
 (character, \code{NA} where there is none), one element per row.
 }
 \description{
-jfreq() tabulates a factor of display strings: a labelled variable's
-values formatted under the call's value.id mode ("1: Male", "Male" or
-"1") and capped at 40 columns, a numeric variable's numbers as text.
+jfreq() tabulates the codes, each row under its display string: a
+labelled variable's values formatted under the call's value.id mode
+("1: Male", "Male" or "1") and capped at 40 columns, one string per
+code since Session 407 (\code{.jst_freq_displays()}), a numeric
+variable's numbers as text.
 The stored Value column is that string. This returns, for each row,
 the value itself and its label whole (Session 399, Capability Slate
 T's build 0), from the map the tabulating branch kept: each display

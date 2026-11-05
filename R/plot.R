@@ -1622,7 +1622,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (is.factor(x)) return(x)
   if (haven::is.labelled(x)) {
     val_labs <- labelled::val_labels(x)
-    if (!is.null(val_labs) && length(val_labs) > 0) return(haven::as_factor(x))
+    if (!is.null(val_labs) && length(val_labs) > 0) return(.jst_code_factor(x))
     return(factor(x))
   }
   factor(x)
@@ -3163,7 +3163,7 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
     if (length(groups) == length(codes)) {
       return(factor(v, levels = codes, labels = groups))
     }
-    return(droplevels(haven::as_factor(x)))
+    return(droplevels(.jst_code_factor(x)))
   }
   f <- if (is.factor(x)) droplevels(x) else droplevels(.jst_text_factor(x))
   if (length(groups) == nlevels(f)) levels(f) <- groups
@@ -3682,7 +3682,7 @@ jplot.jst_freq <- function(x, which = "core", ...) {
     v <- variable_names[i]
     if (!haven::is.labelled(data[[v]])) next
     if (identical(var_types[[i]], "categorical")) {
-      data[[v]] <- haven::as_factor(data[[v]])
+      data[[v]] <- .jst_code_factor(data[[v]])
     } else {
       data[[v]] <- as.numeric(data[[v]])
     }
@@ -3690,7 +3690,7 @@ jplot.jst_freq <- function(x, which = "core", ...) {
   if (has_by && haven::is.labelled(data[[by_name]])) {
     val_labs <- labelled::val_labels(data[[by_name]])
     if (!is.null(val_labs) && length(val_labs) > 0) {
-      data[[by_name]] <- haven::as_factor(data[[by_name]])
+      data[[by_name]] <- .jst_code_factor(data[[by_name]])
     } else {
       data[[by_name]] <- factor(data[[by_name]])
     }

@@ -2251,6 +2251,16 @@
 #' codes are compared as character on both sides, so string codes (e.g.
 #' "US"/"UK") are never coerced to numeric.
 #'
+#' Under \code{"labels"} two codes given in one call can print alike -- a
+#' label used for two codes ("Other" on 1 and on 2), or two long labels the
+#' cap cuts to the same text -- and would read as one category. Those
+#' codes, and only those, print in the \code{"both"} form ("1: Other",
+#' "2: Other"), so each code given reads as itself; a code repeated in the
+#' vector (one per row) is one code, not a collision. A caller that shows a
+#' variable's categories passes them in one call, so every category is
+#' compared with every other (Session 407, the (S399) colliding-labels
+#' item).
+#'
 #' @param codes Vector of stored values (numeric or character), one per level
 #'   or per row. NA entries (system-missing) map to NA in the output.
 #' @param val_labels Named vector as returned by \code{labelled::val_labels()}
@@ -2281,6 +2291,21 @@
     stop("Unknown value.id mode: ", mode, call. = FALSE))
   # Cap in-table width (no-op for bare-code output; bites long labels only).
   out <- vapply(out, .jst_truncate_ellipsis, character(1), USE.NAMES = FALSE)
+  # Two codes that print alike under "labels" print in the "both" form
+  # (Session 407): a repeated label, or two long labels cut alike.
+  if (identical(mode, "labels")) {
+    seen  <- !is.na(codes) & !duplicated(codes_chr)
+    disp  <- out[seen]
+    clash <- codes_chr[seen][disp %in% disp[duplicated(disp)]]
+    if (length(clash) > 0L) {
+      i <- !is.na(codes) & codes_chr %in% clash
+      out[i] <- vapply(ifelse(has_label[i],
+                              paste0(codes_chr[i], ": ", lab[i]),
+                              codes_chr[i]),
+                       .jst_truncate_ellipsis, character(1),
+                       USE.NAMES = FALSE)
+    }
+  }
   out[is.na(codes)] <- NA_character_
   out
 }

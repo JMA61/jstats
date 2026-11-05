@@ -51,5 +51,15 @@ is what reaches \code{.jst_print_table} -- the printer stays width-agnostic.
 Works for both numeric-backed and character-backed haven_labelled variables:
 codes are compared as character on both sides, so string codes (e.g.
 "US"/"UK") are never coerced to numeric.
+
+Under \code{"labels"} two codes given in one call can print alike -- a
+label used for two codes ("Other" on 1 and on 2), or two long labels the
+cap cuts to the same text -- and would read as one category. Those
+codes, and only those, print in the \code{"both"} form ("1: Other",
+"2: Other"), so each code given reads as itself; a code repeated in the
+vector (one per row) is one code, not a collision. A caller that shows a
+variable's categories passes them in one call, so every category is
+compared with every other (Session 407, the (S399) colliding-labels
+item).
 }
 \keyword{internal}

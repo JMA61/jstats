@@ -4,7 +4,7 @@
 \alias{.jst_docx_widths}
 \title{Internal helper: the column widths of a table, in dxa}
 \usage{
-.jst_docx_widths(tbl, style, size = NULL, pad = 120L)
+.jst_docx_widths(tbl, style, size = NULL, pad = 120L, headings = TRUE)
 }
 \arguments{
 \item{tbl}{A jst_table.}
@@ -16,15 +16,22 @@
 \item{pad}{The twips added to each number column beside its margins
 (120; a table fitted to the page gives up half of it first, Session
 403).}
+
+\item{headings}{FALSE for the stub from the data rows alone: the width
+at which no data label wraps, which the page fit and its report read
+(a heading row spans the table, so in a table fitted to its page the
+stub may narrow past it, and the heading runs on over the numbers).}
 }
 \value{
 Integer vector, one per column.
 }
 \description{
-From the widest text each column holds at the style's size, plus the
-cell margins; a column of numbers at least as wide as its block, the
+From the widest text each column holds at the style's size, in the
+table's font and bold where the style sets it bold (Session 407), plus
+the cell margins; a column of numbers at least as wide as its block, the
 widest whole part beside the widest tail (Session 405); the stub from
-its labels and their indents; a spanner's label spread over its columns
-when it is wider than they are.
+every row's label, a heading row's too, each beside its indent (Session
+407); a spanner's label spread over its columns when it is wider than
+they are.
 }
 \keyword{internal}

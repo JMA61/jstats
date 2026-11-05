@@ -4,7 +4,7 @@
 \alias{.jst_docx_decimal_tabs}
 \title{Internal helper: the decimal tab position of each number column}
 \usage{
-.jst_docx_decimal_tabs(tbl, widths, size, margin)
+.jst_docx_decimal_tabs(tbl, widths, size, margin, font = NULL)
 }
 \arguments{
 \item{tbl}{A jst_table.}
@@ -14,6 +14,8 @@
 \item{size}{Points.}
 
 \item{margin}{The cell margin.}
+
+\item{font}{Character(1), or NULL: the face measured in (Session 407).}
 }
 \value{
 Integer vector; NA for the stub.

@@ -14,7 +14,9 @@ NULL (the default) lists the styles, or with \code{save.as} copies
 \item{save.as}{A name for the copy, in quotes: written as
 \code{<name>.jstyle} in the style folder when one is set, else in
 your jstats folder (\code{tools::R_user_dir("jstats")}), or to a path
-given with a folder.}
+given with a folder. "apa" names the built-in style, and "report" one
+a later version adds, so neither can be a copy's name; a file named
+apa.jstyle is not read, and jstats says so.}
 
 \item{overwrite}{Logical. Replace a style file that exists? With FALSE
 (the default) an interactive session asks, and one that cannot ask

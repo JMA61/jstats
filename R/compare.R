@@ -156,7 +156,7 @@
   }
 
   if (is_labelled) {
-    data[[group_name]] <- haven::as_factor(group_var)
+    data[[group_name]] <- .jst_code_factor(group_var)
   } else {
     data[[group_name]] <- if (is.factor(group_var)) group_var
                           else .jst_text_factor(group_var)
@@ -2419,7 +2419,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   if (row_labelled) {
     row_codes <- .jst_group_codes(row_var)
     row_vl    <- labelled::val_labels(row_var)
-    row_var   <- haven::as_factor(row_var)
+    row_var   <- .jst_code_factor(row_var)
   } else if (!is.factor(row_var)) {
     row_var <- .jst_text_factor(row_var)
   }
@@ -2427,7 +2427,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   if (col_labelled) {
     col_codes <- .jst_group_codes(col_var)
     col_vl    <- labelled::val_labels(col_var)
-    col_var   <- haven::as_factor(col_var)
+    col_var   <- .jst_code_factor(col_var)
   } else if (!is.factor(col_var)) {
     col_var <- .jst_text_factor(col_var)
   }

@@ -31,4 +31,15 @@ whole document: landscape when the style -- or the call, since Session
 portrait text width at the style's size with half its padding and its
 labels on two lines (ruling R55, Session 404).
 }
+\details{
+Each table keeps its own style's font (Session 407, the (S406) item):
+the document's defaults are its style's -- the first table's, for
+built tables written together -- and a table whose style sets another
+font, or another size, has it written on its own runs and paragraph
+marks (\code{.jst_docx_retype()}). Until then the defaults alone carried
+the font, so the second table of a document written under two styles
+took the first one's font while its fills, rules and captions followed
+its own style. A table in the document's font and size is written as
+before.
+}
 \keyword{internal}

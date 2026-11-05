@@ -20,6 +20,10 @@ Jeff, Session 402: "if only the changes are listed, then it writes only
 the changes with the 'based on' providing all other specs"): a header
 saying so, the two stamps, based.on naming the style copied, then the
 settings given -- the general ones first, then each section's under its
-heading -- each after the note on what it does and what it takes.
+heading -- each after the note on what it does and what it takes. The
+header is the file's name on a line of its own, then one sentence a
+line, none wrapped (Session 407; Jeff: "each sentence should be on its
+own line ... Notepad and other text editors should easily be able to
+handle sentences that are relatively long without wrapping").
 }
 \keyword{internal}

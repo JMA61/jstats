@@ -2,22 +2,19 @@
 % Please edit documentation in R/tables.R
 \name{.jst_style_note_lines}
 \alias{.jst_style_note_lines}
-\title{Internal helper: a style file's "takes" note, set to the file's width}
+\title{Internal helper: a style file's "takes" note}
 \usage{
-.jst_style_note_lines(text, width = 76L)
+.jst_style_note_lines(text)
 }
 \arguments{
 \item{text}{Character(1), what the setting takes.}
-
-\item{width}{The widest line.}
 }
 \value{
-Character, the comment lines.
+Character(1), the comment line.
 }
 \description{
-"# takes: ..." and, where the text runs past 76 columns, continuation
-lines under it ("#   ..."), broken between words. Set by hand: the wrap
-helpers belong to the message layer and follow the console's width,
-which a file must not (as the orientation text, Session 357).
+"# takes: ..." on one line, however long (Session 407: until then
+broken at 76 columns onto lines opening "#   ", which Jeff found hard to
+read; a text editor shows a long line whole).
 }
 \keyword{internal}
