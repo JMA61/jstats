@@ -4,12 +4,13 @@ Ruling R55: the labels wrap onto at most two lines, the stub never below
 an inch and a half. Half the stub's width is the ruling's measure; a
 label whose words cannot split into two lines that narrow sets the floor
 wider, the narrowest width at which it takes two lines, so no label
-wraps onto a third. A heading row spans the table and sets nothing.
+wraps onto a third. A heading row spans the table and sets nothing: the
+stub may narrow past it, and it runs on over the numbers.
 
 ## Usage
 
 ``` r
-.jst_docx_stub_floor(tbl, size, w1)
+.jst_docx_stub_floor(tbl, size, w1, font = NULL)
 ```
 
 ## Arguments
@@ -25,6 +26,10 @@ wraps onto a third. A heading row spans the table and sets nothing.
 - w1:
 
   The stub's width at that size, unwrapped.
+
+- font:
+
+  Character(1), or NULL: the face measured in (Session 407).
 
 ## Value
 

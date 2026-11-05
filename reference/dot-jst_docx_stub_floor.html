@@ -3,11 +3,13 @@
 an inch and a half. Half the stub's width is the ruling's measure; a
 label whose words cannot split into two lines that narrow sets the floor
 wider, the narrowest width at which it takes two lines, so no label
-wraps onto a third. A heading row spans the table and sets nothing."><meta property="og:description" content="Ruling R55: the labels wrap onto at most two lines, the stub never below
+wraps onto a third. A heading row spans the table and sets nothing: the
+stub may narrow past it, and it runs on over the numbers."><meta property="og:description" content="Ruling R55: the labels wrap onto at most two lines, the stub never below
 an inch and a half. Half the stub's width is the ruling's measure; a
 label whose words cannot split into two lines that narrow sets the floor
 wider, the narrowest width at which it takes two lines, so no label
-wraps onto a third. A heading row spans the table and sets nothing."></head><body>
+wraps onto a third. A heading row spans the table and sets nothing: the
+stub may narrow past it, and it runs on over the numbers."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -15,7 +17,7 @@ wraps onto a third. A heading row spans the table and sets nothing."></head><bod
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.274</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.275</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,12 +48,13 @@ wraps onto a third. A heading row spans the table and sets nothing."></head><bod
 an inch and a half. Half the stub's width is the ruling's measure; a
 label whose words cannot split into two lines that narrow sets the floor
 wider, the narrowest width at which it takes two lines, so no label
-wraps onto a third. A heading row spans the table and sets nothing.</p>
+wraps onto a third. A heading row spans the table and sets nothing: the
+stub may narrow past it, and it runs on over the numbers.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_docx_stub_floor</span><span class="op">(</span><span class="va">tbl</span>, <span class="va">size</span>, <span class="va">w1</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_docx_stub_floor</span><span class="op">(</span><span class="va">tbl</span>, <span class="va">size</span>, <span class="va">w1</span>, font <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -68,6 +71,10 @@ wraps onto a third. A heading row spans the table and sets nothing.</p>
 
 <dt id="arg-w-">w1<a class="anchor" aria-label="anchor" href="#arg-w-"></a></dt>
 <dd><p>The stub's width at that size, unwrapped.</p></dd>
+
+
+<dt id="arg-font">font<a class="anchor" aria-label="anchor" href="#arg-font"></a></dt>
+<dd><p>Character(1), or NULL: the face measured in (Session 407).</p></dd>
 
 </dl></div>
     <div class="section level2">

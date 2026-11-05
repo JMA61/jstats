@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.274</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.275</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_docx_text_width</span><span class="op">(</span><span class="va">s</span>, <span class="va">size</span>, digits <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_docx_text_width</span><span class="op">(</span><span class="va">s</span>, <span class="va">size</span>, digits <span class="op">=</span> <span class="cn">FALSE</span>, font <span class="op">=</span> <span class="cn">NULL</span>, bold <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -57,6 +57,15 @@
 <dt id="arg-digits">digits<a class="anchor" aria-label="anchor" href="#arg-digits"></a></dt>
 <dd><p>Logical; TRUE for a number column (a digit is about half
 an em), FALSE for text (a letter a little less).</p></dd>
+
+
+<dt id="arg-font">font<a class="anchor" aria-label="anchor" href="#arg-font"></a></dt>
+<dd><p>Character(1), or NULL: the face measured in (Session 407).</p></dd>
+
+
+<dt id="arg-bold">bold<a class="anchor" aria-label="anchor" href="#arg-bold"></a></dt>
+<dd><p>Logical; TRUE for bold text, which is up to about 8 percent
+wider than the same text upright (Arial's bold; Times's about 6).</p></dd>
 
 </dl></div>
 

@@ -29,6 +29,9 @@ jstyle(style = NULL, save.as = NULL, overwrite = FALSE, ...)
   A name for the copy, in quotes: written as `<name>.jstyle` in the
   style folder when one is set, else in your jstats folder
   (`tools::R_user_dir("jstats")`), or to a path given with a folder.
+  "apa" names the built-in style, and "report" one a later version adds,
+  so neither can be a copy's name; a file named apa.jstyle is not read,
+  and jstats says so.
 
 - overwrite:
 
@@ -261,10 +264,10 @@ jstyle("apa")
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/RtmpS2VjTu/myjournal.jstyle
+#> Style written to /tmp/RtmpmAH2yY/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/RtmpS2VjTu/myapa.jstyle
+#> Style written to /tmp/RtmpmAH2yY/myapa.jstyle
 #> 
 ```

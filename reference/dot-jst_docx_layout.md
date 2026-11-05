@@ -10,7 +10,9 @@ its padding and its labels on two lines (ruling R55). `landscape` given
 Until Session 406 a document had one orientation, so one wide table
 turned every page. A table wider than its page is fitted to it
 ([`.jst_docx_fit()`](https://jma61.github.io/jstats/reference/dot-jst_docx_fit.md)).
-The paper is the document style's.
+The paper is the document style's. A table narrower than its caption
+row's title widens to it, every column in proportion, as far as its page
+allows (Session 407), so the title keeps one line.
 
 ## Usage
 

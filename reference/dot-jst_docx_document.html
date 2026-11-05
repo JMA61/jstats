@@ -27,7 +27,7 @@ labels on two lines (ruling R55, Session 404)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.274</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.275</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -93,6 +93,18 @@ writing call's setting).</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list: xml (the document part) and landscape (logical, one per
 table).</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Each table keeps its own style's font (Session 407, the (S406) item):
+the document's defaults are its style's – the first table's, for
+built tables written together – and a table whose style sets another
+font, or another size, has it written on its own runs and paragraph
+marks (<code><a href="dot-jst_docx_retype.html">.jst_docx_retype()</a></code>). Until then the defaults alone carried
+the font, so the second table of a document written under two styles
+took the first one's font while its fills, rules and captions followed
+its own style. A table in the document's font and size is written as
+before.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -37,3 +37,15 @@ R55, Session 404).
 ## Value
 
 A list: xml (the document part) and landscape (logical, one per table).
+
+## Details
+
+Each table keeps its own style's font (Session 407, the (S406) item):
+the document's defaults are its style's – the first table's, for built
+tables written together – and a table whose style sets another font, or
+another size, has it written on its own runs and paragraph marks
+([`.jst_docx_retype()`](https://jma61.github.io/jstats/reference/dot-jst_docx_retype.md)).
+Until then the defaults alone carried the font, so the second table of a
+document written under two styles took the first one's font while its
+fills, rules and captions followed its own style. A table in the
+document's font and size is written as before.

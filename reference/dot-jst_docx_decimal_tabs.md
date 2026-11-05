@@ -10,7 +10,7 @@ sat at that right-hand limit), and never left of the widest whole part
 ## Usage
 
 ``` r
-.jst_docx_decimal_tabs(tbl, widths, size, margin)
+.jst_docx_decimal_tabs(tbl, widths, size, margin, font = NULL)
 ```
 
 ## Arguments
@@ -30,6 +30,10 @@ sat at that right-hand limit), and never left of the widest whole part
 - margin:
 
   The cell margin.
+
+- font:
+
+  Character(1), or NULL: the face measured in (Session 407).
 
 ## Value
 

@@ -1,14 +1,13 @@
-# Internal helper: a style file's "takes" note, set to the file's width
+# Internal helper: a style file's "takes" note
 
-"# takes: ..." and, where the text runs past 76 columns, continuation
-lines under it ("# ..."), broken between words. Set by hand: the wrap
-helpers belong to the message layer and follow the console's width,
-which a file must not (as the orientation text, Session 357).
+"# takes: ..." on one line, however long (Session 407: until then broken
+at 76 columns onto lines opening "# ", which Jeff found hard to read; a
+text editor shows a long line whole).
 
 ## Usage
 
 ``` r
-.jst_style_note_lines(text, width = 76L)
+.jst_style_note_lines(text)
 ```
 
 ## Arguments
@@ -17,10 +16,6 @@ which a file must not (as the orientation text, Session 357).
 
   Character(1), what the setting takes.
 
-- width:
-
-  The widest line.
-
 ## Value
 
-Character, the comment lines.
+Character(1), the comment line.
