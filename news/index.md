@@ -1,5 +1,82 @@
 # Changelog
 
+## jstats 0.9.275
+
+Thank you for trying jstats. Here is what is new since 0.9.267.
+
+- **Tables for publication, in Word.** Keep a result with `<-` and give
+  it to
+  [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md),
+  which makes an APA-style table and can write it to a Word file:
+  `m1 <- jlm(WellbeingScore ~ Age + Income, community)`
+  `jtable(m1, file = "Table1.docx")` It makes tables from
+  [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md),
+  [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md),
+  [`jt()`](https://jma61.github.io/jstats/reference/jt.md),
+  [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md),
+  [`jcrosstab()`](https://jma61.github.io/jstats/reference/jcrosstab.md),
+  [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md),
+  [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md),
+  [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md)
+  and [`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md)
+  results, with your variable and value labels. Results of one kind
+  share a table: models of one outcome side by side, or t tests of one
+  grouping variable one under another.
+  [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md) says
+  what it made and where it wrote it, and
+  [`print()`](https://rdrr.io/r/base/print.html) shows a table in the
+  Console.
+- **Several tables in one file.** Make each table, then give them
+  together: `jtable(list(t1, t2), file = "Tables.docx")` Each table gets
+  the page it needs, portrait or landscape.
+- **Your own table style.** A table’s look comes from a style, and apa
+  is built in. `jstyle("apa", save.as = "myjournal")` copies it to a
+  text file you can edit, and `jtable(m1, style = "myjournal")` uses it.
+  A copy can hold only what you change, such as
+  `jstyle("apa", save.as = "myapa", font = "Arial")` and
+  [`?jstyle_settings`](https://jma61.github.io/jstats/reference/jstyle_settings.md)
+  lists every setting.
+- **Three new rows in
+  [`joptions()`](https://jma61.github.io/jstats/reference/joptions.md).**
+  Output folder, where Word files go; Publication style, the style
+  [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md) uses
+  unless told otherwise; and Style folder, where your styles are kept.
+- **Two codes with one label stay apart.** When two codes share a value
+  label, such as 2 = Other and 3 = Other,
+  [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md) counts
+  them on separate rows, and
+  [`jt()`](https://jma61.github.io/jstats/reference/jt.md),
+  [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md),
+  [`jcrosstab()`](https://jma61.github.io/jstats/reference/jcrosstab.md),
+  `jdesc(by =)` and
+  [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) keep
+  them as separate groups, each shown with its code: 2: Other and 3:
+  Other. Before,
+  [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md) with
+  `value.id = "labels"` counted them as one row, and the others made
+  them one group.
+- **A formula function given variables.** `jt(d, Age, Volunteer)`, typed
+  the way [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md)
+  takes its variables, now stops with the formula to use,
+  `jt(Age ~ Volunteer, d)`. The same for
+  [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md),
+  [`jcrosstab()`](https://jma61.github.io/jstats/reference/jcrosstab.md),
+  [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md) and
+  [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md).
+- **Keeping a result.**
+  [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) saves
+  data frames. A result or a table is kept with base R’s
+  [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) and read back with
+  [`readRDS()`](https://rdrr.io/r/base/readRDS.html), and
+  [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) given
+  one shows the two lines.
+
+When something you typed before now stops, its message says what to type
+instead.
+
+Problems or suggestions: tell me, or open an issue at
+<https://github.com/jma61/jstats/issues>.
+
 ## jstats 0.9.267
 
 Thank you for trying jstats. Here is what is new since 0.9.265.

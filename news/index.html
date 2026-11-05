@@ -33,6 +33,26 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.9.275" id="jstats-09275">jstats 0.9.275<a class="anchor" aria-label="anchor" href="#jstats-09275"></a></h2>
+<p>Thank you for trying jstats. Here is what is new since 0.9.267.</p>
+<ul><li>
+<strong>Tables for publication, in Word.</strong> Keep a result with <code>&lt;-</code> and give it to <code><a href="../reference/jtable.html">jtable()</a></code>, which makes an APA-style table and can write it to a Word file: <code>m1 &lt;- jlm(WellbeingScore ~ Age + Income, community)</code> <code>jtable(m1, file = "Table1.docx")</code> It makes tables from <code><a href="../reference/jdesc.html">jdesc()</a></code>, <code><a href="../reference/jfreq.html">jfreq()</a></code>, <code><a href="../reference/jt.html">jt()</a></code>, <code><a href="../reference/jaov.html">jaov()</a></code>, <code><a href="../reference/jcrosstab.html">jcrosstab()</a></code>, <code><a href="../reference/jcorr.html">jcorr()</a></code>, <code><a href="../reference/jlm.html">jlm()</a></code>, <code><a href="../reference/jlogistic.html">jlogistic()</a></code> and <code><a href="../reference/jalpha.html">jalpha()</a></code> results, with your variable and value labels. Results of one kind share a table: models of one outcome side by side, or t tests of one grouping variable one under another. <code><a href="../reference/jtable.html">jtable()</a></code> says what it made and where it wrote it, and <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows a table in the Console.</li>
+<li>
+<strong>Several tables in one file.</strong> Make each table, then give them together: <code>jtable(list(t1, t2), file = "Tables.docx")</code> Each table gets the page it needs, portrait or landscape.</li>
+<li>
+<strong>Your own table style.</strong> A table’s look comes from a style, and apa is built in. <code>jstyle("apa", save.as = "myjournal")</code> copies it to a text file you can edit, and <code>jtable(m1, style = "myjournal")</code> uses it. A copy can hold only what you change, such as <code>jstyle("apa", save.as = "myapa", font = "Arial")</code> and <code><a href="../reference/jstyle_settings.html">?jstyle_settings</a></code> lists every setting.</li>
+<li>
+<strong>Three new rows in <code><a href="../reference/joptions.html">joptions()</a></code>.</strong> Output folder, where Word files go; Publication style, the style <code><a href="../reference/jtable.html">jtable()</a></code> uses unless told otherwise; and Style folder, where your styles are kept.</li>
+<li>
+<strong>Two codes with one label stay apart.</strong> When two codes share a value label, such as 2 = Other and 3 = Other, <code><a href="../reference/jfreq.html">jfreq()</a></code> counts them on separate rows, and <code><a href="../reference/jt.html">jt()</a></code>, <code><a href="../reference/jaov.html">jaov()</a></code>, <code><a href="../reference/jcrosstab.html">jcrosstab()</a></code>, <code>jdesc(by =)</code> and <code><a href="../reference/jplot.html">jplot()</a></code> keep them as separate groups, each shown with its code: 2: Other and 3: Other. Before, <code><a href="../reference/jfreq.html">jfreq()</a></code> with <code>value.id = "labels"</code> counted them as one row, and the others made them one group.</li>
+<li>
+<strong>A formula function given variables.</strong> <code>jt(d, Age, Volunteer)</code>, typed the way <code><a href="../reference/jdesc.html">jdesc()</a></code> takes its variables, now stops with the formula to use, <code>jt(Age ~ Volunteer, d)</code>. The same for <code><a href="../reference/jaov.html">jaov()</a></code>, <code><a href="../reference/jcrosstab.html">jcrosstab()</a></code>, <code><a href="../reference/jlm.html">jlm()</a></code> and <code><a href="../reference/jlogistic.html">jlogistic()</a></code>.</li>
+<li>
+<strong>Keeping a result.</strong> <code><a href="../reference/jsave.html">jsave()</a></code> saves data frames. A result or a table is kept with base R’s <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> and read back with <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS()</a></code>, and <code><a href="../reference/jsave.html">jsave()</a></code> given one shows the two lines.</li>
+</ul><p>When something you typed before now stops, its message says what to type instead.</p>
+<p>Problems or suggestions: tell me, or open an issue at <a href="https://github.com/jma61/jstats/issues" class="external-link uri">https://github.com/jma61/jstats/issues</a>.</p>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.267" id="jstats-09267">jstats 0.9.267<a class="anchor" aria-label="anchor" href="#jstats-09267"></a></h2>
 <p>Thank you for trying jstats. Here is what is new since 0.9.265.</p>
 <ul><li>
