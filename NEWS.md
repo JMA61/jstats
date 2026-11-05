@@ -1,3 +1,51 @@
+# jstats 0.9.275
+
+Thank you for trying jstats. Here is what is new since 0.9.267.
+
+* **Tables for publication, in Word.** Keep a result with `<-` and give it
+  to `jtable()`, which makes an APA-style table and can write it to a Word
+  file:
+  `m1 <- jlm(WellbeingScore ~ Age + Income, community)`
+  `jtable(m1, file = "Table1.docx")`
+  It makes tables from `jdesc()`, `jfreq()`, `jt()`, `jaov()`,
+  `jcrosstab()`, `jcorr()`, `jlm()`, `jlogistic()` and `jalpha()` results,
+  with your variable and value labels. Results of one kind share a table:
+  models of one outcome side by side, or t tests of one grouping variable
+  one under another. `jtable()` says what it made and where it wrote it,
+  and `print()` shows a table in the Console.
+* **Several tables in one file.** Make each table, then give them
+  together:
+  `jtable(list(t1, t2), file = "Tables.docx")`
+  Each table gets the page it needs, portrait or landscape.
+* **Your own table style.** A table's look comes from a style, and apa is
+  built in. `jstyle("apa", save.as = "myjournal")` copies it to a text file
+  you can edit, and `jtable(m1, style = "myjournal")` uses it. A copy can
+  hold only what you change, such as
+  `jstyle("apa", save.as = "myapa", font = "Arial")`
+  and `?jstyle_settings` lists every setting.
+* **Three new rows in `joptions()`.** Output folder, where Word files go;
+  Publication style, the style `jtable()` uses unless told otherwise; and
+  Style folder, where your styles are kept.
+* **Two codes with one label stay apart.** When two codes share a value
+  label, such as 2 = Other and 3 = Other, `jfreq()` counts them on separate
+  rows, and `jt()`, `jaov()`, `jcrosstab()`, `jdesc(by =)` and `jplot()`
+  keep them as separate groups, each shown with its code: 2: Other and
+  3: Other. Before, `jfreq()` with `value.id = "labels"` counted them as one
+  row, and the others made them one group.
+* **A formula function given variables.** `jt(d, Age, Volunteer)`, typed
+  the way `jdesc()` takes its variables, now stops with the formula to use,
+  `jt(Age ~ Volunteer, d)`. The same for `jaov()`, `jcrosstab()`, `jlm()`
+  and `jlogistic()`.
+* **Keeping a result.** `jsave()` saves data frames. A result or a table is
+  kept with base R's `saveRDS()` and read back with `readRDS()`, and
+  `jsave()` given one shows the two lines.
+
+When something you typed before now stops, its message says what to type
+instead.
+
+Problems or suggestions: tell me, or open an issue at
+https://github.com/jma61/jstats/issues.
+
 # jstats 0.9.267
 
 Thank you for trying jstats. Here is what is new since 0.9.265.
