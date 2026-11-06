@@ -242,7 +242,7 @@ t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
              overwrite = TRUE)
 #> Table 1. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> Table written to /tmp/RtmpXPe583/Table2.docx
+#> Table written to /tmp/RtmpsEqweS/Table2.docx
 #> 
 
 # Several tables in one file: build each, then give them together
@@ -252,7 +252,7 @@ doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
 #>   2 variables, on a portrait page.
 #> Table 2. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> 2 tables written to /tmp/RtmpXPe583/Tables.docx
+#> 2 tables written to /tmp/RtmpsEqweS/Tables.docx
 #> 
 print(doc)
 #> Table 1
