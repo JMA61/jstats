@@ -16,8 +16,9 @@
 \item{thou}{The style's thousands setting.}
 }
 \value{
-A list: note (the sentence's body, or the one N's) and title (the
-title's parenthesis body).
+A list: note (the sentence's body, or the one N's) and varies
+(TRUE when the Ns differ, so the sentence goes in the note under
+n.position = title too: ruling R59, Session 409).
 }
 \description{
 "\emph{N} differs by variable: 98 (Current smoker), 103 (Owns home and

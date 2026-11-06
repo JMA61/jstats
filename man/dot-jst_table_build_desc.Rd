@@ -36,9 +36,9 @@ results stack into one table. Role headings come from \code{headings}
 under a heading its variables are indented. The columns are the style's
 descriptives columns; a mean and an SD take the style's decimals, a
 minimum and a maximum the places the data carry (they are values of the
-variable, not statistics), n is a count. The general note opens on N
-(the cases in the pool) when note.n is yes, then carries the user's
-text; each specific note's mark is assigned by the style (letters or
-symbols) and set on its rows' labels.
+variable, not statistics), n is a count. N (the cases in the pool) goes
+where n.position puts it -- after the title, or opening the general
+note, which then carries the user's text; each specific note's mark is
+assigned by the style (letters or symbols) and set on its rows' labels.
 }
 \keyword{internal}

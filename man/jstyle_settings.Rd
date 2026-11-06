@@ -52,7 +52,7 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{note.label.italic}}{the note's label in italics, as APA sets it: yes | no. Takes one of yes | no. In apa: \code{yes}; in report: \code{no}.}
 \item{\code{note.position}}{row: the table's last row | paragraph: under the table. Takes one of row | paragraph. In apa: \code{row}.}
 \item{\code{note.size}}{the notes' text size, in points. Takes a number from 6 to 72. In apa: \code{12}; in report: \code{9}.}
-\item{\code{n.position}}{where N, the number of cases, goes: note (the general note opens on it) | title ("(N = 103)" after the title) | none. Takes one of note | title | none. In apa: \code{note}.}
+\item{\code{n.position}}{where N, the number of cases, goes: note (the general note opens on it) | title ("(N = 103)" after the title; a table with several ns, such as Ns that differ or a t test's groups, gives them in the note) | none. Takes one of note | title | none. In apa: \code{title}.}
 \item{\code{decimals}}{the decimal places of a statistic, such as a mean. Takes a whole number from 0 to 6. In apa: \code{2}.}
 \item{\code{leading.zero}}{the zero before the point: no drops it on a statistic that cannot exceed 1, such as p (.23) | yes keeps it (0.23) | never drops it on every number below 1 (.197 for an SE). Takes one of yes | no | never. In apa: \code{no}; in report: \code{yes}.}
 \item{\code{p.format}}{exact: the p-value | stars: asterisks | both. Takes one of exact | stars | both. In apa: \code{exact}.}

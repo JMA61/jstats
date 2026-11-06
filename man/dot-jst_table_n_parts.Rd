@@ -2,28 +2,32 @@
 % Please edit documentation in R/tables.R
 \name{.jst_table_n_parts}
 \alias{.jst_table_n_parts}
-\title{Internal helper: where a table's N goes (ruling R51)}
+\title{Internal helper: where a table's N goes (rulings R51 and R59)}
 \usage{
-.jst_table_n_parts(setting, n_text, title_text = n_text)
+.jst_table_n_parts(setting, n_text, varies = FALSE)
 }
 \arguments{
 \item{setting}{The n.position value.}
 
-\item{n_text}{NULL, or the sentence's body: "\emph{N} = 103", or the
-models' form when their Ns differ.}
+\item{n_text}{NULL, or the sentence's body: "\emph{N} = 103", or the form
+for ns that vary ("\emph{N} differs by model: ...").}
 
-\item{title_text}{The text for the title's parenthesis; the same by
-default (shorter for models whose Ns differ).}
+\item{varies}{TRUE when the table's ns vary, so the sentence goes in
+the note under title as under note.}
 }
 \value{
 A list: note (character(0) or the sentence) and title ("" or
 the parenthesis to append).
 }
 \description{
-n.position = note opens the general note on N; title adds "(N = 103)"
-after the title, the call's own included; none writes no N. A table
-with no one N to write (variables from different pools of cases) gets
-nothing under any setting. The text is marked up for the writers (\emph{N}
-italic).
+n.position = title adds "(N = 103)" after the title, the call's own
+included -- apa's value, and so report's, since ruling R59 (Session
+409; built Session 410); note opens the general note on N; none writes
+no N. Under title a table whose ns vary -- variables or models whose Ns
+differ, pairwise ns -- gets the note's sentence instead, as note writes
+it (R59: "If the n varies within a table, I think we'll need to at that
+time only, place the n's in the note instead."). A table with no one N
+to write (variables from different pools of cases) gets nothing under
+any setting. The text is marked up for the writers (\emph{N} italic).
 }
 \keyword{internal}

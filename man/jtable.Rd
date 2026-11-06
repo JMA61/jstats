@@ -59,8 +59,8 @@ the grouping variable). \code{*text*} sets a word in
 italics.}
 
 \item{note}{The general note's text, after what the style writes
-there (N, a reference category); \code{*text*} sets a word in
-italics. NULL for none.}
+there (N or the ns when they go there, a filter, a reference
+category); \code{*text*} sets a word in italics. NULL for none.}
 
 \item{file}{The Word file to write, with its .docx extension: a bare
 name goes in the output folder (\code{joptions(output.dir = )}) or the

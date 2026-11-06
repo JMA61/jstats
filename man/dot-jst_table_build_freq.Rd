@@ -41,7 +41,7 @@ by its value label, or by its code where it has none, never by the
 printed string. Several results stack into one table; headings = and a
 named list of results put the variables under role headings, and
 markers = marks a variable's label row, as in the descriptives table.
-The general note opens on N when every variable comes from one pool of
-cases.
+N goes where n.position puts it when every variable comes from one pool
+of cases.
 }
 \keyword{internal}

@@ -36,8 +36,9 @@ under the group's value label (its code where it has none), the
 grouping variable's label over them all (group.spanner), then the test's
 (t, p, d, diff, ci; or f, p, eta2). Signs as jt() computes them, the
 first group's mean minus the second's. The general note: the groups'
-ns where n.position puts N (a range per group where they vary), the
-filter, a sentence for a Welch or a paired test (test.note), the user's
-text; the stars' legend when p.format uses them.
+ns under n.position = note or title (a range per group where they vary;
+ruling R59 keeps them out of the title), the filter, a sentence for a
+Welch or a paired test (test.note), the user's text; the stars' legend
+when p.format uses them.
 }
 \keyword{internal}

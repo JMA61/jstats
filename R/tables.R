@@ -96,9 +96,10 @@
                                       # sets it (Session 409, ruling R58)
     note.position    = "row",         # row (a merged last row) | paragraph
     note.size        = 12,
-    n.position       = "note",        # note: the general note opens on N;
-                                      # title: "(N = 103)" after the title;
-                                      # none (ruling R51, build 3)
+    n.position       = "title",       # title: "(N = 103)" after the title,
+                                      # ns that vary in the note (ruling
+                                      # R59, Session 409); note: the general
+                                      # note opens on N; none (ruling R51)
     decimals         = 2,             # statistics (a mean, an SD, b, SE)
     leading.zero     = "no",          # no: dropped for a statistic bounded
                                       # by 1 (r, p, beta, R2, eta2, alpha,
@@ -369,7 +370,9 @@
                             about = "the notes' text size, in points"),
     n.position       = list(kind = "choice", choices = c("note", "title", "none"),
                             about = c("where N, the number of cases, goes: note (the general note opens",
-                                      "on it) | title (\"(N = 103)\" after the title) | none")),
+                                      "on it) | title (\"(N = 103)\" after the title; a table with",
+                                      "several ns, such as Ns that differ or a t test's groups, gives",
+                                      "them in the note) | none")),
     decimals         = list(kind = "integer", min = 0, max = 6,
                             about = "the decimal places of a statistic, such as a mean"),
     leading.zero     = list(kind = "choice", choices = c("yes", "no", "never"),
@@ -1632,10 +1635,10 @@
 #' under a heading its variables are indented. The columns are the style's
 #' descriptives columns; a mean and an SD take the style's decimals, a
 #' minimum and a maximum the places the data carry (they are values of the
-#' variable, not statistics), n is a count. The general note opens on N
-#' (the cases in the pool) when note.n is yes, then carries the user's
-#' text; each specific note's mark is assigned by the style (letters or
-#' symbols) and set on its rows' labels.
+#' variable, not statistics), n is a count. N (the cases in the pool) goes
+#' where n.position puts it -- after the title, or opening the general
+#' note, which then carries the user's text; each specific note's mark is
+#' assigned by the style (letters or symbols) and set on its rows' labels.
 #'
 #' @param results A list of jst_desc results; names are headings.
 #' @inheritParams .jst_table_build
@@ -1739,28 +1742,32 @@
     style    = style)
 }
 
-#' Internal helper: where a table's N goes (ruling R51)
+#' Internal helper: where a table's N goes (rulings R51 and R59)
 #'
-#' n.position = note opens the general note on N; title adds "(N = 103)"
-#' after the title, the call's own included; none writes no N. A table
-#' with no one N to write (variables from different pools of cases) gets
-#' nothing under any setting. The text is marked up for the writers (*N*
-#' italic).
+#' n.position = title adds "(N = 103)" after the title, the call's own
+#' included -- apa's value, and so report's, since ruling R59 (Session
+#' 409; built Session 410); note opens the general note on N; none writes
+#' no N. Under title a table whose ns vary -- variables or models whose Ns
+#' differ, pairwise ns -- gets the note's sentence instead, as note writes
+#' it (R59: "If the n varies within a table, I think we'll need to at that
+#' time only, place the n's in the note instead."). A table with no one N
+#' to write (variables from different pools of cases) gets nothing under
+#' any setting. The text is marked up for the writers (*N* italic).
 #'
 #' @param setting The n.position value.
-#' @param n_text NULL, or the sentence's body: "*N* = 103", or the
-#'   models' form when their Ns differ.
-#' @param title_text The text for the title's parenthesis; the same by
-#'   default (shorter for models whose Ns differ).
+#' @param n_text NULL, or the sentence's body: "*N* = 103", or the form
+#'   for ns that vary ("*N* differs by model: ...").
+#' @param varies TRUE when the table's ns vary, so the sentence goes in
+#'   the note under title as under note.
 #' @return A list: note (character(0) or the sentence) and title ("" or
 #'   the parenthesis to append).
 #' @keywords internal
-.jst_table_n_parts <- function(setting, n_text, title_text = n_text) {
+.jst_table_n_parts <- function(setting, n_text, varies = FALSE) {
   if (is.null(n_text) || identical(setting, "none")) {
     return(list(note = character(0), title = ""))
   }
-  if (identical(setting, "title")) {
-    return(list(note = character(0), title = paste0(" (", title_text, ")")))
+  if (identical(setting, "title") && !isTRUE(varies)) {
+    return(list(note = character(0), title = paste0(" (", n_text, ")")))
   }
   list(note = paste0(n_text, "."), title = "")
 }
@@ -1861,8 +1868,8 @@
 #' printed string. Several results stack into one table; headings = and a
 #' named list of results put the variables under role headings, and
 #' markers = marks a variable's label row, as in the descriptives table.
-#' The general note opens on N when every variable comes from one pool of
-#' cases.
+#' N goes where n.position puts it when every variable comes from one pool
+#' of cases.
 #'
 #' @param results A list of jst_freq results; names are headings.
 #' @inheritParams .jst_table_build
@@ -2381,9 +2388,10 @@
                                           markup = TRUE, span = spans)
   }
 
-  # The notes: N where n.position puts it (the models' Ns when they
-  # differ), the reference categories, the beta* definition with its
-  # column, the user's text; the stars' legend when stars are shown.
+  # The notes: N where n.position puts it (the models' Ns, when they
+  # differ, in the note under title too: ruling R59), the reference
+  # categories, the beta* definition with its column, the user's text; the
+  # stars' legend when stars are shown.
   n_text <- if (!ns_differ) {
     paste0("*N* = ", count(ns[1L]))
   } else {
@@ -2392,8 +2400,7 @@
     }, character(1))
     paste0("*N* differs by model: ", paste(parts, collapse = ", "))
   }
-  np <- .jst_table_n_parts(key("n.position"), n_text,
-                           if (ns_differ) "*N* differs by model" else n_text)
+  np <- .jst_table_n_parts(key("n.position"), n_text, ns_differ)
   general <- c(np$note, .jst_table_filter_note(results, heads, style, type,
                                                .jst_table_model_list),
                ref_notes)
@@ -2802,19 +2809,20 @@
 #' @param names Character, one per result.
 #' @param by The word after "by": "variable", "scale".
 #' @param thou The style's thousands setting.
-#' @return A list: note (the sentence's body, or the one N's) and title (the
-#'   title's parenthesis body).
+#' @return A list: note (the sentence's body, or the one N's) and varies
+#'   (TRUE when the Ns differ, so the sentence goes in the note under
+#'   n.position = title too: ruling R59, Session 409).
 #' @keywords internal
 .jst_table_n_by <- function(ns, names, by, thou) {
   if (length(unique(ns)) == 1L) {
-    t <- paste0("*N* = ", .jst_tbl_count(ns[1L], thou))
-    return(list(note = t, title = t))
+    return(list(note = paste0("*N* = ", .jst_tbl_count(ns[1L], thou)),
+                varies = FALSE))
   }
   parts <- vapply(unique(ns), function(u) {
     paste0(.jst_tbl_count(u, thou), " (", .jst_and_list(names[ns == u]), ")")
   }, character(1))
-  list(note  = paste0("*N* differs by ", by, ": ", paste(parts, collapse = ", ")),
-       title = paste0("*N* differs by ", by))
+  list(note   = paste0("*N* differs by ", by, ": ", paste(parts, collapse = ", ")),
+       varies = TRUE)
 }
 
 
@@ -2907,18 +2915,15 @@
          cells = cells[c(dcols, rkeys)], raw = raw[c(dcols, rkeys)])
   })
 
-  # The notes: N, or the range of the pairwise ns, where n.position puts
-  # it; the filter; the method of a Spearman or Kendall table; the user's
-  # text; the stars' legend.
+  # The notes: N where n.position puts it, or the range of the pairwise
+  # ns in the note under title too (ruling R59); the filter; the method of
+  # a Spearman or Kendall table; the user's text; the stars' legend.
   pn <- r$n[lower.tri(r$n)]
   one_n <- length(unique(pn)) == 1L
   n_text <- if (one_n) paste0("*N* = ", count(pn[1L])) else {
     paste0("Pairwise *n*s range from ", count(min(pn)), " to ", count(max(pn)))
   }
-  np <- .jst_table_n_parts(key("n.position"), n_text,
-                           if (one_n) n_text else
-                             paste0("pairwise *n*s ", count(min(pn)), " to ",
-                                    count(max(pn))))
+  np <- .jst_table_n_parts(key("n.position"), n_text, !one_n)
   general <- c(np$note, .jst_table_filter_note(results, "the correlations",
                                                style, type))
   meth <- if (is.character(r$method) && length(r$method) == 1L) r$method else "pearson"
@@ -2975,9 +2980,10 @@
 #' grouping variable's label over them all (group.spanner), then the test's
 #' (t, p, d, diff, ci; or f, p, eta2). Signs as jt() computes them, the
 #' first group's mean minus the second's. The general note: the groups'
-#' ns where n.position puts N (a range per group where they vary), the
-#' filter, a sentence for a Welch or a paired test (test.note), the user's
-#' text; the stars' legend when p.format uses them.
+#' ns under n.position = note or title (a range per group where they vary;
+#' ruling R59 keeps them out of the title), the filter, a sentence for a
+#' Welch or a paired test (test.note), the user's text; the stars' legend
+#' when p.format uses them.
 #'
 #' @param results A list of jst_ttest, or of jst_anova, results.
 #' @inheritParams .jst_table_build
@@ -3142,14 +3148,18 @@
          cells = cells[columns$key[-1L]], raw = raw)
   })
 
-  # The notes: the groups' ns where n.position puts N (none when each
-  # group's n is a column); the filter; a Welch or paired test; the user's
-  # text; the stars' legend.
+  # The notes: the groups' ns in the note under n.position = note or title
+  # (none when each group's n is a column, none under none); the filter; a
+  # Welch or paired test; the user's text; the stars' legend. A table of
+  # groups gives several ns, so title writes them in the note as note does
+  # and nothing after the title (ruling R59, Session 409, Jeff: "If the n
+  # varies within a table, I think we'll need to at that time only, place
+  # the n's in the note instead."; groups of one size too, Claude's call
+  # at the build, Session 410).
   npos <- key("n.position")
   gn <- do.call(rbind, lapply(terms, function(tf) as.numeric(tf$n)))
-  Ns <- vapply(mods, function(m) as.numeric(m$n), numeric(1))
-  general <- character(0); n_title <- ""
-  if (identical(npos, "note") && !"n" %in% g_keys) {
+  general <- character(0)
+  if (npos %in% c("note", "title") && !"n" %in% g_keys) {
     if (all(apply(gn, 2L, function(x) length(unique(x)) == 1L))) {
       general <- paste0("*n* = ", .jst_and_list(paste0(count(gn[1L, ]), " (",
                                                        gnames, ")")), ".")
@@ -3163,9 +3173,6 @@
                         if (length(unique(ftxt)) == 1L) " with missing data",
                         ": ", paste0(gnames, ", ", rng, collapse = "; "), ".")
     }
-  } else if (identical(npos, "title")) {
-    n_title <- if (length(unique(Ns)) == 1L) paste0(" (*N* = ", count(Ns[1L]), ")")
-               else " (*N* differs by variable)"
   }
   general <- c(general, .jst_table_filter_note(results, olabs, style, type))
   if (identical(key("test.note"), "yes")) {
@@ -3206,8 +3213,7 @@
                     title  = paste0(
                       if (is.null(title)) gsub("{group}", glab, key("title"),
                                                fixed = TRUE)
-                      else title,
-                      n_title)),
+                      else title)),
     notes    = list(general = general, specific = roles$specific,
                     probability = if (use_stars) .jst_tbl_stars_legend(stars, key("leading.zero"))
                                   else character(0)),
@@ -3380,10 +3386,10 @@
   }
 
   # The notes: N where n.position puts it (each variable's when they
-  # differ); the filter; the user's text; the stars' legend when the test's
-  # p-values carry them.
+  # differ, in the note under title too: ruling R59); the filter; the
+  # user's text; the stars' legend when the test's p-values carry them.
   nb <- .jst_table_n_by(Ns, rlabs, "variable", thou)
-  np <- .jst_table_n_parts(key("n.position"), nb$note, nb$title)
+  np <- .jst_table_n_parts(key("n.position"), nb$note, nb$varies)
   general <- c(np$note, .jst_table_filter_note(results, rlabs, style, type))
   if (!is.null(note)) general <- c(general, note)
 
@@ -3501,13 +3507,13 @@
     }
   }
 
-  # The notes: N where n.position puts it (each scale's when they differ);
-  # the filter; the one scale's alpha; what item-total r is; the user's
-  # text.
+  # The notes: N where n.position puts it (each scale's when they differ,
+  # in the note under title too: ruling R59); the filter; the one scale's
+  # alpha; what item-total r is; the user's text.
   Ns <- vapply(mods, function(m) as.numeric(m$n_used), numeric(1))
   snames <- if (is.null(heads)) "the scale" else heads
   nb <- .jst_table_n_by(Ns, snames, "scale", thou)
-  np <- .jst_table_n_parts(key("n.position"), nb$note, nb$title)
+  np <- .jst_table_n_parts(key("n.position"), nb$note, nb$varies)
   general <- c(np$note, .jst_table_filter_note(results, snames, style, type))
   if (alpha_on && is.null(heads)) {
     general <- c(general, paste0("Cronbach's \u03b1 = ", num(mods[[1L]]$alpha, TRUE),
@@ -5191,8 +5197,8 @@
 #'   the grouping variable). \code{*text*} sets a word in
 #'   italics.
 #' @param note The general note's text, after what the style writes
-#'   there (N, a reference category); \code{*text*} sets a word in
-#'   italics. NULL for none.
+#'   there (N or the ns when they go there, a filter, a reference
+#'   category); \code{*text*} sets a word in italics. NULL for none.
 #' @param file The Word file to write, with its .docx extension: a bare
 #'   name goes in the output folder (\code{joptions(output.dir = )}) or the
 #'   working directory; a path with a folder goes there. NULL writes
@@ -6590,7 +6596,9 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
 #' header is the file's name on a line of its own, then one sentence a
 #' line, none wrapped (Session 407; Jeff: "each sentence should be on its
 #' own line ... Notepad and other text editors should easily be able to
-#' handle sentences that are relatively long without wrapping").
+#' handle sentences that are relatively long without wrapping"). A blank
+#' line follows each setting, none between a setting's notes and the
+#' setting (Session 410; \code{.jst_style_blank_lines()}).
 #'
 #' @param name The new file's style name.
 #' @param based The style copied: its name, or its path when it was given
@@ -6629,9 +6637,29 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
               .jst_style_spec[[part]][[k]] else .jst_style_spec$general[[k]]
       out <- c(out, paste0("# ", .jst_style_about_lines(sp$about)),
                .jst_style_note_lines(.jst_style_takes(sp, part)),
-               paste0(k, " = ", vals[[part]][[k]]))
+               paste0(k, " = ", vals[[part]][[k]]), "")
     }
   }
+  .jst_style_blank_lines(out)
+}
+
+#' Internal helper: a style file's blank lines
+#'
+#' One blank line after each setting, and none between a setting's notes
+#' and the setting (Session 410, the (S409) item; Jeff, on build 1's walk:
+#' "I think it will read better if there was a blank line after each of
+#' the actual settings (but not between the comments and the setting)."):
+#' the writers put a blank line after every setting and before every part,
+#' and this keeps one where two meet and none at the end of the file. The
+#' reader skips blank lines wherever they are.
+#'
+#' @param out Character, the file's lines.
+#' @return Character, the lines with no blank line repeated or last.
+#' @keywords internal
+.jst_style_blank_lines <- function(out) {
+  blank <- !nzchar(out)
+  out <- out[!(blank & c(FALSE, blank[-length(blank)]))]
+  while (length(out) && !nzchar(out[length(out)])) out <- out[-length(out)]
   out
 }
 
@@ -6882,7 +6910,9 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
 #' its own, then one sentence a line, none wrapped (Session 407), and since
 #' Session 409 a block for an assistant asked to match an example. based.on
 #' names the built-in the copied style reaches first: report for a copy of
-#' report or of a file based on it, else apa.
+#' report or of a file based on it, else apa. A blank line follows each
+#' part's heading note and each setting, none between a setting's notes
+#' and the setting (Session 410; \code{.jst_style_blank_lines()}).
 #'
 #' @param st The style copied.
 #' @param name The new file's style name.
@@ -6932,16 +6962,16 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
            paste0("based.on   = ", if (length(built)) tolower(built[1L]) else "apa"))
   for (part in c("general", names(.jst_style_type_nouns))) {
     out <- c(out, "", if (!identical(part, "general")) paste0("[", part, "]"),
-             paste0("# ", heads[[part]]))
+             paste0("# ", heads[[part]]), "")
     spec <- .jst_style_spec[[part]]
     for (k in names(spec)) {
       out <- c(out, paste0("# ", .jst_style_about_lines(spec[[k]]$about)),
                .jst_style_note_lines(.jst_style_takes(spec[[k]], part)),
                paste0(k, " = ", .jst_style_value_out(.jst_style_key(st, part, k),
-                                                     spec[[k]])))
+                                                     spec[[k]])), "")
     }
   }
-  out
+  .jst_style_blank_lines(out)
 }
 
 
