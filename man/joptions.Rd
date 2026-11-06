@@ -135,11 +135,11 @@ on purpose: data come in from one folder, and output goes out to
 another.}
 \item{style}{Character, length 1. Default: \code{"apa"}. The style a
 publication table is made in when its call names none: the built-in
-\code{"apa"} style, or the name of a style file (\code{"myjournal"}
-for myjournal.jstyle) found in the style folder, the working
-directory or your jstats folder, or a path to one. Checked when it is
-set: a style that cannot be found or read stops the call with nothing
-changed. Set back with \code{style = "apa"}.}
+\code{"apa"} or \code{"report"} style, or the name of a style file
+(\code{"myjournal"} for myjournal.jstyle) found in the style folder,
+the working directory or your jstats folder, or a path to one.
+Checked when it is set: a style that cannot be found or read stops
+the call with nothing changed. Set back with \code{style = "apa"}.}
 \item{style.dir}{Character string (length 1), or \code{NULL}. Default:
 \code{NULL}. A folder of style files, searched before the working
 directory and your jstats folder (\code{tools::R_user_dir("jstats")}),

@@ -10,8 +10,9 @@
 A named list of style parts lists.
 }
 \description{
-The styles jstats ships, by name. A name here always means the
-built-in, so a style file cannot take one (\code{.jst_style_files()}
-leaves them out).
+The styles jstats ships, by name: apa, the complete root, and report, a
+short style based on it (Session 409, ruling R58). A name here always
+means the built-in, so a style file cannot take one
+(\code{.jst_style_files()} leaves them out).
 }
 \keyword{internal}

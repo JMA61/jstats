@@ -689,10 +689,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                else names(vl)[match(as.character(codes),
                                     as.character(unname(vl)))]
     }
+    # Every category in one call, so two whose labels print alike -- two
+    # long labels the 40-column cap cuts alike -- show their codes, as the
+    # coefficient table's rows do (Session 409, Fix Slate V; the S407 rule).
+    all_lab <- .jst_format_value_labels(reg$codes, vl, value_mode)
     out[[v]] <- list(
-      labels = vapply(idx[ord], function(i) {
-        .jst_format_value_labels(reg$codes[i], vl, value_mode)
-      }, character(1)),
+      labels = all_lab[idx[ord]],
       dummy  = dum[ord],
       codes        = codes,
       value_labels = vals,
@@ -798,8 +800,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     if (all(present)) return(NULL)
 
     vl   <- .jst_reg_value_labels(reg, full)
-    disp <- function(idx) .jst_format_value_labels(reg$codes[idx], vl,
-                                                   value_mode)
+    # The categories formatted in one call (Session 409, Fix Slate V): two
+    # whose labels print alike show their codes.
+    all_disp <- .jst_format_value_labels(reg$codes, vl, value_mode)
+    disp <- function(idx) all_disp[idx]
     n_present <- sum(present)
     if (n_present < 2L) {
       # A filter that names the variable kept one category of it: say so
@@ -1015,8 +1019,13 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     } else {
       gkey
     }
-    ref_display[[gkey]] <- .jst_format_value_labels(reg$codes[reg$ref_idx], vl,
-                                                    value_mode)
+    # The variable's categories formatted in ONE call (Session 409, Fix
+    # Slate V): a reference and a category whose long labels the 40-column
+    # cap cuts alike show their codes -- "G (ref = 1: Agree that ...)" over
+    # "2: Agree that ..." -- as .jst_format_value_labels() shows them since
+    # Session 407; formatted one at a time, they read alike.
+    all_disp <- .jst_format_value_labels(reg$codes, vl, value_mode)
+    ref_display[[gkey]] <- all_disp[reg$ref_idx]
     if (isTRUE(show_ref)) {
       head_name <- paste0(head_name, " (ref = ", ref_display[[gkey]], ")")
     }
@@ -1024,8 +1033,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 
     for (j in seq_along(reg$dummy_names)) {
       dn   <- reg$dummy_names[j]
-      code <- reg$codes[reg$non_ref_idx[j]]
-      cat_bare[[dn]]       <- .jst_format_value_labels(code, vl, value_mode)
+      cat_bare[[dn]]       <- all_disp[reg$non_ref_idx[j]]
       cat_display[[dn]]    <- paste0("  ", cat_bare[[dn]])
       dummy_to_group[[dn]] <- gkey
     }

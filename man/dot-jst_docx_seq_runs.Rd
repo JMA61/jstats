@@ -4,7 +4,7 @@
 \alias{.jst_docx_seq_runs}
 \title{Internal helper: the caption's runs -- "Table 1" on Word's SEQ field}
 \usage{
-.jst_docx_seq_runs(number, bold = TRUE, size = NULL)
+.jst_docx_seq_runs(number, bold = TRUE, size = NULL, color = NULL)
 }
 \arguments{
 \item{number}{The cached number.}
@@ -12,6 +12,9 @@
 \item{bold}{Logical.}
 
 \item{size}{Points.}
+
+\item{color}{A six-digit hex colour, or NULL (Session 409: a caption bar
+that follows the header takes the header's text colour).}
 }
 \description{
 Internal helper: the caption's runs -- "Table 1" on Word's SEQ field

@@ -1608,27 +1608,6 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   p + ggplot2::facet_wrap(ggplot2::vars(.data$facet))
 }
 
-#' Internal helper: a grouping variable as a factor, value labels kept
-#'
-#' The form the \code{by =} and \code{facet =} variables take for
-#' plotting: a haven-labelled variable with value labels through
-#' \code{haven::as_factor()}, so the labels name the groups, and anything
-#' else through \code{factor()}.
-#'
-#' @param x The variable.
-#' @return A factor.
-#' @keywords internal
-.jst_plot_group_factor <- function(x) {
-  if (is.factor(x)) return(x)
-  if (haven::is.labelled(x)) {
-    val_labs <- labelled::val_labels(x)
-    if (!is.null(val_labs) && length(val_labs) > 0) return(.jst_code_factor(x))
-    return(factor(x))
-  }
-  factor(x)
-}
-
-
 #' Internal helper: build bar chart (1 categorical variable)
 #'
 #' @keywords internal
@@ -3148,7 +3127,11 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
 #' order: a labelled variable's codes sorted, a factor's levels in use, a
 #' text variable's values with the blank cells last, under \code{<blank>}.
 #' A result whose table does not match the groups in its model frame (one
-#' made by an older version) keeps the old axis.
+#' made by an older version) keeps the old axis. Called with no
+#' \code{groups}, it makes the \code{facet =} variable's panels the same
+#' way. (A first definition of this name, earlier in this file, was never
+#' called -- R keeps the later -- and was removed at Session 409, Fix Slate
+#' V.)
 #'
 #' @param x The grouping variable from the result's model frame.
 #' @param groups Character; the Group column of the result's descriptives,

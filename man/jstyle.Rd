@@ -4,23 +4,31 @@
 \alias{jstyle}
 \title{Show, list and copy table styles}
 \usage{
-jstyle(style = NULL, save.as = NULL, overwrite = FALSE, ...)
+jstyle(style = NULL, save.as = NULL, overwrite = FALSE, open = FALSE, ...)
 }
 \arguments{
-\item{style}{The style's name in quotes, or a path to a style file;
-NULL (the default) lists the styles, or with \code{save.as} copies
-\code{joptions(style = )}.}
+\item{style}{The style's name in quotes -- \code{"apa"}, \code{"report"}
+or a style file's -- or a path to a style file; NULL (the default)
+lists the styles, or with \code{save.as} or \code{open} copies or
+opens \code{joptions(style = )}.}
 
 \item{save.as}{A name for the copy, in quotes: written as
 \code{<name>.jstyle} in the style folder when one is set, else in
 your jstats folder (\code{tools::R_user_dir("jstats")}), or to a path
-given with a folder. "apa" names the built-in style, and "report" one
-a later version adds, so neither can be a copy's name; a file named
-apa.jstyle is not read, and jstats says so.}
+given with a folder. "apa" and "report" name the built-in styles, so
+neither can be a copy's name; a file named apa.jstyle or report.jstyle
+is not read, and jstats says so.}
 
 \item{overwrite}{Logical. Replace a style file that exists? With FALSE
 (the default) an interactive session asks, and one that cannot ask
 stops.}
+
+\item{open}{Logical. TRUE opens the style's file in the editor, as base
+R's \code{file.edit()} does (in RStudio, a tab beside your script),
+and prints no settings; the file is still checked, and a value it
+cannot use is named. With \code{save.as} it opens the file just
+written. Only in an interactive session: a script opens nothing. The
+built-in styles have no file; save a copy to open one.}
 
 \item{...}{Settings for a short copy, with \code{save.as}: a general
 setting by its name (\code{font = "Arial"}), a table type's settings
@@ -41,9 +49,16 @@ prints every setting the style gives, marking each one it takes from
 another style; and \code{jstyle("apa", save.as = "myjournal")} saves a
 copy as a style file, myjournal.jstyle, every setting written out with
 a note on what it does and what it takes, to edit in any text editor
-(the step SPSS calls "Save TableLook As").
+(the step SPSS calls "Save TableLook As"). \code{jstyle("myjournal",
+open = TRUE)} opens the file in the editor instead of printing it.
 }
 \details{
+jstats has two built-in styles: \code{"apa"}, APA 7's conventions for a
+journal, and \code{"report"}, the plain look the report style manuals
+share -- Arial 10, "Table 1:" and the title on one line, a light grey
+header, an upright "Note:" -- based on apa. A style for an agency or an
+institute is a copy of report with its own colors and font.
+
 Given settings, \code{jstyle(save.as =)} writes a short file instead: the
 style it copies named on its based.on line, and only the settings given,
 which is all a small change needs. A general setting is given by its
@@ -62,12 +77,34 @@ setting and what it takes. jstats looks for a style named in a call in
 the style folder (\code{joptions(style.dir = )}), the working directory
 and your jstats folder, in that order.
 }
+\section{Making a style with an AI assistant}{
+
+A style file is plain text, so an AI assistant can write one from an
+example report. Give it a complete copy, which lists every setting and
+what each takes -- \code{jstyle("report", save.as = "myagency")} writes
+one; a short file hides the settings it takes from its base -- and the
+example, with a request such as:
+\preformatted{
+Attached are myagency.jstyle, a jstats table style whose notes say what
+each setting does and what it takes, and Report.pdf. Rewrite the style
+file so that jstats tables look like the tables in the report, following
+the instructions at the top of the file, and list what the settings
+cannot reproduce.
+}
+Save its reply over the file and run \code{jstyle("myagency")}, which
+names any value it cannot use (give that back to the assistant), then
+try the style: \code{jtable(c1, style = "myagency", open = TRUE)}. An
+assistant can reach only the looks the settings make; it is told to say
+what it could not reproduce rather than invent a setting.
+}
+
 \examples{
 # The styles jstats can find, and the folders it looks in
 jstyle()
 
-# Every setting of the built-in style
+# Every setting of the built-in styles
 jstyle("apa")
+jstyle("report")
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)

@@ -4,10 +4,15 @@
 \alias{.jst_tbl_stars_legend}
 \title{Internal helper: the probability note the stars key makes}
 \usage{
-.jst_tbl_stars_legend(stars = c(0.05, 0.01, 0.001))
+.jst_tbl_stars_legend(stars = c(0.05, 0.01, 0.001), leading.zero = "no")
 }
 \arguments{
 \item{stars}{The thresholds.}
+
+\item{leading.zero}{The style's leading.zero setting: p is a statistic
+bounded by 1, so its zero is kept only under "yes", as in the cells
+(Session 409: until then the legend dropped it under every setting,
+"*p < .05" beneath cells reading 0.003).}
 }
 \value{
 Character(1).

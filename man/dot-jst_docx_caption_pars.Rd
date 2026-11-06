@@ -4,7 +4,7 @@
 \alias{.jst_docx_caption_pars}
 \title{Internal helper: the caption paragraphs of a table}
 \usage{
-.jst_docx_caption_pars(tbl, style, number)
+.jst_docx_caption_pars(tbl, style, number, color = NULL)
 }
 \arguments{
 \item{tbl}{A jst_table.}
@@ -12,6 +12,10 @@
 \item{style}{The style list.}
 
 \item{number}{The table's number.}
+
+\item{color}{A six-digit hex colour for the caption's text, or NULL
+(Session 409: the header's text colour, on a caption bar that follows
+the header).}
 }
 \value{
 Character; one or two paragraphs' XML.

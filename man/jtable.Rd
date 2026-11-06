@@ -67,11 +67,12 @@ name goes in the output folder (\code{joptions(output.dir = )}) or the
 working directory; a path with a folder goes there. NULL writes
 nothing.}
 
-\item{style}{The style's name in quotes: \code{"apa"}, or the name of a
-style file (\code{"myjournal"} for myjournal.jstyle), looked for in
-the style folder (\code{joptions(style.dir = )}), the working
-directory and your jstats folder; or a path to one. NULL (the
-default) uses \code{joptions(style = )}, apa when it is not set.}
+\item{style}{The style's name in quotes: \code{"apa"}, \code{"report"},
+or the name of a style file (\code{"myjournal"} for
+myjournal.jstyle), looked for in the style folder
+(\code{joptions(style.dir = )}), the working directory and your
+jstats folder; or a path to one. NULL (the default) uses
+\code{joptions(style = )}, apa when it is not set.}
 
 \item{overwrite}{Logical. Replace a file that exists? With FALSE (the
 default) an interactive session asks, and one that cannot ask stops.}
@@ -106,8 +107,9 @@ which prints each one, numbered as in the file.
 \code{jtable()} turns a saved analysis result into a publication table
 and, when \code{file} is given, writes it to a Word file (.docx) that
 opens in Word, LibreOffice and Google Docs. The table's look and
-conventions come from a style -- the built-in \code{"apa"} style, or a
-style file of your own (see \code{\link{jstyle}}).
+conventions come from a style -- the built-in \code{"apa"} style for a
+journal, the built-in \code{"report"} style for a report, or a style
+file of your own (see \code{\link{jstyle}}).
 }
 \details{
 A table is made from each kind of result: a descriptives table from one

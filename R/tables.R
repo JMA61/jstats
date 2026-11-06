@@ -79,14 +79,21 @@
     caption.position = "row",         # row (a merged first row, no borders,
                                       # repeated with the header) | paragraph
     caption.size     = 12,
+    caption.fill     = "none",        # a colour fills the caption row; header:
+                                      # the header's fill and text colour
+                                      # (Session 409, ruling R58)
     header.fill      = "none",        # a colour fills the header cells
     header.text      = "000000",      # the header text colour
     header.bold      = "no",
     band.fill        = "none",        # a colour fills alternate data rows
+    heading.fill     = "none",        # a colour fills each variable's label
+                                      # row (Session 409, ruling R58)
     rules            = "apa",         # apa: top, under the header, bottom;
                                       # grid; outer; none
     rule.color       = "000000",
     note.label       = "Note.",       # "Notes:", "Source:"
+    note.label.italic = "yes",        # the note's label in italics, as APA
+                                      # sets it (Session 409, ruling R58)
     note.position    = "row",         # row (a merged last row) | paragraph
     note.size        = 12,
     n.position       = "note",        # note: the general note opens on N;
@@ -335,6 +342,9 @@
                                       "paragraph: above the table")),
     caption.size     = list(kind = "number", min = 6, max = 72,
                             about = "the caption's text size, in points"),
+    caption.fill     = list(kind = "color", none = TRUE, header = TRUE,
+                            about = c("a color filling the caption row (caption.position = row), header for",
+                                      "the header's fill and text color, or none")),
     header.fill      = list(kind = "color", none = TRUE,
                             about = "a color filling the header cells, or none"),
     header.text      = list(kind = "color", about = "the color of the header's text"),
@@ -342,12 +352,17 @@
                             about = "bold header text: yes | no"),
     band.fill        = list(kind = "color", none = TRUE,
                             about = "a color filling every other data row, or none"),
+    heading.fill     = list(kind = "color", none = TRUE,
+                            about = c("a color filling each variable's label row (the rows variable.headings",
+                                      "sets), or none")),
     rules            = list(kind = "choice", choices = c("apa", "grid", "outer", "none"),
                             about = c("apa: rules above and below the header and under the table",
                                       "grid: every cell | outer: a box | none")),
     rule.color       = list(kind = "color", about = "the color of the rules"),
     note.label       = list(kind = "text", empty = TRUE,
                             about = "the word the general note opens on: Note. | Notes: | Source:"),
+    note.label.italic = list(kind = "choice", choices = c("yes", "no"),
+                             about = "the note's label in italics, as APA sets it: yes | no"),
     note.position    = list(kind = "choice", choices = c("row", "paragraph"),
                             about = "row: the table's last row | paragraph: under the table"),
     note.size        = list(kind = "number", min = 6, max = 72,
@@ -632,26 +647,84 @@
                       jst_anova = "anova", jst_crosstab = "crosstab",
                       jst_alpha = "reliability")
 
+#' Internal: the built-in report style
+#'
+#' The second built-in (ruling R58, Session 408; built Session 409): a
+#' SHORT style based on apa, which stays the complete root of every
+#' based.on chain. It holds only the values the report style manuals share
+#' where apa's differ -- the UK Government Analysis Function, the
+#' Australian Government Style Manual, the UN Editorial Manual, and the US
+#' agencies' forms, which differ from it by a setting or two (the Table
+#' Layer Reference, 8.8): Arial 10, the caption 10 and the note 9, "Table
+#' 1:" with the title on one line, a light grey bold header, apa's three
+#' rules, no banding, the zero before the point (build 1's lean, Session
+#' 409: most of the guidance writes it -- NIH, the GPO manual, CDC's
+#' Emerging Infectious Diseases, the Australian and UK manuals -- and
+#' NCES's table guidelines alone drop it on a statistic that cannot exceed
+#' 1; Jeff: "Okay to keep your lean in this"), an upright "Note:", each
+#' variable's label row bold. The new looks (caption.fill, heading.fill)
+#' stay off, so a brand look is only ever turned on, in a user's own short
+#' file based on this one.
+#'
+#' @keywords internal
+.jst_style_report <- list(
+  general = list(
+    font              = "Arial",
+    size              = 10,
+    caption.form      = "report",
+    caption.size      = 10,
+    header.fill       = "D9D9D9",
+    header.bold       = "yes",
+    note.label        = "Note:",
+    note.label.italic = "no",
+    note.size         = 9,
+    leading.zero      = "yes"
+  ),
+  frequencies = list(variable.headings = "bold"),
+  regression  = list(variable.headings = "bold"),
+  logistic    = list(variable.headings = "bold"),
+  crosstab    = list(variable.headings = "bold")
+)
+
 #' Internal helper: the built-in styles
 #'
-#' The styles jstats ships, by name. A name here always means the
-#' built-in, so a style file cannot take one (\code{.jst_style_files()}
-#' leaves them out).
+#' The styles jstats ships, by name: apa, the complete root, and report, a
+#' short style based on it (Session 409, ruling R58). A name here always
+#' means the built-in, so a style file cannot take one
+#' (\code{.jst_style_files()} leaves them out).
 #' @return A named list of style parts lists.
 #' @keywords internal
-.jst_style_builtin <- function() list(apa = .jst_style_apa)
+.jst_style_builtin <- function() list(apa = .jst_style_apa, report = .jst_style_report)
+
+# The built-in each built-in is based on; apa, the root, has none.
+.jst_style_builtin_base <- c(report = "apa")
+
+#' Internal helper: a built-in style's layers
+#'
+#' The built-in's own list, then the lists of the built-ins it is based
+#' on, apa last: report reads its own values, then apa's.
+#'
+#' @param b Character(1); a built-in style's name.
+#' @return A list of layers, each a parts list with its source.
+#' @keywords internal
+.jst_style_builtin_layers <- function(b) {
+  out  <- list(c(list(source = b), .jst_style_builtin()[[b]]))
+  base <- unname(.jst_style_builtin_base[b])
+  if (!is.na(base)) out <- c(out, .jst_style_builtin_layers(base))
+  out
+}
 
 #' Internal helper: the names kept for built-in styles still to come
 #'
 #' A built-in's name wins over any file, so a file saved under the name of
 #' a built-in a later version adds would stop being read the day that
 #' version is installed, and a file based on it would change its base.
-#' \code{jstyle(save.as = )} refuses these names now, as it refuses
-#' "apa" (Session 407, the (S406) item: \code{report}, Capability Slate
-#' U's report style). A name moves from here to
-#' \code{.jst_style_builtin()} when its style ships.
+#' \code{jstyle(save.as = )} refuses these names, as it refuses a
+#' built-in's (Session 407). A name moves from here to
+#' \code{.jst_style_builtin()} when its style ships: \code{report} did at
+#' Session 409, and none is kept now.
 #' @keywords internal
-.jst_style_reserved <- c("report")
+.jst_style_reserved <- character(0)
 
 #' Internal helper: style files named like a built-in style
 #'
@@ -688,8 +761,8 @@
   if (!length(paths)) return(NULL)
   one <- length(paths) == 1L
   paste0(if (one) "This file is" else "These files are",
-         " not read, since \"", name, "\" always names jstats's built-in ",
-         "style:\n",
+         " not read, since \"", name, "\" always names a style built into ",
+         "jstats:\n",
          paste0("  ", .jst_norm_path(paths), collapse = "\n"), "\n",
          "To use ", if (one) "it" else "one", ", rename it, for example to my",
          name, ".jstyle, and use style = \"my", name, "\".")
@@ -844,8 +917,7 @@
         cat("\n")
       }
     }
-    return(.jst_style_object(b, NA_character_,
-                             list(c(list(source = b), builtin[[b]]))))
+    return(.jst_style_object(b, NA_character_, .jst_style_builtin_layers(b)))
   }
   path <- .jst_style_find(style, fn, cl, mc, from)
   norm <- normalizePath(path, winslash = "/", mustWork = FALSE)
@@ -1227,12 +1299,18 @@
     color = {
       s <- trimws(one())
       if (isTRUE(sp$none) && identical(tolower(s), "none")) return("none")
+      # "header" (caption.fill, Session 409): the header's fill and text color,
+      # so a file names its color once.
+      if (isTRUE(sp$header) && identical(tolower(s), "header")) return("header")
       if (grepl("^#?[0-9A-Fa-f]{6}$", s)) return(toupper(sub("^#", "", s)))
       if (tolower(s) %in% grDevices::colors()) {
         rgb <- grDevices::col2rgb(tolower(s))
         return(sprintf("%02X%02X%02X", rgb[1L], rgb[2L], rgb[3L]))
       }
-      bad(if (isTRUE(sp$none)) {
+      bad(if (isTRUE(sp$header)) {
+        paste0("\"none\", \"header\", a color name such as \"navy\", or six hex ",
+               "digits such as \"1F3864\".")
+      } else if (isTRUE(sp$none)) {
         "\"none\", a color name such as \"navy\", or six hex digits such as \"1F3864\"."
       } else {
         "a color name such as \"navy\" or six hex digits such as \"1F3864\"."
@@ -1426,12 +1504,18 @@
 #' writer, which reads the marker.
 #'
 #' @param stars The thresholds.
+#' @param leading.zero The style's leading.zero setting: p is a statistic
+#'   bounded by 1, so its zero is kept only under "yes", as in the cells
+#'   (Session 409: until then the legend dropped it under every setting,
+#'   "*p < .05" beneath cells reading 0.003).
 #' @return Character(1).
 #' @keywords internal
-.jst_tbl_stars_legend <- function(stars = c(0.05, 0.01, 0.001)) {
+.jst_tbl_stars_legend <- function(stars = c(0.05, 0.01, 0.001), leading.zero = "no") {
   st <- sort(as.numeric(stars), decreasing = TRUE)
+  keep <- .jst_tbl_lz(leading.zero, bounded = TRUE)
   paste(vapply(seq_along(st), function(i) {
-    paste0(strrep("*", i), "*p* < ", sub("^0", "", format(st[i])), ".")
+    v <- format(st[i])
+    paste0(strrep("*", i), "*p* < ", if (keep) v else sub("^0", "", v), ".")
   }, character(1)), collapse = " ")
 }
 
@@ -2320,7 +2404,7 @@
       "kept at 0 and 1."))
   }
   if (!is.null(note)) general <- c(general, note)
-  probability <- if (use_stars) .jst_tbl_stars_legend(stars) else character(0)
+  probability <- if (use_stars) .jst_tbl_stars_legend(stars, key("leading.zero")) else character(0)
 
   # The console note when the Ns differ: each model's N, and the
   # jcomplete() line that puts them on one set of cases (Session 401).
@@ -2853,7 +2937,7 @@
                     title  = paste0(if (is.null(title)) key("title") else title,
                                     np$title)),
     notes    = list(general = general, specific = roles$specific,
-                    probability = if (st_on) .jst_tbl_stars_legend(thr)
+                    probability = if (st_on) .jst_tbl_stars_legend(thr, key("leading.zero"))
                                   else character(0)),
     style    = style)
 }
@@ -3125,7 +3209,7 @@
                       else title,
                       n_title)),
     notes    = list(general = general, specific = roles$specific,
-                    probability = if (use_stars) .jst_tbl_stars_legend(stars)
+                    probability = if (use_stars) .jst_tbl_stars_legend(stars, key("leading.zero"))
                                   else character(0)),
     spanners = spanners,
     style    = style)
@@ -3315,7 +3399,7 @@
                       np$title)),
     notes    = list(general = general, specific = roles$specific,
                     probability = if (use_stars && any(c("chisq", "p") %in% tests))
-                                    .jst_tbl_stars_legend(stars)
+                                    .jst_tbl_stars_legend(stars, key("leading.zero"))
                                   else character(0)),
     spanners = spanners,
     style    = style)
@@ -3660,7 +3744,15 @@
   out  <- character(0)
   gen  <- tbl$notes$general
   if (length(gen)) {
-    out <- c(out, paste0("*", key("note.label"), "* ", paste(gen, collapse = " ")))
+    # The label in italics unless note.label.italic = no (Session 409,
+    # ruling R58: report's upright "Note:"); an empty label is no label --
+    # until Session 409 it left a pair of asterisks, "** N = 103.", that
+    # the Word file and the console printed as marks.
+    lab <- key("note.label")
+    lead <- if (!nzchar(trimws(lab))) ""
+            else if (identical(key("note.label.italic"), "no")) paste0(lab, " ")
+            else paste0("*", lab, "* ")
+    out <- c(out, paste0(lead, paste(gen, collapse = " ")))
   }
   if (length(tbl$notes$specific)) {
     out <- c(out, paste(vapply(tbl$notes$specific, function(s) {
@@ -3848,16 +3940,20 @@
 #' @param number The cached number.
 #' @param bold Logical.
 #' @param size Points.
+#' @param color A six-digit hex colour, or NULL (Session 409: a caption bar
+#'   that follows the header takes the header's text colour).
 #' @keywords internal
-.jst_docx_seq_runs <- function(number, bold = TRUE, size = NULL) {
-  rpr <- paste0("<w:rPr>", if (bold) "<w:b/>",
+.jst_docx_seq_runs <- function(number, bold = TRUE, size = NULL, color = NULL) {
+  col <- if (!is.null(color) && !identical(color, "000000"))
+    paste0("<w:color w:val=\"", color, "\"/>")
+  rpr <- paste0("<w:rPr>", if (bold) "<w:b/>", col,
                 if (!is.null(size)) paste0("<w:sz w:val=\"", size * 2, "\"/>"),
                 "</w:rPr>")
-  paste0(.jst_docx_run("Table ", bold = bold, size = size),
+  paste0(.jst_docx_run("Table ", bold = bold, size = size, color = color),
          "<w:r>", rpr, "<w:fldChar w:fldCharType=\"begin\"/></w:r>",
          "<w:r>", rpr, "<w:instrText xml:space=\"preserve\"> SEQ Table \\* ARABIC </w:instrText></w:r>",
          "<w:r>", rpr, "<w:fldChar w:fldCharType=\"separate\"/></w:r>",
-         .jst_docx_run(as.character(number), bold = bold, size = size),
+         .jst_docx_run(as.character(number), bold = bold, size = size, color = color),
          "<w:r>", rpr, "<w:fldChar w:fldCharType=\"end\"/></w:r>")
 }
 
@@ -3911,9 +4007,12 @@
 #' @param tbl A jst_table.
 #' @param style The style list.
 #' @param number The table's number.
+#' @param color A six-digit hex colour for the caption's text, or NULL
+#'   (Session 409: the header's text colour, on a caption bar that follows
+#'   the header).
 #' @return Character; one or two paragraphs' XML.
 #' @keywords internal
-.jst_docx_caption_pars <- function(tbl, style, number) {
+.jst_docx_caption_pars <- function(tbl, style, number, color = NULL) {
   key  <- function(k) .jst_style_key(style, tbl$type, k)
   form <- key("caption.form"); size <- key("caption.size")
   # The title's markup: the N a style puts after it (n.position = title)
@@ -3921,19 +4020,21 @@
   # other forms.
   title <- tbl$caption$title
   if (identical(form, "apa")) {
-    c(.jst_docx_par(.jst_docx_seq_runs(number, TRUE, size), style = "Caption",
+    c(.jst_docx_par(.jst_docx_seq_runs(number, TRUE, size, color), style = "Caption",
                     keep_next = TRUE),
-      .jst_docx_par(.jst_docx_markup_runs(title, size = size, italic = TRUE),
+      .jst_docx_par(.jst_docx_markup_runs(title, size = size, italic = TRUE,
+                                          color = color),
                     keep_next = TRUE, spacing_after = 6))
   } else if (identical(form, "report")) {
-    .jst_docx_par(paste0(.jst_docx_seq_runs(number, TRUE, size),
+    .jst_docx_par(paste0(.jst_docx_seq_runs(number, TRUE, size, color),
                          .jst_docx_markup_runs(paste0(": ", title), size = size,
-                                               bold = TRUE)),
+                                               bold = TRUE, color = color)),
                   style = "Caption", keep_next = TRUE, spacing_after = 6)
   } else {
-    .jst_docx_par(paste0(.jst_docx_seq_runs(number, TRUE, size),
-                         .jst_docx_run(".", bold = TRUE, size = size),
-                         .jst_docx_markup_runs(paste0(" ", title), size = size)),
+    .jst_docx_par(paste0(.jst_docx_seq_runs(number, TRUE, size, color),
+                         .jst_docx_run(".", bold = TRUE, size = size, color = color),
+                         .jst_docx_markup_runs(paste0(" ", title), size = size,
+                                               color = color)),
                   style = "Caption", keep_next = TRUE, spacing_after = 6)
   }
 }
@@ -4167,6 +4268,19 @@
   hfill <- if (identical(hfill, "none")) NULL else hfill
   bfill <- if (identical(bfill, "none")) NULL else bfill
   htext <- key("header.text"); hbold <- identical(key("header.bold"), "yes")
+  # The two fills of Session 409 (ruling R58): a caption bar -- a colour,
+  # or "header": the header's fill with the header's text colour -- and a
+  # fill for each variable's label row. Both "none" in apa and report, so
+  # neither table's XML changes.
+  cfill <- key("caption.fill"); cfill_text <- NULL
+  if (identical(cfill, "header")) {
+    cfill <- hfill
+    if (!is.null(cfill)) cfill_text <- htext
+  } else if (identical(cfill, "none")) {
+    cfill <- NULL
+  }
+  vfill <- key("heading.fill")
+  vfill <- if (identical(vfill, "none")) NULL else vfill
   cap_row  <- identical(key("caption.position"), "row")
   note_row <- identical(key("note.position"), "row")
   margin   <- 108L
@@ -4187,12 +4301,15 @@
   nil <- .jst_docx_borders("none", FALSE, FALSE, FALSE, FALSE, rcol)
 
   # A caption row: the caption's paragraphs, no borders, repeated with the
-  # header when the table breaks across pages.
+  # header when the table breaks across pages; filled when the style puts a
+  # bar there (caption.fill, Session 409).
   if (cap_row) {
-    pars <- paste(.jst_docx_caption_pars(tbl, style, number), collapse = "")
+    pars <- paste(.jst_docx_caption_pars(tbl, style, number, color = cfill_text),
+                  collapse = "")
     rows_xml <- c(rows_xml,
                   paste0("<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>",
-                         .jst_docx_cell(pars, total, nil, span = nc), "</w:tr>"))
+                         .jst_docx_cell(pars, total, nil, span = nc, fill = cfill),
+                         "</w:tr>"))
   }
 
   # Spanner rows over the header (a regression table's models, then a
@@ -4285,17 +4402,23 @@
                        .jst_docx_run(r$tail, bold = identical(emph, "bold"),
                                      italic = identical(emph, "italic"), size = size))
       borders <- .jst_docx_borders(rules, grid, bottom, grid || outer, grid || outer, rcol)
+      # A variable's label row takes heading.fill (Session 409); a role
+      # heading does not.
       rows_xml <- c(rows_xml, paste0(
         "<w:tr><w:trPr><w:cantSplit/></w:trPr>",
         .jst_docx_cell(.jst_docx_par(runs, ind = if (isTRUE(r$indent > 0L))
                                                    180L * r$indent else NULL,
                                      keep_next = keep, line = line, size = msz),
-                       total, borders, span = nc),
+                       total, borders, span = nc,
+                       fill = if (identical(r$level, "variable")) vfill),
         "</w:tr>"))
       next
     }
     band <- band + 1L
     if (!is.null(bfill) && band %% 2L == 0L) fill <- bfill
+    # A variable's label row that carries cells (a crosstab's, with its
+    # test) takes heading.fill across the row, in place of a band's fill.
+    if (identical(r$level, "variable") && !is.null(vfill)) fill <- vfill
     cells <- character(nc)
     # A fit row's label carries markup (*R*2 -- an italic R); any other
     # label is text as written. A variable's label row that carries cells
@@ -4976,8 +5099,9 @@
 #' \code{jtable()} turns a saved analysis result into a publication table
 #' and, when \code{file} is given, writes it to a Word file (.docx) that
 #' opens in Word, LibreOffice and Google Docs. The table's look and
-#' conventions come from a style -- the built-in \code{"apa"} style, or a
-#' style file of your own (see \code{\link{jstyle}}).
+#' conventions come from a style -- the built-in \code{"apa"} style for a
+#' journal, the built-in \code{"report"} style for a report, or a style
+#' file of your own (see \code{\link{jstyle}}).
 #'
 #' A table is made from each kind of result: a descriptives table from one
 #' or more \code{\link{jdesc}} results; a frequency table from one or more
@@ -5073,11 +5197,12 @@
 #'   name goes in the output folder (\code{joptions(output.dir = )}) or the
 #'   working directory; a path with a folder goes there. NULL writes
 #'   nothing.
-#' @param style The style's name in quotes: \code{"apa"}, or the name of a
-#'   style file (\code{"myjournal"} for myjournal.jstyle), looked for in
-#'   the style folder (\code{joptions(style.dir = )}), the working
-#'   directory and your jstats folder; or a path to one. NULL (the
-#'   default) uses \code{joptions(style = )}, apa when it is not set.
+#' @param style The style's name in quotes: \code{"apa"}, \code{"report"},
+#'   or the name of a style file (\code{"myjournal"} for
+#'   myjournal.jstyle), looked for in the style folder
+#'   (\code{joptions(style.dir = )}), the working directory and your
+#'   jstats folder; or a path to one. NULL (the default) uses
+#'   \code{joptions(style = )}, apa when it is not set.
 #' @param overwrite Logical. Replace a file that exists? With FALSE (the
 #'   default) an interactive session asks, and one that cannot ask stops.
 #' @param open Logical. TRUE opens the file once it is written, in the
@@ -5170,7 +5295,8 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   # A bare word where a quoted value goes (ruling R18): the front door,
   # before anything is evaluated -- the style's name, and a setting's value
   # in the call.
-  word_specs <- list(style = .jst_word_spec(c("apa", names(.jst_style_files())),
+  word_specs <- list(style = .jst_word_spec(c(names(.jst_style_builtin()),
+                                              names(.jst_style_files())),
                                             "a style name"))
   text_keys <- character(0)
   for (k in names(over_q)) {
@@ -6105,7 +6231,14 @@ print.jst_tables <- function(x, ...) {
 #' another style; and \code{jstyle("apa", save.as = "myjournal")} saves a
 #' copy as a style file, myjournal.jstyle, every setting written out with
 #' a note on what it does and what it takes, to edit in any text editor
-#' (the step SPSS calls "Save TableLook As").
+#' (the step SPSS calls "Save TableLook As"). \code{jstyle("myjournal",
+#' open = TRUE)} opens the file in the editor instead of printing it.
+#'
+#' jstats has two built-in styles: \code{"apa"}, APA 7's conventions for a
+#' journal, and \code{"report"}, the plain look the report style manuals
+#' share -- Arial 10, "Table 1:" and the title on one line, a light grey
+#' header, an upright "Note:" -- based on apa. A style for an agency or an
+#' institute is a copy of report with its own colors and font.
 #'
 #' Given settings, \code{jstyle(save.as =)} writes a short file instead: the
 #' style it copies named on its based.on line, and only the settings given,
@@ -6125,18 +6258,25 @@ print.jst_tables <- function(x, ...) {
 #' the style folder (\code{joptions(style.dir = )}), the working directory
 #' and your jstats folder, in that order.
 #'
-#' @param style The style's name in quotes, or a path to a style file;
-#'   NULL (the default) lists the styles, or with \code{save.as} copies
-#'   \code{joptions(style = )}.
+#' @param style The style's name in quotes -- \code{"apa"}, \code{"report"}
+#'   or a style file's -- or a path to a style file; NULL (the default)
+#'   lists the styles, or with \code{save.as} or \code{open} copies or
+#'   opens \code{joptions(style = )}.
 #' @param save.as A name for the copy, in quotes: written as
 #'   \code{<name>.jstyle} in the style folder when one is set, else in
 #'   your jstats folder (\code{tools::R_user_dir("jstats")}), or to a path
-#'   given with a folder. "apa" names the built-in style, and "report" one
-#'   a later version adds, so neither can be a copy's name; a file named
-#'   apa.jstyle is not read, and jstats says so.
+#'   given with a folder. "apa" and "report" name the built-in styles, so
+#'   neither can be a copy's name; a file named apa.jstyle or report.jstyle
+#'   is not read, and jstats says so.
 #' @param overwrite Logical. Replace a style file that exists? With FALSE
 #'   (the default) an interactive session asks, and one that cannot ask
 #'   stops.
+#' @param open Logical. TRUE opens the style's file in the editor, as base
+#'   R's \code{file.edit()} does (in RStudio, a tab beside your script),
+#'   and prints no settings; the file is still checked, and a value it
+#'   cannot use is named. With \code{save.as} it opens the file just
+#'   written. Only in an interactive session: a script opens nothing. The
+#'   built-in styles have no file; save a copy to open one.
 #' @param ... Settings for a short copy, with \code{save.as}: a general
 #'   setting by its name (\code{font = "Arial"}), a table type's settings
 #'   in a list named for its section (\code{regression = list(fit.rows =
@@ -6145,6 +6285,25 @@ print.jst_tables <- function(x, ...) {
 #' @return Invisibly: the styles found (a data frame of name and path),
 #'   the style, or the path of the file written.
 #'
+#' @section Making a style with an AI assistant:
+#' A style file is plain text, so an AI assistant can write one from an
+#' example report. Give it a complete copy, which lists every setting and
+#' what each takes -- \code{jstyle("report", save.as = "myagency")} writes
+#' one; a short file hides the settings it takes from its base -- and the
+#' example, with a request such as:
+#' \preformatted{
+#' Attached are myagency.jstyle, a jstats table style whose notes say what
+#' each setting does and what it takes, and Report.pdf. Rewrite the style
+#' file so that jstats tables look like the tables in the report, following
+#' the instructions at the top of the file, and list what the settings
+#' cannot reproduce.
+#' }
+#' Save its reply over the file and run \code{jstyle("myagency")}, which
+#' names any value it cannot use (give that back to the assistant), then
+#' try the style: \code{jtable(c1, style = "myagency", open = TRUE)}. An
+#' assistant can reach only the looks the settings make; it is told to say
+#' what it could not reproduce rather than invent a setting.
+#'
 #' @seealso \code{\link{jtable}} for the tables, \code{\link{jstyle_settings}}
 #'   for every setting a style holds.
 #'
@@ -6152,8 +6311,9 @@ print.jst_tables <- function(x, ...) {
 #' # The styles jstats can find, and the folders it looks in
 #' jstyle()
 #'
-#' # Every setting of the built-in style
+#' # Every setting of the built-in styles
 #' jstyle("apa")
+#' jstyle("report")
 #'
 #' # A complete copy to edit, and a short one holding two changes
 #' jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
@@ -6161,7 +6321,8 @@ print.jst_tables <- function(x, ...) {
 #'        font = "Arial", regression = list(fit.rows = c("r2", "n")))
 #'
 #' @export
-jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
+jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
+                   open = FALSE, ...) {
   cl  <- sys.call()
   mc  <- match.call(expand.dots = TRUE)
   env <- parent.frame()
@@ -6184,11 +6345,13 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
   .jst_check_args(dots[!(is_set | is_bare)], aliases = near,
                   fn_name = "jstyle", positional = "refuse")
   .jst_word_args(cl, mc, env,
-                 list(style = .jst_word_spec(c("apa", names(.jst_style_files())),
+                 list(style = .jst_word_spec(c(names(.jst_style_builtin()),
+                                               names(.jst_style_files())),
                                              "a style name")), "jstyle")
   .jst_free_text_arg(substitute(style), env, cl, mc, "style", "a style name", "jstyle")
   .jst_free_text_arg(substitute(save.as), env, cl, mc, "save.as", "a name", "jstyle")
   .jst_check_flag(overwrite, "overwrite")
+  .jst_check_flag(open, "open")
   if (any(is_bare)) .jst_style_bare_stop(cl, dots[is_bare])
   if (anyDuplicated(dn[is_set])) {
     twice <- unique(dn[is_set][duplicated(dn[is_set])])
@@ -6203,6 +6366,12 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
               "  ", .jst_call_with(cl, mc, "save.as", "mystyle"), fn = "jstyle")
   }
 
+  # open = TRUE (ruled Session 406, built Session 409): the style's file in
+  # the editor, the printout skipped; with no style named, the session's
+  # (as save.as copies it).
+  if (is.null(save.as) && isTRUE(open)) {
+    return(invisible(.jst_style_open_file(style, cl = cl, mc = mc)))
+  }
   if (is.null(style) && is.null(save.as)) return(invisible(.jst_style_list_print()))
   st <- .jst_style_resolve(style, fn = "jstyle", cl = cl, mc = mc)
   if (is.null(save.as)) {
@@ -6210,7 +6379,7 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
     return(invisible(st))
   }
   vals <- .jst_style_given(given)
-  path <- .jst_style_save_path(save.as)
+  path <- .jst_style_save_path(save.as, from = st$name)
   write <- .jst_table_overwrite_gate(path, overwrite, ask = interactive(),
                                      fn = "jstyle", noun = "style")
   if (!write) return(invisible(NULL))
@@ -6226,7 +6395,66 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
   close(con)
   .jst_msg_out(paste0("Style written to ", .jst_norm_path(path)))
   cat("\n")
+  .jst_style_open(path, open)
   invisible(path)
+}
+
+#' Internal helper: open a style's file, for jstyle(open = TRUE)
+#'
+#' The style named -- or the session's, \code{joptions(style = )}, when
+#' none is -- found as jstyle() finds it and handed to the editor, then
+#' checked: a file holding a value jstats cannot use stops on that line
+#' with the file already open, so it can be put right (Session 409). A
+#' built-in style has no file, and the stop gives the line that saves a
+#' copy and opens it. The session test and the opener are arguments, so a
+#' battery can stand in for both and open nothing, as for jtable()'s
+#' \code{open =}.
+#'
+#' @param style The style argument as given.
+#' @param cl,mc The call, for the line a near miss offers.
+#' @param ask Logical; whether the session is interactive.
+#' @param edit The function that opens the file.
+#' @return The style, resolved.
+#' @keywords internal
+.jst_style_open_file <- function(style, cl = NULL, mc = NULL,
+                                 ask = interactive(), edit = utils::file.edit) {
+  nm <- if (is.null(style)) {
+    getOption(".jst_options_style", .jst_options_defaults$style)
+  } else style
+  if (is.character(nm) && length(nm) == 1L && !is.na(nm) && nzchar(trimws(nm))) {
+    nm <- trimws(nm)
+    b  <- tolower(sub("\\.jstyle$", "", nm, ignore.case = TRUE))
+    if (!grepl("[/\\\\]", nm) && b %in% names(.jst_style_builtin())) {
+      copy <- if (identical(b, "apa")) "myjournal" else paste0("my", b)
+      .jst_stop("\"", b, "\" is built into jstats, so it has no file to open.\n",
+                "Save a copy to open, for example:\n",
+                "  jstyle(\"", b, "\", save.as = \"", copy, "\", open = TRUE)",
+                fn = "jstyle")
+    }
+    .jst_style_open(.jst_style_find(nm, "jstyle", cl, mc), TRUE, ask = ask,
+                    edit = edit)
+  }
+  .jst_style_resolve(style, fn = "jstyle", cl = cl, mc = mc)
+}
+
+#' Internal helper: hand a style file to the editor, when open = TRUE asks
+#'
+#' Only in an interactive session, with \code{utils::file.edit()}, which in
+#' RStudio opens a tab in the editor pane (a script, a rendered page or a
+#' check opens nothing). The session test and the opener are arguments so
+#' a battery can stand in for both.
+#'
+#' @param path The file.
+#' @param open Logical.
+#' @param ask Logical; whether the session is interactive.
+#' @param edit The function that opens the file.
+#' @return TRUE when the file was handed to the editor, invisibly.
+#' @keywords internal
+.jst_style_open <- function(path, open, ask = interactive(),
+                            edit = utils::file.edit) {
+  if (!isTRUE(open) || !isTRUE(ask)) return(invisible(FALSE))
+  edit(normalizePath(path, winslash = "/", mustWork = FALSE))
+  invisible(TRUE)
 }
 
 #' Internal helper: a table type's setting given to jstyle() bare
@@ -6375,14 +6603,19 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
   # since it's built in").
   base <- sub("\\.jstyle$", "", basename(based), ignore.case = TRUE)
   builtin <- !grepl("[/\\\\]", based) && tolower(base) %in% names(.jst_style_builtin())
+  # Two built-ins since Session 409, so a built-in base is "a style built
+  # into jstats"; the editing rule is the complete copy's and the
+  # orientation's, with adding a setting from the list allowed here (the
+  # presentation review's entry 7: one wording for the three texts).
   out <- c(paste0("# ", name, ".jstyle:"),
            paste0("# A jstats table style, based on ", base,
-                  if (builtin) ", the style built into jstats", "."),
+                  if (builtin) ", a style built into jstats", "."),
            paste0("# It lists only the settings that differ from ", base,
                   "; any setting not listed here takes ", base, "'s value."),
            "# ?jstyle_settings lists every setting and what it takes.",
            paste0("# Change only the values after the = signs, or add a setting ",
-                  "from that list."),
+                  "from that list; do not invent a setting, and do not rename a ",
+                  "setting or a section."),
            paste0("# jstyle(\"", name, "\") checks the file and names any value ",
                   "it cannot use."),
            "",
@@ -6450,7 +6683,8 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
     number  = paste0("a number from ", sp$min, " to ", sp$max),
     integer = paste0("a whole number from ", sp$min, " to ", sp$max),
     color   = paste0("a color name such as lightblue, or six hex digits such as ",
-                     "ADD8E6", if (isTRUE(sp$none)) "; or none"),
+                     "ADD8E6", if (isTRUE(sp$header)) "; or header, or none"
+                     else if (isTRUE(sp$none)) "; or none"),
     columns = paste0("one or more of ", paste(sp$cols, collapse = ", "),
                      ", in order, separated by commas",
                      if (isTRUE(sp$none)) "; or none"),
@@ -6464,13 +6698,17 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
 #' bare name goes in the style folder when one is set, else in the per-user
 #' folder, which is created here, by the user's own call (CRAN's rule: a
 #' package writes there only when asked). The .jstyle extension is added
-#' when the name has none; "apa" is the built-in style's name, and a name
-#' in \code{.jst_style_reserved} a built-in's still to come (Session 407).
+#' when the name has none; "apa" and "report" are the built-in styles'
+#' names (Session 409), and a name in \code{.jst_style_reserved} would be
+#' a built-in's still to come (Session 407).
 #'
 #' @param save.as The name given.
+#' @param from Character(1); the name of the style the call copies, for the
+#'   line a refused name offers (Session 409: the call's own style, where
+#'   it was always apa).
 #' @return The path to write.
 #' @keywords internal
-.jst_style_save_path <- function(save.as) {
+.jst_style_save_path <- function(save.as, from = "apa") {
   if (!is.character(save.as) || length(save.as) != 1L || is.na(save.as) ||
       !nzchar(trimws(save.as))) {
     .jst_stop("`save.as` must be a name in quotes, for example:\n",
@@ -6493,16 +6731,18 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
               "Use letters, digits, spaces, dashes, or underscores.",
               fn = "jstyle")
   }
+  # A built-in's name, or one kept for a built-in to come: the line offered
+  # copies the call's own style under "my" and the name (Session 409).
+  example <- paste0("  jstyle(\"", from, "\", save.as = \"my", tolower(base), "\")")
   if (tolower(base) %in% names(.jst_style_builtin())) {
-    .jst_stop("\"", base, "\" is the name of jstats's built-in style.\n",
-              "Give the copy another name, for example:\n",
-              "  jstyle(\"apa\", save.as = \"myjournal\")", fn = "jstyle")
+    .jst_stop("\"", base, "\" is the name of a style built into jstats.\n",
+              "Give the copy another name, for example:\n", example,
+              fn = "jstyle")
   }
   if (tolower(base) %in% .jst_style_reserved) {
     .jst_stop("\"", base, "\" is the name of a built-in style a later ",
               "version of jstats adds.\n",
-              "Give the copy another name, for example:\n",
-              "  jstyle(\"apa\", save.as = \"my", tolower(base), "\")",
+              "Give the copy another name, for example:\n", example,
               fn = "jstyle")
   }
   if (grepl("[/\\\\]", nm)) {
@@ -6578,6 +6818,12 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
                                              collapse = ", then ")))
   } else {
     .jst_msg_out("  built into jstats")
+    # A built-in based on another (report, on apa; Session 409).
+    if (length(st$layers) > 1L) {
+      .jst_msg_out(paste0("  based on ",
+                          paste(vapply(st$layers[-1L], function(L) L$source,
+                                       character(1)), collapse = ", then ")))
+    }
   }
   cat("\n")
   for (part in c("general", names(.jst_style_type_nouns))) {
@@ -6633,7 +6879,10 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
 #' the top: the file jstyle(save.as =) writes when it is given no settings.
 #' The header says to change values only, so the file can be handed to a
 #' person or an AI assistant with a request: the file's name on a line of
-#' its own, then one sentence a line, none wrapped (Session 407).
+#' its own, then one sentence a line, none wrapped (Session 407), and since
+#' Session 409 a block for an assistant asked to match an example. based.on
+#' names the built-in the copied style reaches first: report for a copy of
+#' report or of a file based on it, else apa.
 #'
 #' @param st The style copied.
 #' @param name The new file's style name.
@@ -6650,20 +6899,37 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
              crosstab     = "A crosstab, from jcrosstab() results.",
              reliability  = "A reliability table, from jalpha() results.")
   # The header tells whoever edits the file -- a person, or an AI
-  # assistant given the file's text -- what may change (Session 406).
+  # assistant given the file's text -- what may change (Session 406). The
+  # editing rule is worded as the short file's and the orientation's are
+  # (Session 409, the presentation review's entry 7), and a block below it
+  # addresses an assistant asked to match an example (Session 409; the AI
+  # Integration record, Part 24).
   out <- c(paste0("# ", name, ".jstyle:"),
            "# A jstats table style.",
            paste0("# Every setting jstats has is below, each after a note saying ",
                   "what it does and what it takes."),
-           paste0("# Change only the values after the = signs; do not add, rename ",
-                  "or remove a setting or a section."),
+           paste0("# Change only the values after the = signs; do not invent a ",
+                  "setting, and do not rename a setting or a section."),
            "# A line that starts with # is a note.",
            paste0("# jstyle(\"", name, "\") checks the file and names any value ",
-                  "it cannot use."))
+                  "it cannot use."),
+           "#",
+           "# To an AI assistant asked to edit this file so tables look like an example:",
+           paste0("# Change only the values after the = signs, using only the values ",
+                  "each setting's \"# takes:\" line allows."),
+           "# Keep every other line as it is, and return the whole file.",
+           paste0("# Then say what the example has that these settings cannot make, ",
+                  "rather than inventing a setting for it."))
+  # A copy names as its base the built-in its style reaches first: report
+  # for a copy of report, or of a file based on it, so a setting a later
+  # jstats adds comes from report as the copy's others did; apa otherwise
+  # (Session 409, build 1's lean, on Claude's default).
+  srcs  <- vapply(st$layers, function(L) as.character(L$source), character(1))
+  built <- srcs[tolower(srcs) %in% names(.jst_style_builtin())]
   out <- c(out, "",
            paste0("format     = ", .jst_style_format),
            paste0("written.by = jstats ", .jst_jstats_version()),
-           "based.on   = apa")
+           paste0("based.on   = ", if (length(built)) tolower(built[1L]) else "apa"))
   for (part in c("general", names(.jst_style_type_nouns))) {
     out <- c(out, "", if (!identical(part, "general")) paste0("[", part, "]"),
              paste0("# ", heads[[part]]))
@@ -6691,8 +6957,9 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE, ...) {
 #' that table's columns, labels and notes. A style file (see
 #' \code{\link{jstyle}}) sets any of them; a setting it leaves out comes
 #' from the style its based.on line names, and in the end from the
-#' built-in apa style, whose value each entry gives. A table type's setting
-#' can also be given in a \code{\link{jtable}} call, for that table only.
+#' built-in apa style, whose value each entry gives -- with the built-in
+#' report style's where it differs. A table type's setting can also be
+#' given in a \code{\link{jtable}} call, for that table only.
 #'
 #' This page is made from the list jstats checks every style against, so
 #' it names exactly what jstats accepts. A Greek letter in a label is
@@ -6744,13 +7011,20 @@ NULL
   about <- function(a) {
     sub("[.]$", "", paste(.jst_style_about_lines(a), collapse = " | "))
   }
+  # The built-in report style, read as a call reads it, for the values it
+  # sets (Session 409); built here, not resolved, so no folder is searched.
+  rep_st <- .jst_style_object("report", NA_character_,
+                              .jst_style_builtin_layers("report"))
   sec <- function(title, part) {
     spec  <- .jst_style_spec[[part]]
     items <- vapply(names(spec), function(k) {
       sp <- spec[[k]]
+      a  <- .jst_style_key(.jst_style_apa, part, k)
+      r  <- .jst_style_key(rep_st, part, k)
       paste0("\\item{\\code{", k, "}}{", esc(about(sp$about)),
              ". Takes ", esc(.jst_style_takes(sp, part)), ". In apa: ",
-             value(.jst_style_apa[[part]][[k]], sp), ".}")
+             value(.jst_style_apa[[part]][[k]], sp),
+             if (!identical(a, r)) paste0("; in report: ", value(r, sp)), ".}")
     }, character(1))
     paste0("@rawRd \\section{", title, "}{\n\\describe{\n",
            paste(items, collapse = "\n"), "\n}\n}")

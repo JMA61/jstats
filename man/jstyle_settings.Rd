@@ -9,8 +9,9 @@ set the look of every table, then one section per table type, which set
 that table's columns, labels and notes. A style file (see
 \code{\link{jstyle}}) sets any of them; a setting it leaves out comes
 from the style its based.on line names, and in the end from the
-built-in apa style, whose value each entry gives. A table type's setting
-can also be given in a \code{\link{jtable}} call, for that table only.
+built-in apa style, whose value each entry gives -- with the built-in
+report style's where it differs. A table type's setting can also be
+given in a \code{\link{jtable}} call, for that table only.
 
 This page is made from the list jstats checks every style against, so
 it names exactly what jstats accepts. A Greek letter in a label is
@@ -33,24 +34,27 @@ A general setting may also be set in a table type's section, for that table type
 }
 \section{General settings}{
 \describe{
-\item{\code{font}}{the typeface of every cell, caption and note. Takes any text. In apa: \code{Times New Roman}.}
-\item{\code{size}}{the text size, in points. Takes a number from 6 to 72. In apa: \code{12}.}
+\item{\code{font}}{the typeface of every cell, caption and note. Takes any text. In apa: \code{Times New Roman}; in report: \code{Arial}.}
+\item{\code{size}}{the text size, in points. Takes a number from 6 to 72. In apa: \code{12}; in report: \code{10}.}
 \item{\code{paper}}{the page the file opens on: a4 | letter. Takes one of a4 | letter. In apa: \code{a4}.}
-\item{\code{caption.form}}{apa: bold "Table 1", the italic title on the next line | journal: bold "Table 1." and the title on one line | report: "Table 1:" and the title. Takes one of apa | journal | report. In apa: \code{apa}.}
+\item{\code{caption.form}}{apa: bold "Table 1", the italic title on the next line | journal: bold "Table 1." and the title on one line | report: "Table 1:" and the title. Takes one of apa | journal | report. In apa: \code{apa}; in report: \code{report}.}
 \item{\code{caption.position}}{row: the table's first row, repeated with the header on a new page | paragraph: above the table. Takes one of row | paragraph. In apa: \code{row}.}
-\item{\code{caption.size}}{the caption's text size, in points. Takes a number from 6 to 72. In apa: \code{12}.}
-\item{\code{header.fill}}{a color filling the header cells, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or none. In apa: \code{none}.}
+\item{\code{caption.size}}{the caption's text size, in points. Takes a number from 6 to 72. In apa: \code{12}; in report: \code{10}.}
+\item{\code{caption.fill}}{a color filling the caption row (caption.position = row), header for the header's fill and text color, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or header, or none. In apa: \code{none}.}
+\item{\code{header.fill}}{a color filling the header cells, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or none. In apa: \code{none}; in report: \code{D9D9D9}.}
 \item{\code{header.text}}{the color of the header's text. Takes a color name such as lightblue, or six hex digits such as ADD8E6. In apa: \code{000000}.}
-\item{\code{header.bold}}{bold header text: yes | no. Takes one of yes | no. In apa: \code{no}.}
+\item{\code{header.bold}}{bold header text: yes | no. Takes one of yes | no. In apa: \code{no}; in report: \code{yes}.}
 \item{\code{band.fill}}{a color filling every other data row, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or none. In apa: \code{none}.}
+\item{\code{heading.fill}}{a color filling each variable's label row (the rows variable.headings sets), or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or none. In apa: \code{none}.}
 \item{\code{rules}}{apa: rules above and below the header and under the table | grid: every cell | outer: a box | none. Takes one of apa | grid | outer | none. In apa: \code{apa}.}
 \item{\code{rule.color}}{the color of the rules. Takes a color name such as lightblue, or six hex digits such as ADD8E6. In apa: \code{000000}.}
-\item{\code{note.label}}{the word the general note opens on: Note. | Notes: | Source:. Takes any text, or nothing. In apa: \code{Note.}.}
+\item{\code{note.label}}{the word the general note opens on: Note. | Notes: | Source:. Takes any text, or nothing. In apa: \code{Note.}; in report: \code{Note:}.}
+\item{\code{note.label.italic}}{the note's label in italics, as APA sets it: yes | no. Takes one of yes | no. In apa: \code{yes}; in report: \code{no}.}
 \item{\code{note.position}}{row: the table's last row | paragraph: under the table. Takes one of row | paragraph. In apa: \code{row}.}
-\item{\code{note.size}}{the notes' text size, in points. Takes a number from 6 to 72. In apa: \code{12}.}
+\item{\code{note.size}}{the notes' text size, in points. Takes a number from 6 to 72. In apa: \code{12}; in report: \code{9}.}
 \item{\code{n.position}}{where N, the number of cases, goes: note (the general note opens on it) | title ("(N = 103)" after the title) | none. Takes one of note | title | none. In apa: \code{note}.}
 \item{\code{decimals}}{the decimal places of a statistic, such as a mean. Takes a whole number from 0 to 6. In apa: \code{2}.}
-\item{\code{leading.zero}}{the zero before the point: no drops it on a statistic that cannot exceed 1, such as p (.23) | yes keeps it (0.23) | never drops it on every number below 1 (.197 for an SE). Takes one of yes | no | never. In apa: \code{no}.}
+\item{\code{leading.zero}}{the zero before the point: no drops it on a statistic that cannot exceed 1, such as p (.23) | yes keeps it (0.23) | never drops it on every number below 1 (.197 for an SE). Takes one of yes | no | never. In apa: \code{no}; in report: \code{yes}.}
 \item{\code{p.format}}{exact: the p-value | stars: asterisks | both. Takes one of exact | stars | both. In apa: \code{exact}.}
 \item{\code{p.decimals}}{the decimal places of a p-value. Takes a whole number from 1 to 6. In apa: \code{3}.}
 \item{\code{stars}}{the p-values the asterisks mark, largest first. Takes one to three p-values between 0 and 1, largest first. In apa: \code{.05, .01, .001}.}
@@ -87,7 +91,7 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{cumulative.label}}{the head of the cumulative column. Takes any text, or nothing. In apa: \code{Cumulative \%}.}
 \item{\code{missing.rows}}{a variable's missing cases: combined (one row) | each (a row per missing value) | none. Takes one of combined | each | none. In apa: \code{combined}.}
 \item{\code{missing.label}}{the label of the combined missing row. Takes any text. In apa: \code{Missing}.}
-\item{\code{variable.headings}}{how each variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: \code{plain}.}
+\item{\code{variable.headings}}{how each variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: \code{plain}; in report: \code{bold}.}
 \item{\code{group.headings}}{how a heading from headings = is set: italic | bold | plain. Takes one of italic | bold | plain. In apa: \code{italic}.}
 }
 }
@@ -110,7 +114,7 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{fit.rows}}{the fit rows under the predictors, in order: r2, adj.r2, f, delta.r2 (nested models), f.change (its F test), n, or none. Takes one or more of r2, adj.r2, f, delta.r2, f.change, n, in order, separated by commas; or none. In apa: \code{r2}.}
 \item{\code{reference}}{where a dummy-coded variable's reference category is named: row (after its label) | note (the general note) | none. Takes one of row | note | none. In apa: \code{row}.}
 \item{\code{reference.label}}{the word before the reference category: reference | ref. Takes any text. In apa: \code{reference}.}
-\item{\code{variable.headings}}{how a dummy-coded variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: \code{plain}.}
+\item{\code{variable.headings}}{how a dummy-coded variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: \code{plain}; in report: \code{bold}.}
 \item{\code{group.headings}}{how a heading row is set: italic | bold | plain. Takes one of italic | bold | plain. In apa: \code{italic}.}
 }
 }
@@ -133,7 +137,7 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{fit.rows}}{the fit rows under the predictors, in order: chisq (the model chi-square), nagelkerke, cox.snell, neg2ll, aic, n, or none. Takes one or more of chisq, nagelkerke, cox.snell, neg2ll, aic, n, in order, separated by commas; or none. In apa: \code{chisq, nagelkerke}.}
 \item{\code{reference}}{where a dummy-coded variable's reference category is named: row (after its label) | note (the general note) | none. Takes one of row | note | none. In apa: \code{row}.}
 \item{\code{reference.label}}{the word before the reference category: reference | ref. Takes any text. In apa: \code{reference}.}
-\item{\code{variable.headings}}{how a dummy-coded variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: \code{plain}.}
+\item{\code{variable.headings}}{how a dummy-coded variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: \code{plain}; in report: \code{bold}.}
 \item{\code{group.headings}}{how a heading row is set: italic | bold | plain. Takes one of italic | bold | plain. In apa: \code{italic}.}
 }
 }
@@ -201,7 +205,7 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{p.label}}{the head of the p column. Takes any text, or nothing. In apa: \code{p}.}
 \item{\code{v.label}}{the head of the v column. Takes any text, or nothing. In apa: \code{V}.}
 \item{\code{group.spanner}}{yes: the column variable's label over the groups' columns | no. Takes one of yes | no. In apa: \code{yes}.}
-\item{\code{variable.headings}}{how each variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: \code{plain}.}
+\item{\code{variable.headings}}{how each variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: \code{plain}; in report: \code{bold}.}
 }
 }
 \section{[reliability]: a reliability table}{
