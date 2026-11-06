@@ -30,5 +30,6 @@ of residence)" – equal Ns grouped, as the models' sentence groups them
 
 ## Value
 
-A list: note (the sentence's body, or the one N's) and title (the
-title's parenthesis body).
+A list: note (the sentence's body, or the one N's) and varies (TRUE when
+the Ns differ, so the sentence goes in the note under n.position = title
+too: ruling R59, Session 409).

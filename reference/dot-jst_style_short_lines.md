@@ -9,7 +9,10 @@ heading – each after the note on what it does and what it takes. The
 header is the file's name on a line of its own, then one sentence a
 line, none wrapped (Session 407; Jeff: "each sentence should be on its
 own line ... Notepad and other text editors should easily be able to
-handle sentences that are relatively long without wrapping").
+handle sentences that are relatively long without wrapping"). A blank
+line follows each setting, none between a setting's notes and the
+setting (Session 410;
+[`.jst_style_blank_lines()`](https://jma61.github.io/jstats/reference/dot-jst_style_blank_lines.md)).
 
 ## Usage
 

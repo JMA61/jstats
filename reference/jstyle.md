@@ -152,7 +152,7 @@ jstyle("apa")
 #> note.label.italic = yes
 #> note.position     = row
 #> note.size         = 12
-#> n.position        = note
+#> n.position        = title
 #> decimals          = 2
 #> leading.zero      = no
 #> p.format          = exact
@@ -326,7 +326,7 @@ jstyle("report")
 #> note.label.italic = no
 #> note.position     = row             # from apa
 #> note.size         = 9
-#> n.position        = note            # from apa
+#> n.position        = title           # from apa
 #> decimals          = 2               # from apa
 #> leading.zero      = yes
 #> p.format          = exact           # from apa
@@ -480,10 +480,10 @@ jstyle("report")
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/RtmpEGS82R/myjournal.jstyle
+#> Style written to /tmp/RtmpXPe583/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/RtmpEGS82R/myapa.jstyle
+#> Style written to /tmp/RtmpXPe583/myapa.jstyle
 #> 
 ```

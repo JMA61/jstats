@@ -142,8 +142,9 @@ table type only.
 - `n.position`:
 
   where N, the number of cases, goes: note (the general note opens on
-  it) \| title ("(N = 103)" after the title) \| none. Takes one of note
-  \| title \| none. In apa: `note`.
+  it) \| title ("(N = 103)" after the title; a table with several ns,
+  such as Ns that differ or a t test's groups, gives them in the note)
+  \| none. Takes one of note \| title \| none. In apa: `title`.
 
 - `decimals`:
 

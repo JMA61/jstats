@@ -83,8 +83,9 @@ print(x, ...)
 
 - note:
 
-  The general note's text, after what the style writes there (N, a
-  reference category); `*text*` sets a word in italics. NULL for none.
+  The general note's text, after what the style writes there (N or the
+  ns when they go there, a filter, a reference category); `*text*` sets
+  a word in italics. NULL for none.
 
 - file:
 
@@ -219,20 +220,19 @@ for every setting a style holds.
 # Keep a result, make its table, and look at it in the console
 d1 <- jdesc(community, Age, Income, print = FALSE)
 t1 <- jtable(d1, title = "Descriptive Statistics for Study Variables")
-#> Table 1. Descriptive Statistics for Study Variables
+#> Table 1. Descriptive Statistics for Study Variables (N = 103)
 #>   2 variables, on a portrait page.
 #> No file was written.
 #> 
 print(t1)
 #> Table 1
-#> Descriptive Statistics for Study Variables
+#> Descriptive Statistics for Study Variables (N = 103)
 #> --------------------------------------------------------------
 #> Variable              n       M          SD       Min     Max
 #> --------------------------------------------------------------
 #> Age (years)          103      40.65      11.62      18      71
 #> Annual income (USD)   97  49,855.67  17,427.22  14,000  93,000
 #> --------------------------------------------------------------
-#> Note. N = 103.
 #> 
 
 # Two models of one outcome side by side, written to a Word file
@@ -240,33 +240,32 @@ m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
 m2 <- jlm(WellbeingScore ~ Age + Volunteer, community, print = FALSE)
 t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
              overwrite = TRUE)
-#> Table 1. Regression Coefficients Predicting Wellbeing score (0-100)
+#> Table 1. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> Table written to /tmp/RtmpEGS82R/Table2.docx
+#> Table written to /tmp/RtmpXPe583/Table2.docx
 #> 
 
 # Several tables in one file: build each, then give them together
 doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
               overwrite = TRUE)
-#> Table 1. Descriptive Statistics for Study Variables
+#> Table 1. Descriptive Statistics for Study Variables (N = 103)
 #>   2 variables, on a portrait page.
-#> Table 2. Regression Coefficients Predicting Wellbeing score (0-100)
+#> Table 2. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> 2 tables written to /tmp/RtmpEGS82R/Tables.docx
+#> 2 tables written to /tmp/RtmpXPe583/Tables.docx
 #> 
 print(doc)
 #> Table 1
-#> Descriptive Statistics for Study Variables
+#> Descriptive Statistics for Study Variables (N = 103)
 #> --------------------------------------------------------------
 #> Variable              n       M          SD       Min     Max
 #> --------------------------------------------------------------
 #> Age (years)          103      40.65      11.62      18      71
 #> Annual income (USD)   97  49,855.67  17,427.22  14,000  93,000
 #> --------------------------------------------------------------
-#> Note. N = 103.
 #> 
 #> Table 2
-#> Regression Coefficients Predicting Wellbeing score (0-100)
+#> Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #> --------------------------------------------------------------------------
 #>                                   Model 1                  Model 2
 #> Predictor                   b     SE    β     p      b     SE    β     p
@@ -276,7 +275,6 @@ print(doc)
 #> Volunteered in past year                            5.36  2.18  .23   .016
 #> R²                          .12                      .17
 #> --------------------------------------------------------------------------
-#> Note. N = 103.
 #> 
 
 # Keep a result for a later session with base R
