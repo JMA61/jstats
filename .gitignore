@@ -65,6 +65,6 @@ jstats_source.R
 # Remove this line if a hand-written AGENTS.md is ever wanted here.
 AGENTS.md
 
-
+/styles/
 
 
