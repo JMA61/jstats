@@ -92,7 +92,7 @@ jai()
 #> jstats conventions
 #> 
 #> Orientation for users and AI assistants.
-#> Orientation text v3.9 | jstats 0.9.275 | generated 2026-11-06
+#> Orientation text v3.10 | jstats 0.9.276 | generated 2026-11-06
 #> 
 #> jstats is an integrated set of j-prefixed analysis functions (jdesc,
 #> jfreq, jlm, ...) with shared syntax and output styled after commercial
@@ -190,14 +190,18 @@ jai()
 #>   one table; to put several in one file, build each and give them
 #>   together: jtable(list(t1, t2), file = "Tables.docx"). jtable()
 #>   reports what it made, and print(t1) shows a table in the console. A
-#>   table's look and conventions come from a style: the built-in "apa",
-#>   or a .jstyle text file. jstyle("apa", save.as = "myjournal")
-#>   writes a copy holding every setting, each with a note on what it
-#>   takes; jstyle("myjournal") checks a file and prints its settings;
-#>   ?jstyle_settings lists them all. To change a style, edit values only
-#>   -- never add, rename or remove a setting or a section -- give colors
-#>   by name (lightblue) or six hex digits (ADD8E6), then run
-#>   jstyle("myjournal"), which names any value it cannot use.
+#>   table's look and conventions come from a style: the built-in "apa"
+#>   for a journal or "report" for a report, or a .jstyle text file.
+#>   jstyle("report", save.as = "myagency") writes a copy holding every
+#>   setting, each with a note on what it takes, and
+#>   jstyle("report", save.as = "mine", font = "Calibri") a short file
+#>   holding only the settings given. jstyle("myagency") checks a file and
+#>   prints its settings, jstyle("myagency", open = TRUE) opens it in the
+#>   editor, and ?jstyle_settings lists every setting. To change a style,
+#>   edit its values, or add to a short file a setting from that list; do
+#>   not invent a setting, and do not rename a setting or a section. Give
+#>   colors by name (lightblue) or six hex digits (ADD8E6), then run
+#>   jstyle("myagency"), which names any value it cannot use.
 #> 
 #> - Detailed help and worked examples for each function are available via
 #>   ?jdesc, ?jdeclare_missing, and so on.

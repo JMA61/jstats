@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.275</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.276</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_docx_caption_pars</span><span class="op">(</span><span class="va">tbl</span>, <span class="va">style</span>, <span class="va">number</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_docx_caption_pars</span><span class="op">(</span><span class="va">tbl</span>, <span class="va">style</span>, <span class="va">number</span>, color <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -56,6 +56,12 @@
 
 <dt id="arg-number">number<a class="anchor" aria-label="anchor" href="#arg-number"></a></dt>
 <dd><p>The table's number.</p></dd>
+
+
+<dt id="arg-color">color<a class="anchor" aria-label="anchor" href="#arg-color"></a></dt>
+<dd><p>A six-digit hex colour for the caption's text, or NULL
+(Session 409: the header's text colour, on a caption bar that follows
+the header).</p></dd>
 
 </dl></div>
     <div class="section level2">

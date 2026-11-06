@@ -7,7 +7,8 @@ prints every setting the style gives, marking each one it takes from
 another style; and jstyle(&quot;apa&quot;, save.as = &quot;myjournal&quot;) saves a
 copy as a style file, myjournal.jstyle, every setting written out with
 a note on what it does and what it takes, to edit in any text editor
-(the step SPSS calls &quot;Save TableLook As&quot;)."><meta property="og:description" content="A style holds a table's look and a journal's or a report's conventions:
+(the step SPSS calls &quot;Save TableLook As&quot;). jstyle(&quot;myjournal&quot;,
+open = TRUE) opens the file in the editor instead of printing it."><meta property="og:description" content="A style holds a table's look and a journal's or a report's conventions:
 the font, the caption's form, the rules, the decimals, and for each
 table type its columns and labels. jstyle() lists the styles
 jstats can find; jstyle(&quot;myjournal&quot;) checks a style file and
@@ -15,7 +16,8 @@ prints every setting the style gives, marking each one it takes from
 another style; and jstyle(&quot;apa&quot;, save.as = &quot;myjournal&quot;) saves a
 copy as a style file, myjournal.jstyle, every setting written out with
 a note on what it does and what it takes, to edit in any text editor
-(the step SPSS calls &quot;Save TableLook As&quot;)."></head><body>
+(the step SPSS calls &quot;Save TableLook As&quot;). jstyle(&quot;myjournal&quot;,
+open = TRUE) opens the file in the editor instead of printing it."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -23,7 +25,7 @@ a note on what it does and what it takes, to edit in any text editor
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.275</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.276</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,12 +60,13 @@ prints every setting the style gives, marking each one it takes from
 another style; and <code>jstyle("apa", save.as = "myjournal")</code> saves a
 copy as a style file, myjournal.jstyle, every setting written out with
 a note on what it does and what it takes, to edit in any text editor
-(the step SPSS calls "Save TableLook As").</p>
+(the step SPSS calls "Save TableLook As"). <code>jstyle("myjournal",
+open = TRUE)</code> opens the file in the editor instead of printing it.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jstyle</span><span class="op">(</span>style <span class="op">=</span> <span class="cn">NULL</span>, save.as <span class="op">=</span> <span class="cn">NULL</span>, overwrite <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jstyle</span><span class="op">(</span>style <span class="op">=</span> <span class="cn">NULL</span>, save.as <span class="op">=</span> <span class="cn">NULL</span>, overwrite <span class="op">=</span> <span class="cn">FALSE</span>, open <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -71,24 +74,34 @@ a note on what it does and what it takes, to edit in any text editor
 
 
 <dl><dt id="arg-style">style<a class="anchor" aria-label="anchor" href="#arg-style"></a></dt>
-<dd><p>The style's name in quotes, or a path to a style file;
-NULL (the default) lists the styles, or with <code>save.as</code> copies
-<code>joptions(style = )</code>.</p></dd>
+<dd><p>The style's name in quotes – <code>"apa"</code>, <code>"report"</code>
+or a style file's – or a path to a style file; NULL (the default)
+lists the styles, or with <code>save.as</code> or <code>open</code> copies or
+opens <code>joptions(style = )</code>.</p></dd>
 
 
 <dt id="arg-save-as">save.as<a class="anchor" aria-label="anchor" href="#arg-save-as"></a></dt>
 <dd><p>A name for the copy, in quotes: written as
 <code>&lt;name&gt;.jstyle</code> in the style folder when one is set, else in
 your jstats folder (<code>tools::R_user_dir("jstats")</code>), or to a path
-given with a folder. "apa" names the built-in style, and "report" one
-a later version adds, so neither can be a copy's name; a file named
-apa.jstyle is not read, and jstats says so.</p></dd>
+given with a folder. "apa" and "report" name the built-in styles, so
+neither can be a copy's name; a file named apa.jstyle or report.jstyle
+is not read, and jstats says so.</p></dd>
 
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>
 <dd><p>Logical. Replace a style file that exists? With FALSE
 (the default) an interactive session asks, and one that cannot ask
 stops.</p></dd>
+
+
+<dt id="arg-open">open<a class="anchor" aria-label="anchor" href="#arg-open"></a></dt>
+<dd><p>Logical. TRUE opens the style's file in the editor, as base
+R's <code><a href="https://rdrr.io/r/utils/file.edit.html" class="external-link">file.edit()</a></code> does (in RStudio, a tab beside your script),
+and prints no settings; the file is still checked, and a value it
+cannot use is named. With <code>save.as</code> it opens the file just
+written. Only in an interactive session: a script opens nothing. The
+built-in styles have no file; save a copy to open one.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -106,7 +119,12 @@ the style, or the path of the file written.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Given settings, <code>jstyle(save.as =)</code> writes a short file instead: the
+    <p>jstats has two built-in styles: <code>"apa"</code>, APA 7's conventions for a
+journal, and <code>"report"</code>, the plain look the report style manuals
+share – Arial 10, "Table 1:" and the title on one line, a light grey
+header, an upright "Note:" – based on apa. A style for an agency or an
+institute is a copy of report with its own colors and font.</p>
+<p>Given settings, <code>jstyle(save.as =)</code> writes a short file instead: the
 style it copies named on its based.on line, and only the settings given,
 which is all a small change needs. A general setting is given by its
 name; a table type's settings go in a list named for its section:
@@ -124,6 +142,26 @@ the style folder (<code>joptions(style.dir = )</code>), the working directory
 and your jstats folder, in that order.</p>
     </div>
     <div class="section level2">
+    <h2 id="making-a-style-with-an-ai-assistant">Making a style with an AI assistant<a class="anchor" aria-label="anchor" href="#making-a-style-with-an-ai-assistant"></a></h2>
+
+
+<p>A style file is plain text, so an AI assistant can write one from an
+example report. Give it a complete copy, which lists every setting and
+what each takes – <code>jstyle("report", save.as = "myagency")</code> writes
+one; a short file hides the settings it takes from its base – and the
+example, with a request such as:</p><div class="sourceCode"><pre><code>
+Attached are myagency.jstyle, a jstats table style whose notes say what
+each setting does and what it takes, and Report.pdf. Rewrite the style
+file so that jstats tables look like the tables in the report, following
+the instructions at the top of the file, and list what the settings
+cannot reproduce.
+</code></pre></div><p>Save its reply over the file and run <code>jstyle("myagency")</code>, which
+names any value it cannot use (give that back to the assistant), then
+try the style: <code>jtable(c1, style = "myagency", open = TRUE)</code>. An
+assistant can reach only the looks the settings make; it is told to say
+what it could not reproduce rather than invent a setting.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="jtable.html">jtable</a></code> for the tables, <code><a href="jstyle_settings.html">jstyle_settings</a></code>
 for every setting a style holds.</p></div>
@@ -134,46 +172,50 @@ for every setting a style holds.</p></div>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># The styles jstats can find, and the folders it looks in</span></span></span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Styles</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   apa  built into jstats (the default)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   apa     built into jstats (the default)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   report  built into jstats</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats looks for a style file in these folders, in this order:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   /home/runner/work/jstats/jstats/docs/reference (the working directory)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   /home/runner/.local/share/R/jstats (your jstats folder, not created yet)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Every setting of the built-in style</span></span></span>
+<span class="r-in"><span><span class="co"># Every setting of the built-in styles</span></span></span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"apa"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Style: apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   built into jstats</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> font             = Times New Roman</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> size             = 12</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> paper            = a4</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> caption.form     = apa</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> caption.position = row</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> caption.size     = 12</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> header.fill      = none</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> header.text      = 000000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> header.bold      = no</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> band.fill        = none</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> rules            = apa</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> rule.color       = 000000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> note.label       = Note.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> note.position    = row</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> note.size        = 12</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> n.position       = note</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> decimals         = 2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> leading.zero     = no</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> p.format         = exact</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> p.decimals       = 3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> stars            = .05, .01, .001</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> marks            = letters</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> minus            = true</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> thousands        = comma</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> landscape        = auto</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> line.spacing     = single</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> percent.decimals = 1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> filter.note      = yes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> font              = Times New Roman</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> size              = 12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> paper             = a4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.form      = apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.position  = row</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.size      = 12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.fill      = none</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> header.fill       = none</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> header.text       = 000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> header.bold       = no</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> band.fill         = none</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> heading.fill      = none</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> rules             = apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> rule.color        = 000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.label        = Note.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.label.italic = yes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.position     = row</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.size         = 12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> n.position        = note</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> decimals          = 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> leading.zero      = no</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p.format          = exact</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p.decimals        = 3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stars             = .05, .01, .001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> marks             = letters</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> minus             = true</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> thousands         = comma</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> landscape         = auto</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> line.spacing      = single</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> percent.decimals  = 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> filter.note       = yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [descriptives]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> title          = Descriptive Statistics</span>
@@ -312,14 +354,188 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> item.total.note        = yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> group.headings         = italic</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"report"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Style: report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   built into jstats</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   based on apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> font              = Arial</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> size              = 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> paper             = a4              # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.form      = report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.position  = row             # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.size      = 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.fill      = none            # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> header.fill       = D9D9D9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> header.text       = 000000          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> header.bold       = yes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> band.fill         = none            # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> heading.fill      = none            # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> rules             = apa             # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> rule.color        = 000000          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.label        = Note:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.label.italic = no</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.position     = row             # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.size         = 9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> n.position        = note            # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> decimals          = 2               # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> leading.zero      = yes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p.format          = exact           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p.decimals        = 3               # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stars             = .05, .01, .001  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> marks             = letters         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> minus             = true            # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> thousands         = comma           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> landscape         = auto            # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> line.spacing      = single          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> percent.decimals  = 1               # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> filter.note       = yes             # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [descriptives]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title          = Descriptive Statistics  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns        = n, mean, sd, min, max   # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label     = Variable                # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> n.label        = n                       # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> mean.label     = M                       # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sd.label       = SD                      # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> min.label      = Min                     # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> max.label      = Max                     # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> group.headings = italic                  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [frequencies]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title               = Frequency Distributions  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns             = n, percent               # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label          = Variable                 # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> n.label             = n                        # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> percent.label       = %                        # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> valid.percent.label = Valid %                  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> cumulative.label    = Cumulative %             # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> missing.rows        = combined                 # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> missing.label       = Missing                  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> variable.headings   = bold</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> group.headings      = italic                   # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [regression]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title             = Regression Coefficients Predicting {outcome}  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns           = b, se, beta, p              # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns.last      = none                        # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label        = Predictor                   # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> b.label           = b                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> se.label          = SE                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> beta.label        = β                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p.label           = p                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> t.label           = t                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ci.label          = 95% CI                      # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> beta.gelman.label = β*                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ci.style          = one                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> intercept         = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> intercept.label   = Constant                    # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> fit.rows          = r2                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> reference         = row                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> reference.label   = reference                   # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> variable.headings = bold</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> group.headings    = italic                      # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [logistic]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title             = Logistic Regression Coefficients Predicting {outcome}  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns           = b, se, or, p                # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns.last      = none                        # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label        = Predictor                   # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> b.label           = b                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> se.label          = SE                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> or.label          = OR                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p.label           = p                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> wald.label        = Wald                        # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ci.label          = 95% CI for OR               # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> beta.gelman.label = β*                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ci.style          = one                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> intercept         = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> intercept.label   = Constant                    # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> fit.rows          = chisq, nagelkerke           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> reference         = row                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> reference.label   = reference                   # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> variable.headings = bold</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> group.headings    = italic                      # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [correlation]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title          = Descriptive Statistics and Correlations for Study Variables  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns        = n, mean, sd                 # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label     = Variable                    # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> n.label        = n                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> mean.label     = M                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sd.label       = SD                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> lower.triangle = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> r.stars        = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> method.note    = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [ttest]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title         = Means, Standard Deviations, and t Tests by {group}  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns       = mean, sd, t, p, d           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label    = Variable                    # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> n.label       = n                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> mean.label    = M                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sd.label      = SD                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> t.label       = t                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> df.label      = df                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p.label       = p                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> d.label       = d                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> diff.label    = Mean difference             # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ci.label      = 95% CI                      # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ci.style      = one                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> group.spanner = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> test.note     = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [anova]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title         = Means, Standard Deviations, and One-Way Analyses of Variance by {group}  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns       = mean, sd, f, p, eta2        # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label    = Variable                    # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> n.label       = n                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> mean.label    = M                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sd.label      = SD                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> f.label       = F                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> df.label      = df                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p.label       = p                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> eta2.label    = η²                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> group.spanner = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> test.note     = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [crosstab]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title             = Frequencies and Percentages by {group}  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns           = n, percent                  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> total             = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> percent.base      = column                      # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> test.columns      = chisq, df, p, v             # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label        = Variable                    # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> n.label           = n                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> percent.label     = %                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> total.label       = Total                       # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> chisq.label       = χ²                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> df.label          = df                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p.label           = p                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> v.label           = V                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> group.spanner     = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> variable.headings = bold</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [reliability]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title                  = Item Statistics and Reliability  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns                = mean, sd, item.total, alpha.if.deleted  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label             = Item                        # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> mean.label             = M                           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> sd.label               = SD                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> item.total.label       = Item-total *r*              # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> alpha.if.deleted.label = α if item deleted           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> alpha                  = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> item.total.note        = yes                         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> group.headings         = italic                      # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A complete copy to edit, and a short one holding two changes</span></span></span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"apa"</span>, save.as <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"myjournal"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpskceRk/myjournal.jstyle</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpEGS82R/myjournal.jstyle</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"apa"</span>, save.as <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"myapa"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
 <span class="r-in"><span>       font <span class="op">=</span> <span class="st">"Arial"</span>, regression <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fit.rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"r2"</span>, <span class="st">"n"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpskceRk/myapa.jstyle</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpEGS82R/myapa.jstyle</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

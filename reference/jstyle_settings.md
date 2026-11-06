@@ -6,7 +6,8 @@ that table's columns, labels and notes. A style file (see
 [`jstyle`](https://jma61.github.io/jstats/reference/jstyle.md)) sets any
 of them; a setting it leaves out comes from the style its based.on line
 names, and in the end from the built-in apa style, whose value each
-entry gives. A table type's setting can also be given in a
+entry gives – with the built-in report style's where it differs. A table
+type's setting can also be given in a
 [`jtable`](https://jma61.github.io/jstats/reference/jtable.md) call, for
 that table only.
 
@@ -42,11 +43,12 @@ table type only.
 - `font`:
 
   the typeface of every cell, caption and note. Takes any text. In apa:
-  `Times New Roman`.
+  `Times New Roman`; in report: `Arial`.
 
 - `size`:
 
-  the text size, in points. Takes a number from 6 to 72. In apa: `12`.
+  the text size, in points. Takes a number from 6 to 72. In apa: `12`;
+  in report: `10`.
 
 - `paper`:
 
@@ -57,7 +59,8 @@ table type only.
 
   apa: bold "Table 1", the italic title on the next line \| journal:
   bold "Table 1." and the title on one line \| report: "Table 1:" and
-  the title. Takes one of apa \| journal \| report. In apa: `apa`.
+  the title. Takes one of apa \| journal \| report. In apa: `apa`; in
+  report: `report`.
 
 - `caption.position`:
 
@@ -68,12 +71,20 @@ table type only.
 - `caption.size`:
 
   the caption's text size, in points. Takes a number from 6 to 72. In
-  apa: `12`.
+  apa: `12`; in report: `10`.
+
+- `caption.fill`:
+
+  a color filling the caption row (caption.position = row), header for
+  the header's fill and text color, or none. Takes a color name such as
+  lightblue, or six hex digits such as ADD8E6; or header, or none. In
+  apa: `none`.
 
 - `header.fill`:
 
   a color filling the header cells, or none. Takes a color name such as
-  lightblue, or six hex digits such as ADD8E6; or none. In apa: `none`.
+  lightblue, or six hex digits such as ADD8E6; or none. In apa: `none`;
+  in report: `D9D9D9`.
 
 - `header.text`:
 
@@ -82,13 +93,20 @@ table type only.
 
 - `header.bold`:
 
-  bold header text: yes \| no. Takes one of yes \| no. In apa: `no`.
+  bold header text: yes \| no. Takes one of yes \| no. In apa: `no`; in
+  report: `yes`.
 
 - `band.fill`:
 
   a color filling every other data row, or none. Takes a color name such
   as lightblue, or six hex digits such as ADD8E6; or none. In apa:
   `none`.
+
+- `heading.fill`:
+
+  a color filling each variable's label row (the rows variable.headings
+  sets), or none. Takes a color name such as lightblue, or six hex
+  digits such as ADD8E6; or none. In apa: `none`.
 
 - `rules`:
 
@@ -104,7 +122,12 @@ table type only.
 - `note.label`:
 
   the word the general note opens on: Note. \| Notes: \| Source:. Takes
-  any text, or nothing. In apa: `Note.`.
+  any text, or nothing. In apa: `Note.`; in report: `Note:`.
+
+- `note.label.italic`:
+
+  the note's label in italics, as APA sets it: yes \| no. Takes one of
+  yes \| no. In apa: `yes`; in report: `no`.
 
 - `note.position`:
 
@@ -114,7 +137,7 @@ table type only.
 - `note.size`:
 
   the notes' text size, in points. Takes a number from 6 to 72. In apa:
-  `12`.
+  `12`; in report: `9`.
 
 - `n.position`:
 
@@ -132,7 +155,7 @@ table type only.
   the zero before the point: no drops it on a statistic that cannot
   exceed 1, such as p (.23) \| yes keeps it (0.23) \| never drops it on
   every number below 1 (.197 for an SE). Takes one of yes \| no \|
-  never. In apa: `no`.
+  never. In apa: `no`; in report: `yes`.
 
 - `p.format`:
 
@@ -277,7 +300,7 @@ table type only.
 - `variable.headings`:
 
   how each variable's label row is set: plain \| italic \| bold. Takes
-  one of plain \| italic \| bold. In apa: `plain`.
+  one of plain \| italic \| bold. In apa: `plain`; in report: `bold`.
 
 - `group.headings`:
 
@@ -376,7 +399,8 @@ table type only.
 - `variable.headings`:
 
   how a dummy-coded variable's label row is set: plain \| italic \|
-  bold. Takes one of plain \| italic \| bold. In apa: `plain`.
+  bold. Takes one of plain \| italic \| bold. In apa: `plain`; in
+  report: `bold`.
 
 - `group.headings`:
 
@@ -475,7 +499,8 @@ table type only.
 - `variable.headings`:
 
   how a dummy-coded variable's label row is set: plain \| italic \|
-  bold. Takes one of plain \| italic \| bold. In apa: `plain`.
+  bold. Takes one of plain \| italic \| bold. In apa: `plain`; in
+  report: `bold`.
 
 - `group.headings`:
 
@@ -733,7 +758,7 @@ table type only.
 - `variable.headings`:
 
   how each variable's label row is set: plain \| italic \| bold. Takes
-  one of plain \| italic \| bold. In apa: `plain`.
+  one of plain \| italic \| bold. In apa: `plain`; in report: `bold`.
 
 ## \[reliability\]: a reliability table
 

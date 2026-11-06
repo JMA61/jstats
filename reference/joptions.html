@@ -27,7 +27,7 @@ explicit transform path for data already in the workspace."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.275</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.276</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -224,11 +224,11 @@ another.</p></dd>
 <dt>style</dt>
 <dd><p>Character, length 1. Default: <code>"apa"</code>. The style a
 publication table is made in when its call names none: the built-in
-<code>"apa"</code> style, or the name of a style file (<code>"myjournal"</code>
-for myjournal.jstyle) found in the style folder, the working
-directory or your jstats folder, or a path to one. Checked when it is
-set: a style that cannot be found or read stops the call with nothing
-changed. Set back with <code>style = "apa"</code>.</p></dd>
+<code>"apa"</code> or <code>"report"</code> style, or the name of a style file
+(<code>"myjournal"</code> for myjournal.jstyle) found in the style folder,
+the working directory or your jstats folder, or a path to one.
+Checked when it is set: a style that cannot be found or read stops
+the call with nothing changed. Set back with <code>style = "apa"</code>.</p></dd>
 
 <dt>style.dir</dt>
 <dd><p>Character string (length 1), or <code>NULL</code>. Default:
@@ -402,11 +402,11 @@ their standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Data"</span><span class="op">)</span><span class="op">)</span> <span class="co"># set save/load folder</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Options Settings</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: /tmp/RtmpskceRk/Data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: /tmp/RtmpEGS82R/Data</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Created the data folder:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   /tmp/RtmpskceRk/Data</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   /tmp/RtmpEGS82R/Data</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span>                                                  <span class="co"># (created if absent)</span></span></span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>                         <span class="co"># back to the working directory</span></span></span>
@@ -416,11 +416,11 @@ their standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>output.dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Tables"</span><span class="op">)</span><span class="op">)</span> <span class="co"># where tables are written</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Options Settings</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Output folder: /tmp/RtmpskceRk/Tables</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Output folder: /tmp/RtmpEGS82R/Tables</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Created the output folder:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   /tmp/RtmpskceRk/Tables</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   /tmp/RtmpEGS82R/Tables</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>output.dir <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>                       <span class="co"># back to the working directory</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Options Settings</span>

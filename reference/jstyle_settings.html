@@ -4,8 +4,9 @@ set the look of every table, then one section per table type, which set
 that table's columns, labels and notes. A style file (see
 jstyle) sets any of them; a setting it leaves out comes
 from the style its based.on line names, and in the end from the
-built-in apa style, whose value each entry gives. A table type's setting
-can also be given in a jtable call, for that table only.
+built-in apa style, whose value each entry gives – with the built-in
+report style's where it differs. A table type's setting can also be
+given in a jtable call, for that table only.
 This page is made from the list jstats checks every style against, so
 it names exactly what jstats accepts. A Greek letter in a label is
 written in a style file as the letter itself; this page names it."><meta property="og:description" content="Every setting a jstats table style holds: the general settings, which
@@ -13,8 +14,9 @@ set the look of every table, then one section per table type, which set
 that table's columns, labels and notes. A style file (see
 jstyle) sets any of them; a setting it leaves out comes
 from the style its based.on line names, and in the end from the
-built-in apa style, whose value each entry gives. A table type's setting
-can also be given in a jtable call, for that table only.
+built-in apa style, whose value each entry gives – with the built-in
+report style's where it differs. A table type's setting can also be
+given in a jtable call, for that table only.
 This page is made from the list jstats checks every style against, so
 it names exactly what jstats accepts. A Greek letter in a label is
 written in a style file as the letter itself; this page names it."></head><body>
@@ -25,7 +27,7 @@ written in a style file as the letter itself; this page names it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.275</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.276</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,8 +59,9 @@ set the look of every table, then one section per table type, which set
 that table's columns, labels and notes. A style file (see
 <code><a href="jstyle.html">jstyle</a></code>) sets any of them; a setting it leaves out comes
 from the style its based.on line names, and in the end from the
-built-in apa style, whose value each entry gives. A table type's setting
-can also be given in a <code><a href="jtable.html">jtable</a></code> call, for that table only.</p>
+built-in apa style, whose value each entry gives – with the built-in
+report style's where it differs. A table type's setting can also be
+given in a <code><a href="jtable.html">jtable</a></code> call, for that table only.</p>
 <p>This page is made from the list jstats checks every style against, so
 it names exactly what jstats accepts. A Greek letter in a label is
 written in a style file as the letter itself; this page names it.</p>
@@ -84,34 +87,40 @@ fit.rows = r2, n
     <h2 id="general-settings">General settings<a class="anchor" aria-label="anchor" href="#general-settings"></a></h2>
 
 <dl><dt><code>font</code></dt>
-<dd><p>the typeface of every cell, caption and note. Takes any text. In apa: <code>Times New Roman</code>.</p></dd>
+<dd><p>the typeface of every cell, caption and note. Takes any text. In apa: <code>Times New Roman</code>; in report: <code>Arial</code>.</p></dd>
 
 <dt><code>size</code></dt>
-<dd><p>the text size, in points. Takes a number from 6 to 72. In apa: <code>12</code>.</p></dd>
+<dd><p>the text size, in points. Takes a number from 6 to 72. In apa: <code>12</code>; in report: <code>10</code>.</p></dd>
 
 <dt><code>paper</code></dt>
 <dd><p>the page the file opens on: a4 | letter. Takes one of a4 | letter. In apa: <code>a4</code>.</p></dd>
 
 <dt><code>caption.form</code></dt>
-<dd><p>apa: bold "Table 1", the italic title on the next line | journal: bold "Table 1." and the title on one line | report: "Table 1:" and the title. Takes one of apa | journal | report. In apa: <code>apa</code>.</p></dd>
+<dd><p>apa: bold "Table 1", the italic title on the next line | journal: bold "Table 1." and the title on one line | report: "Table 1:" and the title. Takes one of apa | journal | report. In apa: <code>apa</code>; in report: <code>report</code>.</p></dd>
 
 <dt><code>caption.position</code></dt>
 <dd><p>row: the table's first row, repeated with the header on a new page | paragraph: above the table. Takes one of row | paragraph. In apa: <code>row</code>.</p></dd>
 
 <dt><code>caption.size</code></dt>
-<dd><p>the caption's text size, in points. Takes a number from 6 to 72. In apa: <code>12</code>.</p></dd>
+<dd><p>the caption's text size, in points. Takes a number from 6 to 72. In apa: <code>12</code>; in report: <code>10</code>.</p></dd>
+
+<dt><code>caption.fill</code></dt>
+<dd><p>a color filling the caption row (caption.position = row), header for the header's fill and text color, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or header, or none. In apa: <code>none</code>.</p></dd>
 
 <dt><code>header.fill</code></dt>
-<dd><p>a color filling the header cells, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or none. In apa: <code>none</code>.</p></dd>
+<dd><p>a color filling the header cells, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or none. In apa: <code>none</code>; in report: <code>D9D9D9</code>.</p></dd>
 
 <dt><code>header.text</code></dt>
 <dd><p>the color of the header's text. Takes a color name such as lightblue, or six hex digits such as ADD8E6. In apa: <code>000000</code>.</p></dd>
 
 <dt><code>header.bold</code></dt>
-<dd><p>bold header text: yes | no. Takes one of yes | no. In apa: <code>no</code>.</p></dd>
+<dd><p>bold header text: yes | no. Takes one of yes | no. In apa: <code>no</code>; in report: <code>yes</code>.</p></dd>
 
 <dt><code>band.fill</code></dt>
 <dd><p>a color filling every other data row, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or none. In apa: <code>none</code>.</p></dd>
+
+<dt><code>heading.fill</code></dt>
+<dd><p>a color filling each variable's label row (the rows variable.headings sets), or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or none. In apa: <code>none</code>.</p></dd>
 
 <dt><code>rules</code></dt>
 <dd><p>apa: rules above and below the header and under the table | grid: every cell | outer: a box | none. Takes one of apa | grid | outer | none. In apa: <code>apa</code>.</p></dd>
@@ -120,13 +129,16 @@ fit.rows = r2, n
 <dd><p>the color of the rules. Takes a color name such as lightblue, or six hex digits such as ADD8E6. In apa: <code>000000</code>.</p></dd>
 
 <dt><code>note.label</code></dt>
-<dd><p>the word the general note opens on: Note. | Notes: | Source:. Takes any text, or nothing. In apa: <code>Note.</code>.</p></dd>
+<dd><p>the word the general note opens on: Note. | Notes: | Source:. Takes any text, or nothing. In apa: <code>Note.</code>; in report: <code>Note:</code>.</p></dd>
+
+<dt><code>note.label.italic</code></dt>
+<dd><p>the note's label in italics, as APA sets it: yes | no. Takes one of yes | no. In apa: <code>yes</code>; in report: <code>no</code>.</p></dd>
 
 <dt><code>note.position</code></dt>
 <dd><p>row: the table's last row | paragraph: under the table. Takes one of row | paragraph. In apa: <code>row</code>.</p></dd>
 
 <dt><code>note.size</code></dt>
-<dd><p>the notes' text size, in points. Takes a number from 6 to 72. In apa: <code>12</code>.</p></dd>
+<dd><p>the notes' text size, in points. Takes a number from 6 to 72. In apa: <code>12</code>; in report: <code>9</code>.</p></dd>
 
 <dt><code>n.position</code></dt>
 <dd><p>where N, the number of cases, goes: note (the general note opens on it) | title ("(N = 103)" after the title) | none. Takes one of note | title | none. In apa: <code>note</code>.</p></dd>
@@ -135,7 +147,7 @@ fit.rows = r2, n
 <dd><p>the decimal places of a statistic, such as a mean. Takes a whole number from 0 to 6. In apa: <code>2</code>.</p></dd>
 
 <dt><code>leading.zero</code></dt>
-<dd><p>the zero before the point: no drops it on a statistic that cannot exceed 1, such as p (.23) | yes keeps it (0.23) | never drops it on every number below 1 (.197 for an SE). Takes one of yes | no | never. In apa: <code>no</code>.</p></dd>
+<dd><p>the zero before the point: no drops it on a statistic that cannot exceed 1, such as p (.23) | yes keeps it (0.23) | never drops it on every number below 1 (.197 for an SE). Takes one of yes | no | never. In apa: <code>no</code>; in report: <code>yes</code>.</p></dd>
 
 <dt><code>p.format</code></dt>
 <dd><p>exact: the p-value | stars: asterisks | both. Takes one of exact | stars | both. In apa: <code>exact</code>.</p></dd>
@@ -232,7 +244,7 @@ fit.rows = r2, n
 <dd><p>the label of the combined missing row. Takes any text. In apa: <code>Missing</code>.</p></dd>
 
 <dt><code>variable.headings</code></dt>
-<dd><p>how each variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: <code>plain</code>.</p></dd>
+<dd><p>how each variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: <code>plain</code>; in report: <code>bold</code>.</p></dd>
 
 <dt><code>group.headings</code></dt>
 <dd><p>how a heading from headings = is set: italic | bold | plain. Takes one of italic | bold | plain. In apa: <code>italic</code>.</p></dd>
@@ -294,7 +306,7 @@ fit.rows = r2, n
 <dd><p>the word before the reference category: reference | ref. Takes any text. In apa: <code>reference</code>.</p></dd>
 
 <dt><code>variable.headings</code></dt>
-<dd><p>how a dummy-coded variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: <code>plain</code>.</p></dd>
+<dd><p>how a dummy-coded variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: <code>plain</code>; in report: <code>bold</code>.</p></dd>
 
 <dt><code>group.headings</code></dt>
 <dd><p>how a heading row is set: italic | bold | plain. Takes one of italic | bold | plain. In apa: <code>italic</code>.</p></dd>
@@ -356,7 +368,7 @@ fit.rows = r2, n
 <dd><p>the word before the reference category: reference | ref. Takes any text. In apa: <code>reference</code>.</p></dd>
 
 <dt><code>variable.headings</code></dt>
-<dd><p>how a dummy-coded variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: <code>plain</code>.</p></dd>
+<dd><p>how a dummy-coded variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: <code>plain</code>; in report: <code>bold</code>.</p></dd>
 
 <dt><code>group.headings</code></dt>
 <dd><p>how a heading row is set: italic | bold | plain. Takes one of italic | bold | plain. In apa: <code>italic</code>.</p></dd>
@@ -532,7 +544,7 @@ fit.rows = r2, n
 <dd><p>yes: the column variable's label over the groups' columns | no. Takes one of yes | no. In apa: <code>yes</code>.</p></dd>
 
 <dt><code>variable.headings</code></dt>
-<dd><p>how each variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: <code>plain</code>.</p></dd>
+<dd><p>how each variable's label row is set: plain | italic | bold. Takes one of plain | italic | bold. In apa: <code>plain</code>; in report: <code>bold</code>.</p></dd>
 
 
 </dl></div>

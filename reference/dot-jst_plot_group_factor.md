@@ -1,10 +1,4 @@
-# Internal helper: a grouping variable as a factor, value labels kept
-
-The form the `by =` and `facet =` variables take for plotting: a
-haven-labelled variable with value labels through
-[`haven::as_factor()`](https://forcats.tidyverse.org/reference/as_factor.html),
-so the labels name the groups, and anything else through
-[`factor()`](https://rdrr.io/r/base/factor.html).
+# Internal helper: a box plot's groups, labeled as the descriptives label them
 
 [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) on a
 [`jt()`](https://jma61.github.io/jstats/reference/jt.md) or
@@ -16,13 +10,14 @@ S344 item). The axis now takes the table's labels, which follow
 in the table's order: a labelled variable's codes sorted, a factor's
 levels in use, a text variable's values with the blank cells last, under
 `<blank>`. A result whose table does not match the groups in its model
-frame (one made by an older version) keeps the old axis.
+frame (one made by an older version) keeps the old axis. Called with no
+`groups`, it makes the `facet =` variable's panels the same way. (A
+first definition of this name, earlier in this file, was never called –
+R keeps the later – and was removed at Session 409, Fix Slate V.)
 
 ## Usage
 
 ``` r
-.jst_plot_group_factor(x, groups = NULL)
-
 .jst_plot_group_factor(x, groups = NULL)
 ```
 
@@ -37,7 +32,5 @@ frame (one made by an older version) keeps the old axis.
   Character; the Group column of the result's descriptives, or `NULL`.
 
 ## Value
-
-A factor.
 
 A factor.

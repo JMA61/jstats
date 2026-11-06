@@ -3,8 +3,9 @@
 `jtable()` turns a saved analysis result into a publication table and,
 when `file` is given, writes it to a Word file (.docx) that opens in
 Word, LibreOffice and Google Docs. The table's look and conventions come
-from a style – the built-in `"apa"` style, or a style file of your own
-(see [`jstyle`](https://jma61.github.io/jstats/reference/jstyle.md)).
+from a style – the built-in `"apa"` style for a journal, the built-in
+`"report"` style for a report, or a style file of your own (see
+[`jstyle`](https://jma61.github.io/jstats/reference/jstyle.md)).
 
 ## Usage
 
@@ -93,10 +94,10 @@ print(x, ...)
 
 - style:
 
-  The style's name in quotes: `"apa"`, or the name of a style file
-  (`"myjournal"` for myjournal.jstyle), looked for in the style folder
-  (`joptions(style.dir = )`), the working directory and your jstats
-  folder; or a path to one. NULL (the default) uses
+  The style's name in quotes: `"apa"`, `"report"`, or the name of a
+  style file (`"myjournal"` for myjournal.jstyle), looked for in the
+  style folder (`joptions(style.dir = )`), the working directory and
+  your jstats folder; or a path to one. NULL (the default) uses
   `joptions(style = )`, apa when it is not set.
 
 - overwrite:
@@ -241,7 +242,7 @@ t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
              overwrite = TRUE)
 #> Table 1. Regression Coefficients Predicting Wellbeing score (0-100)
 #>   2 models side by side, on a portrait page.
-#> Table written to /tmp/RtmpskceRk/Table2.docx
+#> Table written to /tmp/RtmpEGS82R/Table2.docx
 #> 
 
 # Several tables in one file: build each, then give them together
@@ -251,7 +252,7 @@ doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
 #>   2 variables, on a portrait page.
 #> Table 2. Regression Coefficients Predicting Wellbeing score (0-100)
 #>   2 models side by side, on a portrait page.
-#> 2 tables written to /tmp/RtmpskceRk/Tables.docx
+#> 2 tables written to /tmp/RtmpEGS82R/Tables.docx
 #> 
 print(doc)
 #> Table 1

@@ -618,6 +618,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_apa.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_bare_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_builtin.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_builtin_layers.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_call_layer.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_check_value.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_columns_req.html</loc></url>
@@ -635,8 +636,11 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_newer_line.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_note_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_object.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_open.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_open_file.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_print.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_read.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_report.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_reserved.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_resolve.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_save_path.html</loc></url>

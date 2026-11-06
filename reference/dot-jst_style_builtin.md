@@ -1,7 +1,8 @@
 # Internal helper: the built-in styles
 
-The styles jstats ships, by name. A name here always means the built-in,
-so a style file cannot take one
+The styles jstats ships, by name: apa, the complete root, and report, a
+short style based on it (Session 409, ruling R58). A name here always
+means the built-in, so a style file cannot take one
 ([`.jst_style_files()`](https://jma61.github.io/jstats/reference/dot-jst_style_files.md)
 leaves them out).
 

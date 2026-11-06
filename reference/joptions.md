@@ -170,12 +170,12 @@ query, or as an echo of the slots a setting call touched.
 - style:
 
   Character, length 1. Default: `"apa"`. The style a publication table
-  is made in when its call names none: the built-in `"apa"` style, or
-  the name of a style file (`"myjournal"` for myjournal.jstyle) found in
-  the style folder, the working directory or your jstats folder, or a
-  path to one. Checked when it is set: a style that cannot be found or
-  read stops the call with nothing changed. Set back with
-  `style = "apa"`.
+  is made in when its call names none: the built-in `"apa"` or
+  `"report"` style, or the name of a style file (`"myjournal"` for
+  myjournal.jstyle) found in the style folder, the working directory or
+  your jstats folder, or a path to one. Checked when it is set: a style
+  that cannot be found or read stops the call with nothing changed. Set
+  back with `style = "apa"`.
 
 - style.dir:
 
@@ -348,11 +348,11 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> 
 joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: /tmp/RtmpskceRk/Data
+#> Data folder: /tmp/RtmpEGS82R/Data
 #> Run joptions() to see all settings.
 #> 
 #> Created the data folder:
-#>   /tmp/RtmpskceRk/Data
+#>   /tmp/RtmpEGS82R/Data
 #> 
                                                   # (created if absent)
 joptions(data.dir = NULL)                         # back to the working directory
@@ -362,11 +362,11 @@ joptions(data.dir = NULL)                         # back to the working director
 #> 
 joptions(output.dir = file.path(tempdir(), "Tables")) # where tables are written
 #> Options Settings
-#> Output folder: /tmp/RtmpskceRk/Tables
+#> Output folder: /tmp/RtmpEGS82R/Tables
 #> Run joptions() to see all settings.
 #> 
 #> Created the output folder:
-#>   /tmp/RtmpskceRk/Tables
+#>   /tmp/RtmpEGS82R/Tables
 #> 
 joptions(output.dir = NULL)                       # back to the working directory
 #> Options Settings

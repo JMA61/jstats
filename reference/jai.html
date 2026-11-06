@@ -19,7 +19,7 @@ what they find there."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.275</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.276</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,7 +137,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats conventions</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Orientation for users and AI assistants.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.9 | jstats 0.9.275 | generated 2026-11-06</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.10 | jstats 0.9.276 | generated 2026-11-06</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats is an integrated set of j-prefixed analysis functions (jdesc,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jfreq, jlm, ...) with shared syntax and output styled after commercial</span>
@@ -235,14 +235,18 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   one table; to put several in one file, build each and give them</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   together: jtable(list(t1, t2), file = "Tables.docx"). jtable()</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   reports what it made, and print(t1) shows a table in the console. A</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   table's look and conventions come from a style: the built-in "apa",</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   or a .jstyle text file. jstyle("apa", save.as = "myjournal")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   writes a copy holding every setting, each with a note on what it</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   takes; jstyle("myjournal") checks a file and prints its settings;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   ?jstyle_settings lists them all. To change a style, edit values only</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   -- never add, rename or remove a setting or a section -- give colors</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   by name (lightblue) or six hex digits (ADD8E6), then run</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   jstyle("myjournal"), which names any value it cannot use.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   table's look and conventions come from a style: the built-in "apa"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   for a journal or "report" for a report, or a .jstyle text file.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jstyle("report", save.as = "myagency") writes a copy holding every</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   setting, each with a note on what it takes, and</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jstyle("report", save.as = "mine", font = "Calibri") a short file</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   holding only the settings given. jstyle("myagency") checks a file and</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   prints its settings, jstyle("myagency", open = TRUE) opens it in the</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   editor, and ?jstyle_settings lists every setting. To change a style,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   edit its values, or add to a short file a setting from that list; do</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   not invent a setting, and do not rename a setting or a section. Give</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   colors by name (lightblue) or six hex digits (ADD8E6), then run</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jstyle("myagency"), which names any value it cannot use.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Detailed help and worked examples for each function are available via</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ?jdesc, ?jdeclare_missing, and so on.</span>
