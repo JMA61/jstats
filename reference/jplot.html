@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.278</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -56,7 +56,8 @@
 <span>  numeric <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  categorical <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  count <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  facet <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  facet <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  style <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'jst_lm'</span></span>
@@ -67,28 +68,35 @@
 <span>  at <span class="op">=</span> <span class="st">"zero"</span>,</span>
 <span>  equation <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  r2 <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  <span class="va">...</span></span>
+<span>  <span class="va">...</span>,</span>
+<span>  style <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'jst_logistic'</span></span>
-<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, focal <span class="op">=</span> <span class="cn">NULL</span>, at <span class="op">=</span> <span class="st">"zero"</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, focal <span class="op">=</span> <span class="cn">NULL</span>, at <span class="op">=</span> <span class="st">"zero"</span>, <span class="va">...</span>, style <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'jst_ttest'</span></span>
-<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span>, style <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'jst_anova'</span></span>
-<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span>, style <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'jst_corr'</span></span>
-<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span>, style <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'jst_crosstab'</span></span>
-<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span>, style <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'jst_desc'</span></span>
 <span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'jst_freq'</span></span>
+<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'jst_alpha'</span></span>
+<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'jst_multi'</span></span>
 <span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -159,17 +167,14 @@ the corrected <code>subset = !(Age &lt; 40)</code> shown (see
 
 
 <dt id="arg-labels">labels<a class="anchor" aria-label="anchor" href="#arg-labels"></a></dt>
-<dd><p>Character or NULL. Variable label display mode (data-first
-and formula forms): one of <code>"both"</code>, <code>"names"</code>, <code>"labels"</code>,
-<code>"legend"</code>, or <code>"legend.bottom"</code>. <code>"names"</code> uses variable
-names as axis/legend titles; <code>"labels"</code> uses each variable's label
-as its axis/legend title instead (falling back to the name when
-unlabelled) and prints no console legend; <code>"legend"</code> and
-<code>"legend.bottom"</code> keep names on the axes and print a console label
-legend. <code>"both"</code> is accepted but currently renders as <code>"names"</code>
-on plots (the <code>"name: label"</code> form for plot titles is deferred to a
-later phase). NULL (default) defers to <code><a href="joutput.html">joutput()</a></code>'s
-<code>variable.id</code> setting. Not a logical.</p></dd>
+<dd><p>Character or NULL. How the chart names its variables
+(data-first and formula forms). NULL (the default) and <code>"labels"</code>
+title each axis and legend with the variable's label, the name where it
+has none; <code><a href="joutput.html">joutput()</a></code>'s <code>variable.id</code> does not reach a chart,
+as it reaches no table. <code>"names"</code> uses the variables' names;
+<code>"legend"</code> and <code>"legend.bottom"</code> keep names on the axes and
+print a console label legend; <code>"both"</code> is accepted and renders as
+<code>"names"</code>. Not a logical.</p></dd>
 
 
 <dt id="arg-numeric">numeric<a class="anchor" aria-label="anchor" href="#arg-numeric"></a></dt>
@@ -205,10 +210,18 @@ it is provided for symmetry with the other analysis functions.</p></dd>
 bar chart), bare or in quotes. See Details.</p></dd>
 
 
+<dt id="arg-style">style<a class="anchor" aria-label="anchor" href="#arg-style"></a></dt>
+<dd><p>The publication style the chart is drawn in, a name in
+quotes: <code>"apa"</code>, <code>"report"</code>, or the name of a style file (see
+<code><a href="jstyle.html">jstyle</a></code>). NULL (the default) uses <code>joptions(style = )</code>,
+apa when it is not set. The style's <code>[plot]</code> section gives the chart's
+look, and <code><a href="jtable.html">jtable()</a></code> frames the chart in the same style.</p></dd>
+
+
 <dt id="arg-focal">focal<a class="anchor" aria-label="anchor" href="#arg-focal"></a></dt>
-<dd><p>Unquoted name of the independent variable to place on the
+<dd><p>Unquoted name of the predictor to place on the
 x-axis for <code>jst_lm</code> / <code>jst_logistic</code> <code>fit</code> and
-<code>probability</code> plots. Defaults to the first independent variable
+<code>probability</code> plots. Defaults to the first predictor
 in the model that is not dummy-coded, since a fitted line needs a
 numeric axis. A dummy-coded categorical variable is named as the
 formula names it (<code>focal = Region</code>), and is drawn with its
@@ -218,7 +231,7 @@ each with its 95% confidence interval, the cases behind them.</p></dd>
 
 <dt id="arg-at">at<a class="anchor" aria-label="anchor" href="#arg-at"></a></dt>
 <dd><p>Character string or named list specifying where non-focal
-independent variables are held when drawing the fitted line in
+predictors are held when drawing the fitted line in
 <code>jst_lm</code> / <code>jst_logistic</code> methods. One of <code>zero</code>
 (default), <code>mean</code>, <code>mixed</code> (categorical at 0, interval
 at mean), or a named list <code>list(Var1 = value, ...)</code>. A term
@@ -230,25 +243,29 @@ line, so the line of a model with a squared term is a curve.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Invisibly, a single <code>ggplot</code> object if one plot is produced,
-or a named list of <code>ggplot</code> objects if multiple are produced
-(result-object form). Invisibly returns the <code>ggplot</code> object for
-the data-first form.</p>
+    <p>Invisibly, the chart: a <code>ggplot</code> object of class
+<code>jst_plot</code>, which keeps what a figure needs – its kind, its N,
+its default title from labels and the data it shows – for
+<code><a href="jtable.html">jtable()</a></code>; it remains a ggplot, so <code>+</code> adds to it.
+For a result drawn in several plots (result-object form), a named list
+of them, which <code><a href="jtable.html">jtable()</a></code> takes as one figure each.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p><strong>Result-object form:</strong> Pass a result object returned by one of the
 package's analysis functions. Produces appropriate plots for each class of
 result (see valid plot names below).</p>
-<p><strong>Formula form</strong> (for plots that distinguish DV from IV): Pass a
+<p><strong>Formula form</strong> (for plots that distinguish an outcome from a
+predictor): Pass a
 formula as the first argument, followed optionally by a data frame, given
 either positionally or as <code>data = </code>:
 <code>jplot(WellbeingScore ~ Income, data = community)</code> is the same plot
 as <code>jplot(WellbeingScore ~ Income, community)</code>. Used
 for scatterplots and boxplots, consistent with the formula syntax of
-<code><a href="jlm.html">jlm()</a></code>, <code><a href="jaov.html">jaov()</a></code>, and <code><a href="jt.html">jt()</a></code>. The DV on the left of
-<code>~</code> goes on the y-axis; the IV on the right goes on the x-axis. Only
-single-IV formulas are supported here; for multi-IV models, fit with
+<code><a href="jlm.html">jlm()</a></code>, <code><a href="jaov.html">jaov()</a></code>, and <code><a href="jt.html">jt()</a></code>. The outcome on the left of
+<code>~</code> goes on the y-axis; the predictor on the right goes on the
+x-axis. Only one predictor is supported here; for a model of several, fit
+with
 <code><a href="jlm.html">jlm()</a></code> and pass the result to <code>jplot()</code>. Each side names a
 variable as it stands: a computed term such as <code>log(Income)</code> or
 <code>I(Age &gt; 40)</code> is refused, so create it as a variable of the data
@@ -277,6 +294,20 @@ variable as numbers unless it is registered or asserted (see
 <p>Supports pipeline integration (<code>jsubset</code>, <code>jcomplete</code>, per-call
 <code>subset</code>), grouping via <code>by = </code>, and regression lines with
 equation/R-squared/band annotations.</p>
+<p><strong>The look.</strong> A chart is drawn in a publication style's look – the
+style's <code>[plot]</code> section: its font and size, its colors, its gridlines and
+axis lines, where its legend goes. Both built-in styles draw in greys,
+Arial 10 on white, bars from zero; <code>"apa"</code> with both axis lines, no
+gridlines and the legend at the right, <code>"report"</code> with light
+horizontal gridlines, the x axis line alone and the legend at the top. A
+chart's axes and legends are titled by the variables' labels, the name
+where a variable has none; a bar chart of one series shows each bar's
+count. The style is <code>joptions(style = )</code>'s, apa when none is set,
+or the call's <code>style =</code>.</p>
+<p><strong>A chart in a Word file.</strong> Keep a chart with <code>&lt;-</code> and give it
+to <code><a href="jtable.html">jtable()</a></code>: it goes into the Word file as a figure,
+numbered, its title – the variables' labels – in the caption with N
+after it, in the style it was drawn in (see <code><a href="jtable.html">jtable</a></code>).</p>
 <p>Valid plot names by class (for the result-object form):</p><ul><li><p><code>jst_lm</code>: <code>fit</code>, <code>predicted</code>, <code>effects</code>,
 <code>coef</code>, <code>residuals</code>, <code>qq</code>,
 <code>scale</code>, <code>cooks</code>, <code>leverage</code></p></li>
@@ -332,7 +363,7 @@ band illustrating the homoskedasticity assumption), <code>none</code> (no band).
     <div class="section level2">
     <h2 id="methods-by-class-">Methods (by class)<a class="anchor" aria-label="anchor" href="#methods-by-class-"></a></h2>
 
-<ul><li><p><code>jplot(default)</code>: the default method: a scatter or box plot from a formula (<code>DV ~ IV</code>), or a histogram or bar chart from a data frame and one or more variables.</p></li>
+<ul><li><p><code>jplot(default)</code>: the default method: a scatter or box plot from a formula (<code>Outcome ~ Predictor</code>), or a histogram or bar chart from a data frame and one or more variables.</p></li>
 <li><p><code>jplot(jst_lm)</code>: diagnostic, coefficient (forest), and fitted-effect plots for a <code><a href="jlm.html">jlm()</a></code> linear-regression result.</p></li>
 <li><p><code>jplot(jst_logistic)</code>: predicted-probability (S-curve) and coefficient plots for a <code><a href="jlogistic.html">jlogistic()</a></code> result.</p></li>
 <li><p><code>jplot(jst_ttest)</code>: a group-comparison box plot for a <code><a href="jt.html">jt()</a></code> result, with the group means marked; <code>which = "qq"</code> draws the normal Q-Q plot of its residuals.</p></li>
@@ -341,6 +372,11 @@ band illustrating the homoskedasticity assumption), <code>none</code> (no band).
 <li><p><code>jplot(jst_crosstab)</code>: a grouped bar chart of cell counts for a <code><a href="jcrosstab.html">jcrosstab()</a></code> result.</p></li>
 <li><p><code>jplot(jst_desc)</code>: (planned) direct plotting of a <code><a href="jdesc.html">jdesc()</a></code> result is not yet available; this method points you to the data-first form, for example <code>jplot(data, Variable)</code>.</p></li>
 <li><p><code>jplot(jst_freq)</code>: (planned) direct plotting of a <code><a href="jfreq.html">jfreq()</a></code> result is not yet available; this method points you to the data-first form, for example <code>jplot(data, Variable)</code>.</p></li>
+<li><p><code>jplot(jst_alpha)</code>: a <code><a href="jalpha.html">jalpha()</a></code> result is not drawn; this method says
+so and points you to the data-first form for its items, for example
+<code>jplot(data, Item1)</code>.</p></li>
+<li><p><code>jplot(jst_multi)</code>: a <code><a href="jmulti.html">jmulti()</a></code> result is not drawn; this method says
+so and points you to the data-first form for its items.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -417,8 +453,6 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 97 (6 Excluded)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Ignoring unknown labels:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> <span style="color: #00BB00;">fill</span> : <span style="color: #0000BB;">"Volunteer"</span></span>
 <span class="r-plt img"><img src="jplot-10.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Boxplot: a labelled variable with a few categories, such as Region,</span></span></span>
@@ -463,6 +497,27 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-plt img"><img src="jplot-16.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A chart kept, then written to a Word file as a figure</span></span></span>
+<span class="r-in"><span><span class="va">p1</span> <span class="op">&lt;-</span> <span class="fu">jplot</span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Bar Chart: Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-plt img"><img src="jplot-17.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="fu"><a href="jtable.html">jtable</a></span><span class="op">(</span><span class="va">p1</span>, file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Figure1.docx"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Figure 1. Region of residence (N = 103)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   a bar chart, 6 by 4 inches, on a portrait page.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Figure written to /tmp/RtmpGuokn9/Figure1.docx</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The report style's look</span></span></span>
+<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span>, style <span class="op">=</span> <span class="st">"report"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Bar Chart: Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-plt img"><img src="jplot-18.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default (omit the data frame in either form)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame set to: community</span>
@@ -472,28 +527,28 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 97 (6 Excluded)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-17.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-19.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Income</span>, line <span class="op">=</span> <span class="st">"lm"</span><span class="op">)</span>  <span class="co"># + regression line</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Scatterplot: WellbeingScore and Income</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 97 (6 Excluded)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-18.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-20.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">Age</span><span class="op">)</span>                                   <span class="co"># histogram</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Histogram: Age</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-19.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-21.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">Region</span>, <span class="va">Volunteer</span><span class="op">)</span>                     <span class="co"># grouped bar chart</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Grouped Bar Chart: Region and Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-20.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-22.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

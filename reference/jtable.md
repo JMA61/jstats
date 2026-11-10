@@ -30,6 +30,9 @@ print(x, ...)
 
 # S3 method for class 'jst_tables'
 print(x, ...)
+
+# S3 method for class 'jst_figure'
+print(x, ...)
 ```
 
 ## Arguments
@@ -59,15 +62,21 @@ print(x, ...)
   is a table of its own, and so is a
   [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md)
   result. Or a table `jtable()` has already built, or a list of them:
-  they go to the file as they are, in the order given.
+  they go to the file as they are, in the order given. Or a chart, made
+  a figure: one
+  [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) drew,
+  one drawn in ggplot2, or the set of plots
+  [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) drew of
+  one result, each a figure; a chart goes beside built tables, never
+  beside a saved result.
 
 - headings:
 
   A named list: each heading and the variables under it, bare or in
   quotes, e.g.
-  `list("Dependent variable" = Wellbeing, "Independent variables" = c(Income, Age))`.
-  Every variable of the result goes under one heading; the table follows
-  the list's order. For a descriptives or frequency table.
+  `list(Outcome = WellbeingScore, Predictors = c(Income, Age))`. Every
+  variable of the result goes under one heading; the table follows the
+  list's order. For a descriptives or frequency table.
 
 - markers:
 
@@ -80,11 +89,11 @@ print(x, ...)
 
 - title:
 
-  The table's title; the style's title when NULL (a regression table's
-  names the outcome, a t-test, ANOVA or crosstab's the grouping
-  variable, a multiple-response table's is the text its items' labels
-  share). A title given here fills the same placeholders the style's
-  does – `{outcome}`, `{group}`, `{set}` – so
+  The table's title, or a figure's; the style's title when NULL (a
+  regression table's names the outcome, a t-test, ANOVA or crosstab's
+  the grouping variable, a multiple-response table's is the text its
+  items' labels share). A title given here fills the same placeholders
+  the style's does – `{outcome}`, `{group}`, `{set}` – so
   `title = "Ages by {group}"` names the grouping variable. `*text*` sets
   a word in italics.
 
@@ -110,10 +119,11 @@ print(x, ...)
 
 - style:
 
-  The style's name in quotes: `"apa"`, `"report"`, or the name of a
-  style file (`"myjournal"` for myjournal.jstyle), looked for in the
-  style folder (`joptions(style.dir = )`), the working directory and
-  your jstats folder; or a path to one. NULL (the default) uses
+  The style a table is built in, or a chart framed and drawn in – its
+  name in quotes: `"apa"`, `"report"`, or the name of a style file
+  (`"myjournal"` for myjournal.jstyle), looked for in the style folder
+  (`joptions(style.dir = )`), the working directory and your jstats
+  folder; or a path to one. NULL (the default) uses
   `joptions(style = )`, apa when it is not set.
 
 - overwrite:
@@ -144,15 +154,18 @@ print(x, ...)
   [`jstyle_settings`](https://jma61.github.io/jstats/reference/jstyle_settings.md)
   lists every setting. The general settings (the font, the caption's
   form, the decimals) are the style file's, except `landscape = "yes"`
-  or `"no"`, a page choice the call may make. Any other input stops with
-  "unused input".
+  or `"no"`, a page choice the call may make. A chart's settings, the
+  `[plot]` section's, are the style file's alone. Any other input stops
+  with "unused input".
 
 ## Value
 
 The table, invisibly: an object of class `jst_table`, which shows a
 facsimile of the Word table when printed. A call given two or more built
 tables returns them together (class `jst_tables`), which prints each
-one, numbered as in the file.
+one, numbered as in the file. A chart given alone returns its figure
+(class `jst_figure`), which prints its caption and note and draws the
+picture as the Word file holds it.
 
 ## Details
 
@@ -186,10 +199,12 @@ each item's mean, standard deviation, corrected item-total correlation
 and alpha if the item is deleted; and a multiple-response table from a
 [`jmulti`](https://jma61.github.io/jstats/reference/jmulti.md) result –
 how many chose each option of a set of yes/no items, and what percentage
-of everyone who answered. The variables of a descriptives or frequency
-table go under role headings when `headings` names them, and each
-specific note's variables are marked when `markers` names them. A filter
-the analysis applied
+of everyone who answered. A chart – one
+[`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) drew, or
+one drawn in ggplot2 – goes into the Word file as a figure (see Charts,
+below). The variables of a descriptives or frequency table go under role
+headings when `headings` names them, and each specific note's variables
+are marked when `markers` names them. A filter the analysis applied
 ([`jsubset`](https://jma61.github.io/jstats/reference/jsubset.md),
 `subset =`) is named in the general note.
 
@@ -214,6 +229,36 @@ page it needs: a table too wide for a portrait page sits on landscape
 pages of its own, and the tables around it stay portrait.
 `landscape = "yes"` or `"no"` in the call that writes a file sets every
 page.
+
+**Charts.** A chart kept with `<-` – one
+[`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) drew, or
+one drawn in ggplot2 – is given as a built table is:
+`jtable(p1, file = "Figure1.docx")` writes it as a figure, and
+`jtable(list(t1, p1, t2), file = "Report.docx")` writes it between the
+tables. Figures are numbered apart from the tables (Figure 1, Figure 2,
+...), each framed as the style frames a table: the number, the title
+with N after it, the picture, and a note only when there is one. A
+[`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) chart's
+title is its variables' labels, or a model's or a test's plot's own
+title; a chart drawn in ggplot2 has its own title, which moves from the
+picture to the caption. `title =`, `note =` and `source =` give one
+chart's. A
+[`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) chart is
+drawn in the call's `style =`, or else in the style it was drawn in; a
+chart drawn in ggplot2 keeps its own look. The picture is drawn at the
+size the style's `[plot]` section gives (6 by 4 inches in both built-in
+styles, at 300 dots an inch), kept within the page. The `[plot]` section
+can also write each chart's data to an Excel file beside the Word file
+(`data.file = yes`: \_figures.xlsx, a sheet per figure) and each figure
+as a vector file (`vector.file = pdf` or `eps`: \_Figure_1.pdf),
+replacing files of those names; both are off in the built-in styles.
+
+**Labels.** A table or a figure shows each variable by its label and
+each category by its value label, as the result kept them when the
+analysis ran. Where the result holds none, the variable's name or the
+category's code shows, and a note says so: add the label with
+[`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) and
+run the analysis again.
 
 **The analysis inside the call.** `jtable(jlm(Fear ~ Age, d))` runs the
 analysis without printing it and makes its table; errors and warnings
@@ -260,7 +305,7 @@ t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
              overwrite = TRUE)
 #> Table 1. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> Table written to /tmp/RtmpLJH66q/Table2.docx
+#> Table written to /tmp/RtmpGuokn9/Table2.docx
 #> 
 
 # Several tables in one file: build each, then give them together
@@ -270,7 +315,7 @@ doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
 #>   2 variables, on a portrait page.
 #> Table 2. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> 2 tables written to /tmp/RtmpLJH66q/Tables.docx
+#> 2 tables written to /tmp/RtmpGuokn9/Tables.docx
 #> 
 print(doc)
 #> Table 1
@@ -293,6 +338,22 @@ print(doc)
 #> Volunteered in past year                            5.36  2.18  .23   .016
 #> R²                          .12                      .17
 #> --------------------------------------------------------------------------
+#> 
+
+# A chart as a figure, beside the tables
+p1 <- jplot(community, Region)
+#> Bar Chart: Region
+#> 
+#> Analysis N: 103
+#> 
+
+doc2 <- jtable(list(t1, p1), file = file.path(tempdir(), "Report.docx"),
+               overwrite = TRUE)
+#> Table 1. Descriptive Statistics for Study Variables (N = 103)
+#>   2 variables, on a portrait page.
+#> Figure 1. Region of residence (N = 103)
+#>   a bar chart, 6 by 4 inches, on a portrait page.
+#> 1 table and 1 figure written to /tmp/RtmpGuokn9/Report.docx
 #> 
 
 # Keep a result for a later session with base R

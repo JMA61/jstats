@@ -3,7 +3,8 @@
 The alternative to the histogram (Capability Slate C3, Session 378): the
 variable's kernel density estimate, one curve, or one per group of
 `by =` laid over each other, and one panel per group of `facet =`. Never
-the automatic choice: `type = "density"` asks for it.
+the automatic choice: `type = "density"` asks for it. In the look's
+colors since Session 415.
 
 ## Usage
 
@@ -14,6 +15,7 @@ the automatic choice: `type = "density"` asks for it.
   by_name = NULL,
   axis_labels = NULL,
   by_label = NULL,
-  facet_name = NULL
+  facet_name = NULL,
+  look = .jst_plot_look_now()
 )
 ```

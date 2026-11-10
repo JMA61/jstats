@@ -85,8 +85,16 @@ A style file is plain text: a setting is a name, an equals sign and a
 value; a `#` starts a note; the general settings come first, then one
 section per table type, `[descriptives]`, `[frequencies]`,
 `[regression]`, `[logistic]`, `[correlation]`, `[ttest]`, `[anova]`,
-`[crosstab]`, `[reliability]` and `[multiresponse]`. A setting the file
-leaves out comes from the style its `based.on` line names.
+`[crosstab]`, `[reliability]` and `[multiresponse]`, then `[plot]`, a
+chart's: the font and size its words are drawn in, its palette (greys,
+or colors in order, such as a brand's), gridlines, axis lines, where the
+legend goes, the values on its bars, its width and height in inches, its
+resolution, and whether a Word file of figures is written with each
+chart's data in an Excel file and each figure as a vector file. A
+setting the file leaves out comes from the style its `based.on` line
+names; a font or size the `[plot]` section leaves out comes from the
+file's general settings first, so a file that sets its tables' font sets
+its charts' too.
 [`jstyle_settings`](https://jma61.github.io/jstats/reference/jstyle_settings.md)
 lists every setting and what it takes. jstats looks for a style named in
 a call in the style folder (`joptions(style.dir = )`), the working
@@ -324,6 +332,22 @@ jstyle("apa")
 #> none.label    = None of these
 #> choice.note   = yes
 #> 
+#> [plot]
+#> font            = Arial
+#> size            = 10
+#> palette         = greys
+#> gridlines       = none
+#> grid.color      = D9D9D9
+#> axis.lines      = both
+#> legend.position = right
+#> values          = yes
+#> values.grouped  = no
+#> width           = 6
+#> height          = 4
+#> resolution      = 300
+#> data.file       = no
+#> vector.file     = none
+#> 
 jstyle("report")
 #> Style: report
 #>   built into jstats
@@ -514,13 +538,29 @@ jstyle("report")
 #> none.label    = None of these  # from apa
 #> choice.note   = yes            # from apa
 #> 
+#> [plot]
+#> font            = Arial
+#> size            = 10
+#> palette         = greys       # from apa
+#> gridlines       = horizontal
+#> grid.color      = D9D9D9      # from apa
+#> axis.lines      = x
+#> legend.position = top
+#> values          = yes         # from apa
+#> values.grouped  = no          # from apa
+#> width           = 6           # from apa
+#> height          = 4           # from apa
+#> resolution      = 300         # from apa
+#> data.file       = no          # from apa
+#> vector.file     = none        # from apa
+#> 
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/RtmpLJH66q/myjournal.jstyle
+#> Style written to /tmp/RtmpGuokn9/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/RtmpLJH66q/myapa.jstyle
+#> Style written to /tmp/RtmpGuokn9/myapa.jstyle
 #> 
 ```

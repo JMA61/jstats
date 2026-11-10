@@ -13,7 +13,7 @@ Gelman-standardized coefficients and odds ratios (Exp(b))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.278</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -76,11 +76,11 @@ Gelman-standardized coefficients and odds ratios (Exp(b)).</p>
 
 
 <dl><dt id="arg-formula">formula<a class="anchor" aria-label="anchor" href="#arg-formula"></a></dt>
-<dd><p>A model formula, e.g. <code>DV ~ IV1 + IV2</code>. The DV
-must be a binary variable coded 0/1, and a variable of the data: a
+<dd><p>A model formula, e.g. <code>Outcome ~ Predictor1 +
+Predictor2</code>. The outcome must be a binary variable coded 0/1, and a variable of the data: a
 computed term on the left, such as <code>I(Score &gt; 50)</code>, is refused,
 so create the 0/1 variable first. Transformed predictor terms such
-as <code>log(IV1)</code> are computed automatically and used throughout the
+as <code>log(Predictor1)</code> are computed automatically and used throughout the
 output.</p></dd>
 
 
@@ -122,7 +122,7 @@ they lack value labels, named bare or in quotes, several with
 
 
 <dt id="arg-count">count<a class="anchor" aria-label="anchor" href="#arg-count"></a></dt>
-<dd><p>Optional. Independent variables to treat as counts for this
+<dd><p>Optional. Predictors to treat as counts for this
 call (the per-call counterpart of <code><a href="jcount.html">jcount()</a></code>), named bare or in
 quotes, several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>. A count predictor is numeric-like, so it enters the
 model exactly as <code>numeric</code> would; the argument is provided for
@@ -346,7 +346,7 @@ prints them; NULL otherwise.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The dependent variable must be coded 0/1. If it is not, the function
+    <p>The outcome must be coded 0/1. If it is not, the function
 stops with a clear error message and suggests the appropriate
 <code><a href="jrecode.html">jrecode()</a></code> command.</p>
 <p>Handles haven-labelled variables, registered dummy variables via
@@ -371,8 +371,8 @@ those that evaluate to one numeric or logical column. Terms that produce
 several columns (<code>poly(x, 2)</code>, spline bases) or a categorical
 result (<code>cut(x, 3)</code>) are not supported inline: create the derived
 variable as a column of the data first, then name that column in the
-formula. (The dependent variable must be a plain 0/1 dichotomy, so a
-transform applies to predictors, not the response.)
+formula. (The outcome must be a plain 0/1 dichotomy, so a
+transform applies to predictors, not the outcome.)
 A categorical variable may be compared but not transformed.
 <code>I(x == 2)</code>, <code>I(x %in% c(1, 3))</code> and, for a text variable,
 <code>I(x == "web")</code> each enter the model as a TRUE/FALSE predictor, as
@@ -498,7 +498,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      117.260            0.158          0.211      123.260</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -536,7 +536,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      117.260            0.158          0.211      123.260</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -580,7 +580,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      115.385            0.174          0.233      123.385</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -625,7 +625,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      108.857            0.228          0.305      114.857</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -666,7 +666,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      117.260            0.158          0.211      123.260</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -703,7 +703,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      130.801            0.108          0.144      140.801</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -753,7 +753,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      130.801            0.108          0.144      140.801</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -801,7 +801,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      130.801            0.108          0.144      140.801</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -842,7 +842,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      112.913            0.199          0.266      118.913</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

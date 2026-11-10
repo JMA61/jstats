@@ -36,4 +36,5 @@ S336: the N statement, not the table).
 
 ## Value
 
-`invisible(NULL)`; prints the line.
+The cases drawn, invisibly (a figure's N since Session 415, the S412
+audit's F7); prints the line.

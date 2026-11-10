@@ -21,7 +21,8 @@ joutput("full"), the tables that could have been one.
   replaced = FALSE,
   asked = FALSE,
   hint = FALSE,
-  how = NULL
+  how = NULL,
+  extra = NULL
 )
 ```
 
@@ -53,3 +54,9 @@ joutput("full"), the tables that could have been one.
 
   As
   [`.jst_table_finish()`](https://jma61.github.io/jstats/reference/dot-jst_table_finish.md).
+
+- extra:
+
+  The files written beside the Word file for its figures
+  ([`.jst_figure_files()`](https://jma61.github.io/jstats/reference/dot-jst_figure_files.md)),
+  or NULL.

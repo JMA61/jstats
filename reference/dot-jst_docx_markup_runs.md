@@ -12,7 +12,8 @@ that would be italic is set inside italic text.
   size = NULL,
   bold = FALSE,
   italic = FALSE,
-  color = NULL
+  color = NULL,
+  keep = FALSE
 )
 ```
 
@@ -35,3 +36,8 @@ that would be italic is set inside italic text.
 
   A six-digit hex colour, or NULL (Session 405: a column head with
   markup takes the header's colour).
+
+- keep:
+
+  Logical; TRUE for a row's label
+  ([`.jst_docx_keep_text()`](https://jma61.github.io/jstats/reference/dot-jst_docx_keep_text.md)).

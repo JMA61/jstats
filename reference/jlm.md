@@ -91,12 +91,12 @@ jlm(
   counterpart of
   [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)),
   named bare or in quotes, several with
-  [`c()`](https://rdrr.io/r/base/c.html). On the dependent variable it
-  speaks the count-regression caveat definitively rather than as a
-  hedge, and applies even when the variable sits outside the structural
-  0-6 band. On an independent variable it behaves like `numeric` (a
-  count predictor enters the model as numeric). A variable cannot be
-  listed in both `count` and `categorical`.
+  [`c()`](https://rdrr.io/r/base/c.html). On the outcome it speaks the
+  count-regression caveat definitively rather than as a hedge, and
+  applies even when the variable sits outside the structural 0-6 band.
+  On a predictor it behaves like `numeric` (a count predictor enters the
+  model as numeric). A variable cannot be listed in both `count` and
+  `categorical`.
 
 - ci:
 
@@ -420,10 +420,10 @@ statistics.
   plain numeric variables) to be treated as categorical (e.g. a numeric
   Program variable coded 1–4 from a CSV file).
 
-- The dependent variable is always modelled as numeric. Naming it in
-  `numeric` or `count` does not change that; it only asserts the DV's
-  role so the count / categorical-like note is silenced (`numeric`) or
-  stated definitively (`count`).
+- The outcome is always modelled as numeric. Naming it in `numeric` or
+  `count` does not change that; it only asserts the outcome's role so
+  the count / categorical-like note is silenced (`numeric`) or stated
+  definitively (`count`).
 
 Transformed terms in `formula` are computed automatically. A term that
 applies a function to a variable – `log(x)`, `sqrt(x)`, `exp(x)`,

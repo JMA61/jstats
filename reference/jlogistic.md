@@ -36,11 +36,12 @@ jlogistic(
 
 - formula:
 
-  A model formula, e.g. `DV ~ IV1 + IV2`. The DV must be a binary
-  variable coded 0/1, and a variable of the data: a computed term on the
-  left, such as `I(Score > 50)`, is refused, so create the 0/1 variable
-  first. Transformed predictor terms such as `log(IV1)` are computed
-  automatically and used throughout the output.
+  A model formula, e.g. `Outcome ~ Predictor1 + Predictor2`. The outcome
+  must be a binary variable coded 0/1, and a variable of the data: a
+  computed term on the left, such as `I(Score > 50)`, is refused, so
+  create the 0/1 variable first. Transformed predictor terms such as
+  `log(Predictor1)` are computed automatically and used throughout the
+  output.
 
 - data:
 
@@ -83,8 +84,8 @@ jlogistic(
 
 - count:
 
-  Optional. Independent variables to treat as counts for this call (the
-  per-call counterpart of
+  Optional. Predictors to treat as counts for this call (the per-call
+  counterpart of
   [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)),
   named bare or in quotes, several with
   [`c()`](https://rdrr.io/r/base/c.html). A count predictor is
@@ -338,8 +339,8 @@ Invisibly returns a list of class `jst_logistic` containing:
 
 ## Details
 
-The dependent variable must be coded 0/1. If it is not, the function
-stops with a clear error message and suggests the appropriate
+The outcome must be coded 0/1. If it is not, the function stops with a
+clear error message and suggests the appropriate
 [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)
 command.
 
@@ -368,9 +369,9 @@ supported inline are those that evaluate to one numeric or logical
 column. Terms that produce several columns (`poly(x, 2)`, spline bases)
 or a categorical result (`cut(x, 3)`) are not supported inline: create
 the derived variable as a column of the data first, then name that
-column in the formula. (The dependent variable must be a plain 0/1
-dichotomy, so a transform applies to predictors, not the response.) A
-categorical variable may be compared but not transformed. `I(x == 2)`,
+column in the formula. (The outcome must be a plain 0/1 dichotomy, so a
+transform applies to predictors, not the outcome.) A categorical
+variable may be compared but not transformed. `I(x == 2)`,
 `I(x %in% c(1, 3))` and, for a text variable, `I(x == "web")` each enter
 the model as a TRUE/FALSE predictor, as in
 [`lm()`](https://rdrr.io/r/stats/lm.html); an order comparison such as
@@ -498,7 +499,7 @@ jlogistic(Volunteer ~ Income + Age, data = community)
 #> -----------------  --------------  -------------  -------
 #>      117.260            0.158          0.211      123.260
 #> 
-#> Dependent Variable Encoding
+#> Outcome Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 #> 
@@ -536,7 +537,7 @@ jlogistic(Volunteer ~ Income + Age, community)
 #> -----------------  --------------  -------------  -------
 #>      117.260            0.158          0.211      123.260
 #> 
-#> Dependent Variable Encoding
+#> Outcome Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 #> 
@@ -580,7 +581,7 @@ jlogistic(Volunteer ~ Income * Age, data = community)
 #> -----------------  --------------  -------------  -------
 #>      115.385            0.174          0.233      123.385
 #> 
-#> Dependent Variable Encoding
+#> Outcome Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 #> 
@@ -625,7 +626,7 @@ jlogistic(OwnsHome01 ~ Income + Age, data = df)
 #> -----------------  --------------  -------------  -------
 #>      108.857            0.228          0.305      114.857
 #> 
-#> Dependent Variable Encoding
+#> Outcome Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 #> 
@@ -666,7 +667,7 @@ jlogistic(Volunteer ~ Income + Age)
 #> -----------------  --------------  -------------  -------
 #>      117.260            0.158          0.211      123.260
 #> 
-#> Dependent Variable Encoding
+#> Outcome Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 #> 
@@ -703,7 +704,7 @@ jlogistic(Volunteer ~ Region + Age, categorical = "Region")
 #> -----------------  --------------  -------------  -------
 #>      130.801            0.108          0.144      140.801
 #> 
-#> Dependent Variable Encoding
+#> Outcome Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 #> 
@@ -753,7 +754,7 @@ jlogistic(Volunteer ~ Region + Age)
 #> -----------------  --------------  -------------  -------
 #>      130.801            0.108          0.144      140.801
 #> 
-#> Dependent Variable Encoding
+#> Outcome Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 #> 
@@ -801,7 +802,7 @@ jlogistic(Volunteer ~ Region + Age)
 #> -----------------  --------------  -------------  -------
 #>      130.801            0.108          0.144      140.801
 #> 
-#> Dependent Variable Encoding
+#> Outcome Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 #> 
@@ -842,7 +843,7 @@ jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #> -----------------  --------------  -------------  -------
 #>      112.913            0.199          0.266      118.913
 #> 
-#> Dependent Variable Encoding
+#> Outcome Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 #> 

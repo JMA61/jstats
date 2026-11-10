@@ -12,7 +12,7 @@ Internal helper: the parts of a document file
 
 - tables:
 
-  A list of jst_table.
+  A list of jst_table and jst_figure.
 
 - style:
 
@@ -24,4 +24,5 @@ Internal helper: the parts of a document file
 
 ## Value
 
-A named list of parts: path in the package, then the text.
+A named list of parts: path in the package, then the text, or a
+picture's bytes.

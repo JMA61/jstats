@@ -24,7 +24,8 @@ allows (Session 407), so the title keeps one line.
 
 - tables:
 
-  A list of jst_table.
+  A list of jst_table, and of jst_figure (a figure's page and size,
+  [`.jst_figure_layout()`](https://jma61.github.io/jstats/reference/dot-jst_figure_layout.md)).
 
 - style:
 

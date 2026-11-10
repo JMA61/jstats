@@ -22,7 +22,8 @@ jplot(
   numeric = NULL,
   categorical = NULL,
   count = NULL,
-  facet = NULL
+  facet = NULL,
+  style = NULL
 )
 
 # S3 method for class 'jst_lm'
@@ -33,28 +34,35 @@ jplot(
   at = "zero",
   equation = TRUE,
   r2 = TRUE,
-  ...
+  ...,
+  style = NULL
 )
 
 # S3 method for class 'jst_logistic'
-jplot(x, which = "core", focal = NULL, at = "zero", ...)
+jplot(x, which = "core", focal = NULL, at = "zero", ..., style = NULL)
 
 # S3 method for class 'jst_ttest'
-jplot(x, which = "core", ...)
+jplot(x, which = "core", ..., style = NULL)
 
 # S3 method for class 'jst_anova'
-jplot(x, which = "core", ...)
+jplot(x, which = "core", ..., style = NULL)
 
 # S3 method for class 'jst_corr'
-jplot(x, which = "core", ...)
+jplot(x, which = "core", ..., style = NULL)
 
 # S3 method for class 'jst_crosstab'
-jplot(x, which = "core", ...)
+jplot(x, which = "core", ..., style = NULL)
 
 # S3 method for class 'jst_desc'
 jplot(x, which = "core", ...)
 
 # S3 method for class 'jst_freq'
+jplot(x, which = "core", ...)
+
+# S3 method for class 'jst_alpha'
+jplot(x, which = "core", ...)
+
+# S3 method for class 'jst_multi'
 jplot(x, which = "core", ...)
 ```
 
@@ -123,17 +131,14 @@ jplot(x, which = "core", ...)
 
 - labels:
 
-  Character or NULL. Variable label display mode (data-first and formula
-  forms): one of `"both"`, `"names"`, `"labels"`, `"legend"`, or
-  `"legend.bottom"`. `"names"` uses variable names as axis/legend
-  titles; `"labels"` uses each variable's label as its axis/legend title
-  instead (falling back to the name when unlabelled) and prints no
-  console legend; `"legend"` and `"legend.bottom"` keep names on the
-  axes and print a console label legend. `"both"` is accepted but
-  currently renders as `"names"` on plots (the `"name: label"` form for
-  plot titles is deferred to a later phase). NULL (default) defers to
+  Character or NULL. How the chart names its variables (data-first and
+  formula forms). NULL (the default) and `"labels"` title each axis and
+  legend with the variable's label, the name where it has none;
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
-  `variable.id` setting. Not a logical.
+  `variable.id` does not reach a chart, as it reaches no table.
+  `"names"` uses the variables' names; `"legend"` and `"legend.bottom"`
+  keep names on the axes and print a console label legend; `"both"` is
+  accepted and renders as `"names"`. Not a logical.
 
 - numeric:
 
@@ -174,34 +179,47 @@ jplot(x, which = "core", ...)
   histogram, density plot, bar chart or grouped bar chart), bare or in
   quotes. See Details.
 
+- style:
+
+  The publication style the chart is drawn in, a name in quotes:
+  `"apa"`, `"report"`, or the name of a style file (see
+  [`jstyle`](https://jma61.github.io/jstats/reference/jstyle.md)). NULL
+  (the default) uses `joptions(style = )`, apa when it is not set. The
+  style's `[plot]` section gives the chart's look, and
+  [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md)
+  frames the chart in the same style.
+
 - focal:
 
-  Unquoted name of the independent variable to place on the x-axis for
-  `jst_lm` / `jst_logistic` `fit` and `probability` plots. Defaults to
-  the first independent variable in the model that is not dummy-coded,
-  since a fitted line needs a numeric axis. A dummy-coded categorical
-  variable is named as the formula names it (`focal = Region`), and is
-  drawn with its categories along the axis: the predicted outcome (or
-  probability) at each with its 95% confidence interval, the cases
-  behind them.
+  Unquoted name of the predictor to place on the x-axis for `jst_lm` /
+  `jst_logistic` `fit` and `probability` plots. Defaults to the first
+  predictor in the model that is not dummy-coded, since a fitted line
+  needs a numeric axis. A dummy-coded categorical variable is named as
+  the formula names it (`focal = Region`), and is drawn with its
+  categories along the axis: the predicted outcome (or probability) at
+  each with its 95% confidence interval, the cases behind them.
 
 - at:
 
-  Character string or named list specifying where non-focal independent
-  variables are held when drawing the fitted line in `jst_lm` /
-  `jst_logistic` methods. One of `zero` (default), `mean`, `mixed`
-  (categorical at 0, interval at mean), or a named list
-  `list(Var1 = value, ...)`. A term computed from the focal variable
-  alone, or from it and variables held – a square, `I(x^2)`; a log,
-  `log(x + 1)` – is not held: it is computed from the focal variable at
-  each point of the line, so the line of a model with a squared term is
-  a curve.
+  Character string or named list specifying where non-focal predictors
+  are held when drawing the fitted line in `jst_lm` / `jst_logistic`
+  methods. One of `zero` (default), `mean`, `mixed` (categorical at 0,
+  interval at mean), or a named list `list(Var1 = value, ...)`. A term
+  computed from the focal variable alone, or from it and variables held
+  – a square, `I(x^2)`; a log, `log(x + 1)` – is not held: it is
+  computed from the focal variable at each point of the line, so the
+  line of a model with a squared term is a curve.
 
 ## Value
 
-Invisibly, a single `ggplot` object if one plot is produced, or a named
-list of `ggplot` objects if multiple are produced (result-object form).
-Invisibly returns the `ggplot` object for the data-first form.
+Invisibly, the chart: a `ggplot` object of class `jst_plot`, which keeps
+what a figure needs – its kind, its N, its default title from labels and
+the data it shows – for
+[`jtable()`](https://jma61.github.io/jstats/reference/jtable.md); it
+remains a ggplot, so `+` adds to it. For a result drawn in several plots
+(result-object form), a named list of them, which
+[`jtable()`](https://jma61.github.io/jstats/reference/jtable.md) takes
+as one figure each.
 
 ## Details
 
@@ -209,21 +227,22 @@ Invisibly returns the `ggplot` object for the data-first form.
 package's analysis functions. Produces appropriate plots for each class
 of result (see valid plot names below).
 
-**Formula form** (for plots that distinguish DV from IV): Pass a formula
-as the first argument, followed optionally by a data frame, given either
-positionally or as `data = `:
+**Formula form** (for plots that distinguish an outcome from a
+predictor): Pass a formula as the first argument, followed optionally by
+a data frame, given either positionally or as `data = `:
 `jplot(WellbeingScore ~ Income, data = community)` is the same plot as
 `jplot(WellbeingScore ~ Income, community)`. Used for scatterplots and
 boxplots, consistent with the formula syntax of
 [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md),
 [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md), and
-[`jt()`](https://jma61.github.io/jstats/reference/jt.md). The DV on the
-left of `~` goes on the y-axis; the IV on the right goes on the x-axis.
-Only single-IV formulas are supported here; for multi-IV models, fit
-with [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md) and pass
-the result to `jplot()`. Each side names a variable as it stands: a
-computed term such as `log(Income)` or `I(Age > 40)` is refused, so
-create it as a variable of the data first.
+[`jt()`](https://jma61.github.io/jstats/reference/jt.md). The outcome on
+the left of `~` goes on the y-axis; the predictor on the right goes on
+the x-axis. Only one predictor is supported here; for a model of
+several, fit with
+[`jlm()`](https://jma61.github.io/jstats/reference/jlm.md) and pass the
+result to `jplot()`. Each side names a variable as it stands: a computed
+term such as `log(Income)` or `I(Age > 40)` is refused, so create it as
+a variable of the data first.
 
 **Variable-list form** (for distributions and counts): Pass a data frame
 followed by one or two unquoted variable names. The data frame is given
@@ -251,6 +270,24 @@ only a scatter plot draws) keeps the numbers.
 Supports pipeline integration (`jsubset`, `jcomplete`, per-call
 `subset`), grouping via `by = `, and regression lines with
 equation/R-squared/band annotations.
+
+**The look.** A chart is drawn in a publication style's look – the
+style's `[plot]` section: its font and size, its colors, its gridlines
+and axis lines, where its legend goes. Both built-in styles draw in
+greys, Arial 10 on white, bars from zero; `"apa"` with both axis lines,
+no gridlines and the legend at the right, `"report"` with light
+horizontal gridlines, the x axis line alone and the legend at the top. A
+chart's axes and legends are titled by the variables' labels, the name
+where a variable has none; a bar chart of one series shows each bar's
+count. The style is `joptions(style = )`'s, apa when none is set, or the
+call's `style =`.
+
+**A chart in a Word file.** Keep a chart with `<-` and give it to
+[`jtable()`](https://jma61.github.io/jstats/reference/jtable.md): it
+goes into the Word file as a figure, numbered, its title – the
+variables' labels – in the caption with N after it, in the style it was
+drawn in (see
+[`jtable`](https://jma61.github.io/jstats/reference/jtable.md)).
 
 Valid plot names by class (for the result-object form):
 
@@ -314,8 +351,8 @@ the homoskedasticity assumption), `none` (no band).
 ## Methods (by class)
 
 - `jplot(default)`: the default method: a scatter or box plot from a
-  formula (`DV ~ IV`), or a histogram or bar chart from a data frame and
-  one or more variables.
+  formula (`Outcome ~ Predictor`), or a histogram or bar chart from a
+  data frame and one or more variables.
 
 - `jplot(jst_lm)`: diagnostic, coefficient (forest), and fitted-effect
   plots for a [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md)
@@ -353,6 +390,16 @@ the homoskedasticity assumption), `none` (no band).
   [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md) result
   is not yet available; this method points you to the data-first form,
   for example `jplot(data, Variable)`.
+
+- `jplot(jst_alpha)`: a
+  [`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md)
+  result is not drawn; this method says so and points you to the
+  data-first form for its items, for example `jplot(data, Item1)`.
+
+- `jplot(jst_multi)`: a
+  [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md)
+  result is not drawn; this method says so and points you to the
+  data-first form for its items.
 
 ## See also
 
@@ -430,8 +477,6 @@ jplot(WellbeingScore ~ Income, community, by = Volunteer, line = "lm")
 #> 
 #> Analysis N: 97 (6 Excluded)
 #> 
-#> Ignoring unknown labels:
-#> • fill : "Volunteer"
 
 
 # Boxplot: a labelled variable with a few categories, such as Region,
@@ -471,6 +516,27 @@ jplot(community, Region)                   # bar chart
 
 jplot(community, Region, Volunteer)        # grouped bar chart
 #> Grouped Bar Chart: Region and Volunteer
+#> 
+#> Analysis N: 103
+#> 
+
+
+# A chart kept, then written to a Word file as a figure
+p1 <- jplot(community, Region)
+#> Bar Chart: Region
+#> 
+#> Analysis N: 103
+#> 
+
+jtable(p1, file = file.path(tempdir(), "Figure1.docx"), overwrite = TRUE)
+#> Figure 1. Region of residence (N = 103)
+#>   a bar chart, 6 by 4 inches, on a portrait page.
+#> Figure written to /tmp/RtmpGuokn9/Figure1.docx
+#> 
+
+# The report style's look
+jplot(community, Region, style = "report")
+#> Bar Chart: Region
 #> 
 #> Analysis N: 103
 #> 

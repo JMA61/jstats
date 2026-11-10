@@ -27,7 +27,7 @@ written in a style file as the letter itself; this page names it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.278</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -627,6 +627,53 @@ fit.rows = r2, n
 
 <dt><code>choice.note</code></dt>
 <dd><p>yes: the note says respondents could choose more than one, so the percentages sum to more than 100 | no. Takes one of yes | no. In apa: <code>yes</code>.</p></dd>
+
+
+</dl></div>
+    <div class="section level2">
+    <h2 id="-plot-a-chart">[plot]: a chart<a class="anchor" aria-label="anchor" href="#-plot-a-chart"></a></h2>
+
+<dl><dt><code>font</code></dt>
+<dd><p>the typeface of a chart's text. Takes any text. In apa: <code>Arial</code>.</p></dd>
+
+<dt><code>size</code></dt>
+<dd><p>the size of a chart's text, in points. Takes a number from 6 to 72. In apa: <code>10</code>.</p></dd>
+
+<dt><code>palette</code></dt>
+<dd><p>the colors of a chart's bars, lines and points, in order: greys (595959 for one series, 404040 and A6A6A6 for two, more in steps from 404040) or the colors to use. Takes greys, or one or more colors in order, separated by commas, each a color name such as navy or six hex digits such as 1F3864. In apa: <code>greys</code>.</p></dd>
+
+<dt><code>gridlines</code></dt>
+<dd><p>light lines across a chart at the axes' labels: none | horizontal | vertical | both. Takes one of none | horizontal | vertical | both. In apa: <code>none</code>; in report: <code>horizontal</code>.</p></dd>
+
+<dt><code>grid.color</code></dt>
+<dd><p>the color of the gridlines. Takes a color name such as lightblue, or six hex digits such as ADD8E6. In apa: <code>D9D9D9</code>.</p></dd>
+
+<dt><code>axis.lines</code></dt>
+<dd><p>the axis lines drawn: both | x (the bottom axis) | y (the left axis) | none. Takes one of both | x | y | none. In apa: <code>both</code>; in report: <code>x</code>.</p></dd>
+
+<dt><code>legend.position</code></dt>
+<dd><p>where a chart's legend goes, with its title: right | top | bottom (top and bottom start at the left) | none. Takes one of right | top | bottom | none. In apa: <code>right</code>; in report: <code>top</code>.</p></dd>
+
+<dt><code>values</code></dt>
+<dd><p>yes: each bar's value just beyond its end, on a chart of one series, such as a bar chart of one variable | no. Takes one of yes | no. In apa: <code>yes</code>.</p></dd>
+
+<dt><code>values.grouped</code></dt>
+<dd><p>the same on a chart of several series, such as grouped bars: no | yes. Takes one of no | yes. In apa: <code>no</code>.</p></dd>
+
+<dt><code>width</code></dt>
+<dd><p>a figure's width in a Word file, in inches. Takes a number from 1 to 20. In apa: <code>6</code>.</p></dd>
+
+<dt><code>height</code></dt>
+<dd><p>a figure's height in a Word file, in inches. Takes a number from 1 to 20. In apa: <code>4</code>.</p></dd>
+
+<dt><code>resolution</code></dt>
+<dd><p>the resolution of a figure's picture, in dots per inch. Takes a whole number from 72 to 1200. In apa: <code>300</code>.</p></dd>
+
+<dt><code>data.file</code></dt>
+<dd><p>yes: the numbers each chart shows are written to an Excel file beside the Word file, a sheet per figure | no. Takes one of no | yes. In apa: <code>no</code>.</p></dd>
+
+<dt><code>vector.file</code></dt>
+<dd><p>a vector file of each figure beside the Word file, as a publisher may ask for one: none | pdf | eps. Takes one of none | pdf | eps. In apa: <code>none</code>.</p></dd>
 
 
 </dl></div>

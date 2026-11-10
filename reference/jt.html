@@ -19,7 +19,7 @@ are displayed alongside labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.278</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -81,8 +81,8 @@ are displayed alongside labels in the group descriptives table.</p>
 
 
 <dl><dt id="arg-formula">formula<a class="anchor" aria-label="anchor" href="#arg-formula"></a></dt>
-<dd><p>A formula of the form <code>DV ~ Group</code>. A transformed
-term such as <code>log(DV)</code> is computed automatically: the test and
+<dd><p>A formula of the form <code>Outcome ~ Group</code>. A transformed
+term such as <code>log(Outcome)</code> is computed automatically: the test and
 the descriptive output both use the transformed values.</p></dd>
 
 
@@ -147,7 +147,7 @@ the corrected <code>subset = !(Age &lt; 40)</code> shown (see
 <code>"both"</code>, <code>"names"</code>, <code>"labels"</code>, <code>"legend"</code>, or
 <code>"legend.bottom"</code>. <code>"names"</code> shows variable names only;
 <code>"both"</code> shows <code>"name: label"</code>;
-<code>"labels"</code> shows the DV and grouping-variable labels in the table
+<code>"labels"</code> shows the outcome and grouping-variable labels in the table
 captions (group levels follow the value.id mode) – best for short labels;
 <code>"legend"</code>/<code>"legend.bottom"</code> keep names and print a label
 legend after the output. NULL (default) defers to <code><a href="joutput.html">joutput()</a></code>'s

@@ -25,7 +25,7 @@ open = TRUE) opens the file in the editor instead of printing it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.278</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -140,8 +140,15 @@ value; a <code>#</code> starts a note; the general settings come first, then
 one section per table type, <code>[descriptives]</code>, <code>[frequencies]</code>,
 <code>[regression]</code>, <code>[logistic]</code>, <code>[correlation]</code>,
 <code>[ttest]</code>, <code>[anova]</code>, <code>[crosstab]</code>, <code>[reliability]</code>
-and <code>[multiresponse]</code>. A setting the file leaves out comes from the style
-its <code>based.on</code> line names. <code><a href="jstyle_settings.html">jstyle_settings</a></code> lists every
+and <code>[multiresponse]</code>, then <code>[plot]</code>, a chart's: the font and
+size its words are drawn in, its palette (greys, or colors in order, such
+as a brand's), gridlines, axis lines, where the legend goes, the values on
+its bars, its width and height in inches, its resolution, and whether a
+Word file of figures is written with each chart's data in an Excel file
+and each figure as a vector file. A setting the file leaves out comes from
+the style its <code>based.on</code> line names; a font or size the
+<code>[plot]</code> section leaves out comes from the file's general settings
+first, so a file that sets its tables' font sets its charts' too. <code><a href="jstyle_settings.html">jstyle_settings</a></code> lists every
 setting and what it takes. jstats looks for a style named in a call in
 the style folder (<code>joptions(style.dir = )</code>), the working directory
 and your jstats folder, in that order.</p>
@@ -375,6 +382,22 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> none.label    = None of these</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> choice.note   = yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [plot]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> font            = Arial</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> size            = 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> palette         = greys</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> gridlines       = none</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> grid.color      = D9D9D9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> axis.lines      = both</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> legend.position = right</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> values          = yes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> values.grouped  = no</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> width           = 6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> height          = 4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> resolution      = 300</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> data.file       = no</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> vector.file     = none</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"report"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Style: report</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   built into jstats</span>
@@ -565,14 +588,30 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> none.label    = None of these  # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> choice.note   = yes            # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [plot]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> font            = Arial</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> size            = 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> palette         = greys       # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> gridlines       = horizontal</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> grid.color      = D9D9D9      # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> axis.lines      = x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> legend.position = top</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> values          = yes         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> values.grouped  = no          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> width           = 6           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> height          = 4           # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> resolution      = 300         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> data.file       = no          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> vector.file     = none        # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A complete copy to edit, and a short one holding two changes</span></span></span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"apa"</span>, save.as <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"myjournal"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpLJH66q/myjournal.jstyle</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpGuokn9/myjournal.jstyle</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"apa"</span>, save.as <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"myapa"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
 <span class="r-in"><span>       font <span class="op">=</span> <span class="st">"Arial"</span>, regression <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fit.rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"r2"</span>, <span class="st">"n"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpLJH66q/myapa.jstyle</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpGuokn9/myapa.jstyle</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

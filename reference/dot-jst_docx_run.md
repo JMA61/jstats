@@ -12,7 +12,8 @@ Internal helper: one run of text
   superscript = FALSE,
   color = NULL,
   size = NULL,
-  tab = FALSE
+  tab = FALSE,
+  keep = FALSE
 )
 ```
 
@@ -37,3 +38,9 @@ Internal helper: one run of text
 - tab:
 
   Logical; TRUE writes a tab character before the text.
+
+- keep:
+
+  Logical; TRUE writes a label that breaks only where ruling R55's
+  measure breaks it
+  ([`.jst_docx_keep_text()`](https://jma61.github.io/jstats/reference/dot-jst_docx_keep_text.md)).

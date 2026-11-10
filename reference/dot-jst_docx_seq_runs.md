@@ -5,7 +5,13 @@ Internal helper: the caption's runs – "Table 1" on Word's SEQ field
 ## Usage
 
 ``` r
-.jst_docx_seq_runs(number, bold = TRUE, size = NULL, color = NULL)
+.jst_docx_seq_runs(
+  number,
+  bold = TRUE,
+  size = NULL,
+  color = NULL,
+  word = "Table"
+)
 ```
 
 ## Arguments
@@ -26,3 +32,8 @@ Internal helper: the caption's runs – "Table 1" on Word's SEQ field
 
   A six-digit hex colour, or NULL (Session 409: a caption bar that
   follows the header takes the header's text colour).
+
+- word:
+
+  "Table", or "Figure" for a figure, numbered on a sequence of its own
+  (ruling R63, Session 411).

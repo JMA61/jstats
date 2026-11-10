@@ -5,7 +5,7 @@ Internal helper: the caption paragraphs of a table
 ## Usage
 
 ``` r
-.jst_docx_caption_pars(tbl, style, number, color = NULL)
+.jst_docx_caption_pars(tbl, style, number, color = NULL, word = "Table")
 ```
 
 ## Arguments
@@ -28,6 +28,11 @@ Internal helper: the caption paragraphs of a table
   caption.text (Session 409: the header's text colour, on a caption bar
   that follows the header; ruling R78, Session 413: a caption.text of
   the style's own otherwise, black by default).
+
+- word:
+
+  "Table", or "Figure" for a figure (ruling R63). A figure with no title
+  – a chart drawn by hand with none, given none – has its number alone.
 
 ## Value
 

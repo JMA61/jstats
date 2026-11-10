@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.278</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -127,9 +127,9 @@ The first sorted unique value becomes the reference category. Use
 <dd><p>Optional. Variables to treat as counts for this call (the
 per-call counterpart of <code><a href="jcount.html">jcount()</a></code>), named bare or in quotes,
 several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>. On the
-dependent variable it speaks the count-regression caveat definitively
+outcome it speaks the count-regression caveat definitively
 rather than as a hedge, and applies even when the variable sits outside
-the structural 0-6 band. On an independent variable it behaves like
+the structural 0-6 band. On a predictor it behaves like
 <code>numeric</code> (a count predictor enters the model as numeric). A
 variable cannot be listed in both <code>count</code> and <code>categorical</code>.</p></dd>
 
@@ -413,9 +413,9 @@ with labels like "18 years", "19 years").</p></li>
 <li><p>The <code>categorical</code> argument forces variables without value
 labels (or plain numeric variables) to be treated as categorical
 (e.g. a numeric Program variable coded 1–4 from a CSV file).</p></li>
-<li><p>The dependent variable is always modelled as numeric. Naming it in
+<li><p>The outcome is always modelled as numeric. Naming it in
 <code>numeric</code> or <code>count</code> does not change that; it only asserts the
-DV's role so the count / categorical-like note is silenced
+outcome's role so the count / categorical-like note is silenced
 (<code>numeric</code>) or stated definitively (<code>count</code>).</p></li>
 </ul><p>Transformed terms in <code>formula</code> are computed automatically. A term
 that applies a function to a variable – <code>log(x)</code>, <code>sqrt(x)</code>,

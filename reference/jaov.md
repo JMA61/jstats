@@ -35,9 +35,9 @@ jaov(
 
 - formula:
 
-  A formula of the form `DV ~ Group`. A transformed term such as
-  `log(DV)` is computed automatically: the tests and the descriptive
-  output all use the transformed values.
+  A formula of the form `Outcome ~ Group`. A transformed term such as
+  `log(Outcome)` is computed automatically: the tests and the
+  descriptive output all use the transformed values.
 
 - data:
 
@@ -115,9 +115,9 @@ jaov(
   Character or NULL. Variable label display mode: one of `"both"`,
   `"names"`, `"labels"`, `"legend"`, or `"legend.bottom"`. `"names"`
   shows variable names only; `"both"` shows `"name: label"`; `"labels"`
-  shows the DV and grouping-variable labels wherever the variable name
-  appears (table captions and the ANOVA Source row; group levels follow
-  the value.id mode) – best for short labels;
+  shows the outcome and grouping-variable labels wherever the variable
+  name appears (table captions and the ANOVA Source row; group levels
+  follow the value.id mode) – best for short labels;
   `"legend"`/`"legend.bottom"` keep names and print a label legend after
   the output. NULL (default) defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s

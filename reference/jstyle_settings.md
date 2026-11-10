@@ -892,3 +892,83 @@ table type only.
   yes: the note says respondents could choose more than one, so the
   percentages sum to more than 100 \| no. Takes one of yes \| no. In
   apa: `yes`.
+
+## \[plot\]: a chart
+
+- `font`:
+
+  the typeface of a chart's text. Takes any text. In apa: `Arial`.
+
+- `size`:
+
+  the size of a chart's text, in points. Takes a number from 6 to 72. In
+  apa: `10`.
+
+- `palette`:
+
+  the colors of a chart's bars, lines and points, in order: greys
+  (595959 for one series, 404040 and A6A6A6 for two, more in steps
+  from 404040) or the colors to use. Takes greys, or one or more colors
+  in order, separated by commas, each a color name such as navy or six
+  hex digits such as 1F3864. In apa: `greys`.
+
+- `gridlines`:
+
+  light lines across a chart at the axes' labels: none \| horizontal \|
+  vertical \| both. Takes one of none \| horizontal \| vertical \| both.
+  In apa: `none`; in report: `horizontal`.
+
+- `grid.color`:
+
+  the color of the gridlines. Takes a color name such as lightblue, or
+  six hex digits such as ADD8E6. In apa: `D9D9D9`.
+
+- `axis.lines`:
+
+  the axis lines drawn: both \| x (the bottom axis) \| y (the left axis)
+  \| none. Takes one of both \| x \| y \| none. In apa: `both`; in
+  report: `x`.
+
+- `legend.position`:
+
+  where a chart's legend goes, with its title: right \| top \| bottom
+  (top and bottom start at the left) \| none. Takes one of right \| top
+  \| bottom \| none. In apa: `right`; in report: `top`.
+
+- `values`:
+
+  yes: each bar's value just beyond its end, on a chart of one series,
+  such as a bar chart of one variable \| no. Takes one of yes \| no. In
+  apa: `yes`.
+
+- `values.grouped`:
+
+  the same on a chart of several series, such as grouped bars: no \|
+  yes. Takes one of no \| yes. In apa: `no`.
+
+- `width`:
+
+  a figure's width in a Word file, in inches. Takes a number from 1
+  to 20. In apa: `6`.
+
+- `height`:
+
+  a figure's height in a Word file, in inches. Takes a number from 1
+  to 20. In apa: `4`.
+
+- `resolution`:
+
+  the resolution of a figure's picture, in dots per inch. Takes a whole
+  number from 72 to 1200. In apa: `300`.
+
+- `data.file`:
+
+  yes: the numbers each chart shows are written to an Excel file beside
+  the Word file, a sheet per figure \| no. Takes one of no \| yes. In
+  apa: `no`.
+
+- `vector.file`:
+
+  a vector file of each figure beside the Word file, as a publisher may
+  ask for one: none \| pdf \| eps. Takes one of none \| pdf \| eps. In
+  apa: `none`.
