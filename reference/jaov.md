@@ -185,9 +185,10 @@ Invisibly returns a list of class `jst_anova` containing: `model` (the
 `aov` or `oneway.test` object), `model_frame` (the analysis data frame
 used for plotting), `test_type`, `formula`, `descriptives`, `f`, `df1`,
 `df2`, `p`, `eta_squared`, `n`, `sample_info` (pipeline and missing data
-counts), and `posthoc` (the pairwise comparisons as an unrounded data
-frame, with `test` naming the method; `NULL` when post-hoc tests were
-not requested), and `levene`: Levene's test as printed, a list of `F`,
+counts), `data_name` (the data frame as the call named it), and
+`posthoc` (the pairwise comparisons as an unrounded data frame, with
+`test` naming the method; `NULL` when post-hoc tests were not
+requested), and `levene`: Levene's test as printed, a list of `F`,
 `df1`, `df2`, `p` and `note` – the verdict of the note under a
 significant test (`"acceptable"`, `"unreliable"` or `"differ"`),
 recorded at every output level, or `NA` when no note applies (the test

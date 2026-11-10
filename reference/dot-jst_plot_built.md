@@ -6,7 +6,14 @@ colors
 ## Usage
 
 ``` r
-.jst_plot_built(p, scales, data = NULL)
+.jst_plot_built(
+  p,
+  scales,
+  data = NULL,
+  flip = FALSE,
+  tweak = NULL,
+  relook = NULL
+)
 ```
 
 ## Arguments
@@ -23,3 +30,12 @@ colors
 - data:
 
   The numbers it shows, for the Excel sheet, or NULL.
+
+- flip:
+
+  TRUE for a chart whose bars run across.
+
+- tweak:
+
+  NULL, or a theme setting of the chart's own, added again when the
+  chart is drawn in another look.

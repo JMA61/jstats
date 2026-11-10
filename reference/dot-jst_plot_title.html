@@ -21,7 +21,7 @@ Uses variable names (not labels), matching the user's typed call."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.280</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,13 @@ Uses variable names (not labels), matching the user's typed call.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_plot_title</span><span class="op">(</span><span class="va">plot_type</span>, <span class="va">variable_names</span>, by_name <span class="op">=</span> <span class="cn">NULL</span>, facet_name <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_plot_title</span><span class="op">(</span></span>
+<span>  <span class="va">plot_type</span>,</span>
+<span>  <span class="va">variable_names</span>,</span>
+<span>  by_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  facet_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  parts <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -80,6 +86,12 @@ Uses variable names (not labels), matching the user's typed call.</p>
 
 <dt id="arg-facet-name">facet_name<a class="anchor" aria-label="anchor" href="#arg-facet-name"></a></dt>
 <dd><p>Optional character string for the facet variable.</p></dd>
+
+
+<dt id="arg-parts">parts<a class="anchor" aria-label="anchor" href="#arg-parts"></a></dt>
+<dd><p>Optional character: the variables as the call gave them, a
+range as "A to B" (<code><a href="dot-jst_resolve_varrange.html">.jst_resolve_varrange()</a></code>), for a 100% stacked
+bar's set of items.</p></dd>
 
 </dl></div>
     <div class="section level2">

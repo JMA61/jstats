@@ -100,9 +100,9 @@ jalpha(
 
 Invisibly returns a list of class `jst_alpha` containing: `alpha`
 (Cronbach's alpha), `n_items`, `n_used`, `n_excluded`,
-`item_statistics`, `item_total_statistics`, and `sample_info` (pipeline
-and missing data counts). item statistics data frame, and item-total
-statistics data frame.
+`item_statistics`, `item_total_statistics`, `sample_info` (pipeline and
+missing data counts) and `data_name` (the data frame as the call named
+it).
 
 ## Details
 

@@ -9,7 +9,16 @@ the scale again
 ## Usage
 
 ``` r
-.jst_plot_scale(aes, levels, look, guide = TRUE)
+.jst_plot_scale(
+  aes,
+  levels,
+  look,
+  guide = TRUE,
+  contrast = FALSE,
+  rows = NULL,
+  breaks = NULL,
+  labels = NULL
+)
 ```
 
 ## Arguments
@@ -30,6 +39,30 @@ the scale again
 
   TRUE for a legend.
 
+- contrast:
+
+  TRUE for the text color that reads on each series' color.
+
+- rows:
+
+  NULL, or the legend's rows.
+
+- breaks:
+
+  NULL, or the series in the order the legend's keys are given.
+
+- labels:
+
+  NULL, or the keys' labels, named by series.
+
 ## Value
 
 A ggplot2 scale.
+
+## Details
+
+Since Session 416 a scale may also carry what a 100% stacked bar's
+needs: the black or white that reads on each series' color, for a value
+written inside a segment (`contrast`); and a legend's rows, the order
+its keys are given in and the labels they take (`rows`, `breaks`,
+`labels`).

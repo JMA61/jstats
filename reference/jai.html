@@ -19,7 +19,7 @@ what they find there."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.280</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,7 +137,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats conventions</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Orientation for users and AI assistants.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.10 | jstats 0.9.279 | generated 2026-11-10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.11 | jstats 0.9.280 | generated 2026-11-10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats is an integrated set of j-prefixed analysis functions (jdesc,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jfreq, jlm, ...) with shared syntax and output styled after commercial</span>
@@ -209,11 +209,13 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   relationships with jcorr() (correlations), jlm() (regression,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   numeric outcome), or jlogistic() (regression, yes/no outcome);</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   cross-tabulate with jcrosstab(); check scale reliability with</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   jalpha(). The group-comparison and regression functions take a formula</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (jt(CommuteTime ~ OwnsHome), jlm(Income ~ Age + Education));</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   jcorr(), jalpha(), jdesc(), and jfreq() take variable names</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   instead. For anything not listed, check help("jstats") for the full</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   function list before reaching for another package.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jalpha(); tabulate a tick-all-that-apply question, stored as one</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   yes/no item per option, with jmulti(). The group-comparison and</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   regression functions take a formula (jt(CommuteTime ~ OwnsHome),</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jlm(Income ~ Age + Education)); jcorr(), jalpha(), jmulti(),</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jdesc(), and jfreq() take variable names instead. For anything not</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   listed, check help("jstats") for the full function list before</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   reaching for another package.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Analysis functions print their results directly. Keep a result with</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   &lt;- (m1 &lt;- jlm(...)) to make a publication table of it with</span>
@@ -247,6 +249,22 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   not invent a setting, and do not rename a setting or a section. Give</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   colors by name (lightblue) or six hex digits (ADD8E6), then run</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jstyle("myagency"), which names any value it cannot use.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Draw charts with jplot(), which chooses the chart from the variables:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jplot(community, Age) a histogram, jplot(community, Region) a bar</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   chart, jplot(WellbeingScore ~ Age, community) a scatterplot. Ask for</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   the others by name: type = "pie" or type = "donut" for one</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   variable of up to six categories, and type = "stacked" for a 100%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   stacked bar -- of one variable within groups,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jplot(community, Education, by = Region, type = "stacked"), or of</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   items that share their answer categories,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jplot(community, Environment1:Environment5, type = "stacked").</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jplot() also draws a kept result: jplot(m1) a model's plots, and</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jplot(mr) a jmulti() result's ranked bar chart. A chart kept with</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   &lt;- goes into a Word file as a figure, alone or beside built tables:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jtable(list(t1, p1), file = "Report.docx"). A chart's look -- its</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   colors, font and gridlines -- comes from the style, as a table's does:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   the [plot] settings in ?jstyle_settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Detailed help and worked examples for each function are available via</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ?jdesc, ?jdeclare_missing, and so on.</span>

@@ -946,6 +946,23 @@ table type only.
   the same on a chart of several series, such as grouped bars: no \|
   yes. Takes one of no \| yes. In apa: `no`.
 
+- `values.stacked`:
+
+  yes: a 100% stacked bar's percentages inside its segments, none in a
+  segment under 6 percent \| no. Takes one of no \| yes. In apa: `no`.
+
+- `values.decimals`:
+
+  the decimal places of a percentage a chart shows, on a pie's slices,
+  at a ranked bar's end or in a stacked bar's segments: 0 or 1. Takes a
+  whole number from 0 to 1. In apa: `0`.
+
+- `pie.max`:
+
+  the most categories a pie or a donut chart shows; a variable with more
+  stops, with the line that draws a bar chart. Takes a whole number from
+  2 to 6. In apa: `6`.
+
 - `width`:
 
   a figure's width in a Word file, in inches. Takes a number from 1

@@ -175,11 +175,12 @@ Invisibly returns a list of class `jst_crosstab` containing: `observed`
 (observed frequency table), `expected` (expected frequency table),
 `adjusted_residuals` (matrix of adjusted standardized residuals), `n`
 (total N), `model_frame` (the analysis data frame used for plotting),
-`sample_info` (pipeline and missing data counts), and if `chisq = TRUE`:
-`chi_square`, `df`, and `p` (the Pearson chi-square), `chi_method` (the
-test's method string), `cramers_v` (Cramer's V, phi without its sign in
-a 2x2 table), and for 2x2 tables `chi_square_corrected` and
-`p_corrected` (the Yates continuity-corrected values).
+`sample_info` (pipeline and missing data counts), `data_name` (the data
+frame as the call named it), and if `chisq = TRUE`: `chi_square`, `df`,
+and `p` (the Pearson chi-square), `chi_method` (the test's method
+string), `cramers_v` (Cramer's V, phi without its sign in a 2x2 table),
+and for 2x2 tables `chi_square_corrected` and `p_corrected` (the Yates
+continuity-corrected values).
 
 ## Details
 
@@ -480,4 +481,44 @@ jcrosstab(Education ~ Volunteer, chisq = TRUE)
 #> 
 #> Cramer's V: 0.411
 #> 
+
+# Keep the result to draw its charts: a grouped bar chart, or a 100%
+# stacked bar with one bar per group
+ct <- jcrosstab(Education ~ Region, community)
+#> Cross-Tabulation
+#> 
+#> Case Processing    Excluded  Remaining
+#>     Original             --        103
+#>     Auto-listwise         6         97
+#>     Analysis N           --         97
+#> 
+#> Missing data   From 103   %
+#>     Education
+#>       Missing      6     5.8
+#> --------------------------------------
+#> 
+#> Crosstab: Education by Region
+#> Education                  1: North    2: South    3: East    4: West     Total
+#> -----------------------    --------    --------    -------    -------    ------
+#> 1: Some high school           4           6          7          6         23
+#>   (Row %)                    17.4%       26.1%      30.4%      26.1%     100.0%
+#> 
+#> 2: High school graduate       7           2          6          3         18
+#>   (Row %)                    38.9%       11.1%      33.3%      16.7%     100.0%
+#> 
+#> 3: Some college               4           8          8          5         25
+#>   (Row %)                    16.0%       32.0%      32.0%      20.0%     100.0%
+#> 
+#> 4: Bachelor's degree          6           2          2          3         13
+#>   (Row %)                    46.2%       15.4%      15.4%      23.1%     100.0%
+#> 
+#> 5: Graduate degree            5           1          6          6         18
+#>   (Row %)                    27.8%        5.6%      33.3%      33.3%     100.0%
+#> 
+#> Total                        26          19         29         23         97
+#> 
+jplot(ct)
+
+jplot(ct, which = "stacked")
+
 ```

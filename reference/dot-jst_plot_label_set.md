@@ -1,0 +1,22 @@
+# Internal helper: the value labels of a variable's valid codes
+
+For the test that a set of items shares its categories (ruling R68; the
+Session 414 lean: "compared by value-label sets"): the labels of the
+codes that are not declared missing, by code.
+
+## Usage
+
+``` r
+.jst_plot_label_set(x)
+```
+
+## Arguments
+
+- x:
+
+  The variable.
+
+## Value
+
+A named character vector (code = label) sorted by code, or NULL for a
+variable with no value labels.

@@ -17,7 +17,7 @@ multiple-response set (MULT RESPONSE, or a CTABLES $ set).'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.280</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -170,8 +170,8 @@ make a publication table of it with <code><a href="jtable.html">jtable</a></code
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="jfreq.html">jfreq</a></code> for one variable's frequencies,
-<code><a href="jtable.html">jtable</a></code> for the table; <code><a href="jstats-package.html">jstats</a></code> for the
-package overview.</p></div>
+<code><a href="jtable.html">jtable</a></code> for the table, <code><a href="jplot.html">jplot</a></code> for the
+chart; <code><a href="jstats-package.html">jstats</a></code> for the package overview.</p></div>
     </div>
 
     <div class="section level2">
@@ -218,13 +218,16 @@ package overview.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> None of these       3    33.33</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Keep the result to make a publication table of it</span></span></span>
+<span class="r-in"><span><span class="co"># Keep the result to make a publication table of it, or to draw its</span></span></span>
+<span class="r-in"><span><span class="co"># ranked bar chart</span></span></span>
 <span class="r-in"><span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu">jmulti</span><span class="op">(</span><span class="va">svc</span>, <span class="va">Counselling</span><span class="op">:</span><span class="va">Financial</span>, print <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">t1</span> <span class="op">&lt;-</span> <span class="fu"><a href="jtable.html">jtable</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Table 1. Services used (N = 9)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   1 set of 4 options, on a portrait page.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> The table was made in R; no Word file was asked for.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu"><a href="jplot.html">jplot</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="jmulti-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

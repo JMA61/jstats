@@ -63,7 +63,7 @@ jplot(x, which = "core", ...)
 jplot(x, which = "core", ...)
 
 # S3 method for class 'jst_multi'
-jplot(x, which = "core", ...)
+jplot(x, which = "core", ..., style = NULL)
 ```
 
 ## Arguments
@@ -82,18 +82,21 @@ jplot(x, which = "core", ...)
 
   Additional arguments: for the result-object form these are passed to
   class-specific methods; for the data-first form these are unquoted
-  variable names (1 or 2).
+  variable names (1 or 2; for `type = "stacked"` a set of items, which a
+  range such as `Q1:Q5` may name).
 
 - by:
 
-  Unquoted variable name for group-coloring (data-first form).
+  Unquoted variable name for group-coloring (data-first form). With
+  `type = "stacked"`, the groups: one bar for each.
 
 - type:
 
   Character. Plot type override for the data-first form. One of
-  `histogram`, `density`, `bar`, `scatter`, `box`, `grouped_bar`. If
-  NULL (default), auto-detected from variable types; `density` is never
-  the automatic choice.
+  `histogram`, `density`, `bar`, `scatter`, `box`, `grouped_bar`, `pie`,
+  `donut`, `stacked`. If NULL (default), auto-detected from variable
+  types; `density`, `pie`, `donut` and `stacked` are never the automatic
+  choice.
 
 - line:
 
@@ -249,8 +252,13 @@ followed by one or two unquoted variable names. The data frame is given
 either positionally or as `data = `: `jplot(data = community, Age)` is
 the same plot as `jplot(community, Age)`. Used for histograms (1
 numeric), bar charts (1 categorical), and grouped bar charts (2
-categorical). Calls that would otherwise auto-detect to a scatter or
-boxplot produce a helpful error directing you to the formula form.
+categorical), and, asked for with `type =`, for pie and donut charts and
+100% stacked bars (see "Parts of a whole" below). Calls that would
+otherwise auto-detect to a scatter or boxplot produce a helpful error
+directing you to the formula form. A range, `Environment1:Environment5`,
+names every variable from the first to the last in the data frame's
+order, as in
+[`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md).
 
 **A labelled variable with a few categories**, such as Region – six
 values or fewer with at least one of them labelled, or whole numbers
@@ -279,8 +287,12 @@ no gridlines and the legend at the right, `"report"` with light
 horizontal gridlines, the x axis line alone and the legend at the top. A
 chart's axes and legends are titled by the variables' labels, the name
 where a variable has none; a bar chart of one series shows each bar's
-count. The style is `joptions(style = )`'s, apa when none is set, or the
-call's `style =`.
+count, a pie or a donut each slice's percentage and a ranked bar chart
+each bar's (the style's `values`); a 100% stacked bar shows its
+percentages inside its segments only under the style's
+`values.stacked = yes`. Percentages are whole numbers, or have one
+decimal place under `values.decimals = 1`. The style is
+`joptions(style = )`'s, apa when none is set, or the call's `style =`.
 
 **A chart in a Word file.** Keep a chart with `<-` and give it to
 [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md): it
@@ -309,7 +321,19 @@ Valid plot names by class (for the result-object form):
 - `jst_corr`: `heatmap`, `scatter` (scatter requires exactly 2 variables
   in the correlation)
 
-- `jst_crosstab`: `bar`
+- `jst_crosstab`: `bar` (the default), `stacked` (a 100% stacked bar:
+  one bar per group – the variable on the right of the formula – with
+  the row variable's distribution within it, the column percentages of
+  the crosstab; for the other way round, swap the formula. The chart
+  follows the percentages the publication table prints: under a style
+  file whose `[crosstab]` `percent.base` is `row`, one bar per category
+  of the row variable)
+
+- `jst_multi` (a
+  [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md)
+  result): `bar`, a ranked bar chart – one horizontal bar per option in
+  the order of the result's table, "None of these" last, each bar's
+  percentage of everyone who answered at its end
 
 The shortcut keyword `core` (default) produces a curated default set for
 the class; `all` produces every plot the class supports.
@@ -327,10 +351,42 @@ need a predictor, or that are drawn against the fitted values or the
 leverage, are left out with a note.
 
 Valid plot types for the data-first form: `histogram`, `density`, `bar`,
-`scatter`, `box`, `grouped_bar`. A density plot is the histogram's
-alternative for a numeric variable – its kernel density estimate, one
-curve, or one per group of `by =` laid over each other – and is drawn
-only when asked for with `type = "density"`.
+`scatter`, `box`, `grouped_bar`, `pie`, `donut`, `stacked`. A density
+plot is the histogram's alternative for a numeric variable – its kernel
+density estimate, one curve, or one per group of `by =` laid over each
+other – and is drawn only when asked for with `type = "density"`.
+
+**Parts of a whole.** Three charts show how a whole divides, and each is
+drawn only when asked for by name. They draw a variable by its
+categories whatever its type, each category named by its value label;
+the whole is the cases with an answer. A
+[`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md) or
+[`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)
+registration, which says how the analyses read a variable, changes
+nothing in these charts; `numeric =` in the call shows a labelled
+variable by its codes.
+
+- `type = "pie"` and `type = "donut"`: one variable as one whole. The
+  slices are its categories that have cases, clockwise from 12 o'clock
+  in the variable's own order, each labelled beside it with its
+  percentage; no legend. A pie shows at most six categories (the style's
+  `pie.max`): a variable with more stops, with the line that draws a bar
+  chart. `by =` and `facet =` are refused – to show a variable within
+  groups, draw a 100% stacked bar.
+
+- `type = "stacked"`: a 100% stacked bar, horizontal bars whose segments
+  are a variable's categories and sum to 100. With `by =`, one variable
+  within each group:
+  `jplot(community, Education, by = Region, type = "stacked")` draws a
+  bar for each region. With several variables and no `by =`, a set of
+  items that share their answer categories – the items of a scale – one
+  bar per item:
+  `jplot(community, Environment1:Environment5, type = "stacked")`. The
+  items must share one set of categories (their value labels; unlabelled
+  items, their values), and each bar's whole is that item's own valid
+  answers. The legend is above the chart in the segments' order. A
+  [`jcrosstab()`](https://jma61.github.io/jstats/reference/jcrosstab.md)
+  result draws the same chart: `jplot(ct, which = "stacked")`.
 
 In the variable-list form `facet =` draws one panel per group of the
 variable named, with the groups' value labels as the panel titles: the
@@ -379,7 +435,8 @@ the homoskedasticity assumption), `none` (no band).
 
 - `jplot(jst_crosstab)`: a grouped bar chart of cell counts for a
   [`jcrosstab()`](https://jma61.github.io/jstats/reference/jcrosstab.md)
-  result.
+  result; `which = "stacked"` draws the 100% stacked bar, one bar per
+  group.
 
 - `jplot(jst_desc)`: (planned) direct plotting of a
   [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md) result
@@ -396,10 +453,11 @@ the homoskedasticity assumption), `none` (no band).
   result is not drawn; this method says so and points you to the
   data-first form for its items, for example `jplot(data, Item1)`.
 
-- `jplot(jst_multi)`: a
-  [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md)
-  result is not drawn; this method says so and points you to the
-  data-first form for its items.
+- `jplot(jst_multi)`: the ranked bar chart of a multiple-response set,
+  for a [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md)
+  result: one bar per option in the order of the result's table, "None
+  of these" last, each bar's percentage of everyone who answered at its
+  end.
 
 ## See also
 
@@ -531,7 +589,7 @@ p1 <- jplot(community, Region)
 jtable(p1, file = file.path(tempdir(), "Figure1.docx"), overwrite = TRUE)
 #> Figure 1. Region of residence (N = 103)
 #>   a bar chart, 6 by 4 inches, on a portrait page.
-#> Figure written to /tmp/RtmpGuokn9/Figure1.docx
+#> Figure written to /tmp/RtmprXDOjw/Figure1.docx
 #> 
 
 # The report style's look
@@ -540,6 +598,69 @@ jplot(community, Region, style = "report")
 #> 
 #> Analysis N: 103
 #> 
+
+
+# Parts of a whole, each asked for by name
+jplot(community, Region, type = "pie")
+#> Pie Chart: Region
+#> 
+#> Analysis N: 103
+#> 
+
+jplot(community, Region, type = "donut")
+#> Donut Chart: Region
+#> 
+#> Analysis N: 103
+#> 
+
+# A 100% stacked bar: one variable within groups, or a set of items
+jplot(community, Education, by = Region, type = "stacked")
+#> 100% Stacked Bar Chart: Education by Region
+#> 
+#> Analysis N: 97 (6 Excluded)
+#> 
+
+jplot(community, Environment1:Environment5, type = "stacked")
+#> 100% Stacked Bar Chart: Environment1 to Environment5
+#> 
+#> 103 Cases in the 5 Variable Pool; 84 Complete on All
+#> 
+
+# ... and from a crosstab
+ct <- jcrosstab(Education ~ Region, community)
+#> Cross-Tabulation
+#> 
+#> Case Processing    Excluded  Remaining
+#>     Original             --        103
+#>     Auto-listwise         6         97
+#>     Analysis N           --         97
+#> 
+#> Missing data   From 103   %
+#>     Education
+#>       Missing      6     5.8
+#> --------------------------------------
+#> 
+#> Crosstab: Education by Region
+#> Education                  1: North    2: South    3: East    4: West     Total
+#> -----------------------    --------    --------    -------    -------    ------
+#> 1: Some high school           4           6          7          6         23
+#>   (Row %)                    17.4%       26.1%      30.4%      26.1%     100.0%
+#> 
+#> 2: High school graduate       7           2          6          3         18
+#>   (Row %)                    38.9%       11.1%      33.3%      16.7%     100.0%
+#> 
+#> 3: Some college               4           8          8          5         25
+#>   (Row %)                    16.0%       32.0%      32.0%      20.0%     100.0%
+#> 
+#> 4: Bachelor's degree          6           2          2          3         13
+#>   (Row %)                    46.2%       15.4%      15.4%      23.1%     100.0%
+#> 
+#> 5: Graduate degree            5           1          6          6         18
+#>   (Row %)                    27.8%        5.6%      33.3%      33.3%     100.0%
+#> 
+#> Total                        26          19         29         23         97
+#> 
+jplot(ct, which = "stacked")
 
 
 # Using juse() default (omit the data frame in either form)

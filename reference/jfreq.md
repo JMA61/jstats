@@ -30,7 +30,9 @@ jfreq(
 
   Unquoted variable name(s) within `data`. None when `data` is a single
   variable. A [`c()`](https://rdrr.io/r/base/c.html) of names, bare or
-  quoted, is read as the names.
+  quoted, is read as the names. A range in colon notation
+  (`Environment1:Environment5`) names every variable from the first to
+  the last, in the data frame's order.
 
 - subset:
 
@@ -109,8 +111,9 @@ with seven components – `valid`, the valid-row frequency table as a data
 frame; `udm`, the declared-missing rows as a data frame, empty when the
 variable has none; `na`, the system-missing row as a one-row data frame,
 or `NULL` when there are none; `total`, `valid_count`, and `missing`,
-the case counts; and `var_label`, the variable's display label) and
-`sample_info` (pipeline and missing data counts).
+the case counts; and `var_label`, the variable's display label),
+`sample_info` (pipeline and missing data counts) and `data_name` (the
+data frame as the call named it).
 
 ## Details
 

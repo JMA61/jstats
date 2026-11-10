@@ -11,7 +11,7 @@ invisibly returns the underlying results as a data frame."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.280</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,7 +73,9 @@ or a numeric vector.</p></dd>
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Unquoted variable names within <code>data</code>. None when
 <code>data</code> is a single variable. A <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code> of names, bare
-or quoted, is read as the names.</p></dd>
+or quoted, is read as the names. A range in colon notation
+(<code>Environment1:Environment5</code>) names every variable from the
+first to the last, in the data frame's order.</p></dd>
 
 
 <dt id="arg-by">by<a class="anchor" aria-label="anchor" href="#arg-by"></a></dt>
@@ -188,7 +190,8 @@ wants no output: see <code><a href="joutput.html">joutput</a></code>.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Invisibly returns a list of class <code>jst_desc</code> containing:
 <code>descriptives</code> (data frame of statistics, or NULL for grouped output),
-and <code>sample_info</code> (pipeline and missing data counts). Also
+<code>sample_info</code> (pipeline and missing data counts) and
+<code>data_name</code> (the data frame as the call named it). Also
 prints a formatted table to the console.</p>
     </div>
     <div class="section level2">
@@ -322,6 +325,22 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------  -----  -----------  ---  ---  ------  ------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 0: No        54        54       25   76  47.463  11.699</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes       49        49       29   81  54.673  10.059</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">jdesc</span><span class="op">(</span><span class="va">Environment1</span><span class="op">:</span><span class="va">Environment5</span><span class="op">)</span>      <span class="co"># a range of variables</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Descriptive Statistics</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 5 Variable Pool; 84 Complete on All</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: Listwise deletion using jcomplete() would leave 84 cases.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable      Total  Non_missing  Min  Max   Mean    SD</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------------  -----  -----------  ---  ---  -----  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1   103        91       1    5   3.176  1.160</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment2   103       103       1    5   2.845  1.170</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3   103        91       1    5   3.055  1.223</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment4   103       103       1    5   3.243  1.175</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment5   103       103       1    5   2.777  1.448</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With a vector directly</span></span></span>

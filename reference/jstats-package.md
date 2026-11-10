@@ -145,10 +145,11 @@ package's GitHub repository.
 **Visualization**
 
 - [`jplot`](https://jma61.github.io/jstats/reference/jplot.md) –
-  histograms, bar charts, scatterplots, and boxplots from a data frame,
-  plus plots of result objects from
-  [`jt()`](https://jma61.github.io/jstats/reference/jt.md),
-  [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md), etc.
+  histograms, bar charts, scatterplots, boxplots, pie and donut charts
+  and 100% stacked bars from a data frame, plus plots of result objects
+  from [`jt()`](https://jma61.github.io/jstats/reference/jt.md),
+  [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md),
+  [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md), etc.
 
 **Publication tables**
 

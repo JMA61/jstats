@@ -171,12 +171,13 @@ Invisibly returns a list of class `jst_ttest` containing: `model` (the
 `t.test` result), `model_frame` (the analysis data frame used for
 plotting), `test_type`, `formula`, `descriptives`, `t`, `df`, `p`,
 `mean_difference`, `ci` (95% CI), `cohens_d`, `d_label`, `n`,
-`sample_info` (pipeline and missing data counts), and `levene`: Levene's
-test as printed, a list of `F`, `df1`, `df2`, `p` and `note` – the
-verdict of the note under a significant test (`"acceptable"`,
-`"unreliable"` or `"differ"`), recorded at every output level, or `NA`
-when no note applies (the test not significant, or Welch's test run);
-`NULL` when Levene's test was not asked for or the test is paired.
+`sample_info` (pipeline and missing data counts), `data_name` (the data
+frame as the call named it), and `levene`: Levene's test as printed, a
+list of `F`, `df1`, `df2`, `p` and `note` – the verdict of the note
+under a significant test (`"acceptable"`, `"unreliable"` or `"differ"`),
+recorded at every output level, or `NA` when no note applies (the test
+not significant, or Welch's test run); `NULL` when Levene's test was not
+asked for or the test is paired.
 
 ## Details
 

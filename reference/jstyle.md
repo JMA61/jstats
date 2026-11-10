@@ -342,6 +342,9 @@ jstyle("apa")
 #> legend.position = right
 #> values          = yes
 #> values.grouped  = no
+#> values.stacked  = no
+#> values.decimals = 0
+#> pie.max         = 6
 #> width           = 6
 #> height          = 4
 #> resolution      = 300
@@ -548,6 +551,9 @@ jstyle("report")
 #> legend.position = top
 #> values          = yes         # from apa
 #> values.grouped  = no          # from apa
+#> values.stacked  = no          # from apa
+#> values.decimals = 0           # from apa
+#> pie.max         = 6           # from apa
 #> width           = 6           # from apa
 #> height          = 4           # from apa
 #> resolution      = 300         # from apa
@@ -557,10 +563,10 @@ jstyle("report")
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/RtmpGuokn9/myjournal.jstyle
+#> Style written to /tmp/RtmprXDOjw/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/RtmpGuokn9/myapa.jstyle
+#> Style written to /tmp/RtmprXDOjw/myapa.jstyle
 #> 
 ```

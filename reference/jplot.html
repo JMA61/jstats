@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.280</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -97,7 +97,7 @@
 <span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'jst_multi'</span></span>
-<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">jplot</span><span class="op">(</span><span class="va">x</span>, which <span class="op">=</span> <span class="st">"core"</span>, <span class="va">...</span>, style <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -118,18 +118,22 @@ one or more specific plot names valid for the object's class.
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments: for the result-object form these are
 passed to class-specific methods; for the data-first form these are
-unquoted variable names (1 or 2).</p></dd>
+unquoted variable names (1 or 2; for <code>type = "stacked"</code> a set of
+items, which a range such as <code>Q1:Q5</code> may name).</p></dd>
 
 
 <dt id="arg-by">by<a class="anchor" aria-label="anchor" href="#arg-by"></a></dt>
-<dd><p>Unquoted variable name for group-coloring (data-first form).</p></dd>
+<dd><p>Unquoted variable name for group-coloring (data-first form).
+With <code>type = "stacked"</code>, the groups: one bar for each.</p></dd>
 
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
 <dd><p>Character. Plot type override for the data-first form. One
 of <code>histogram</code>, <code>density</code>, <code>bar</code>, <code>scatter</code>,
-<code>box</code>, <code>grouped_bar</code>. If NULL (default), auto-detected
-from variable types; <code>density</code> is never the automatic choice.</p></dd>
+<code>box</code>, <code>grouped_bar</code>, <code>pie</code>, <code>donut</code>,
+<code>stacked</code>. If NULL (default), auto-detected
+from variable types; <code>density</code>, <code>pie</code>, <code>donut</code> and
+<code>stacked</code> are never the automatic choice.</p></dd>
 
 
 <dt id="arg-line">line<a class="anchor" aria-label="anchor" href="#arg-line"></a></dt>
@@ -276,8 +280,12 @@ given either positionally or as <code>data = </code>:
 <code>jplot(data = community, Age)</code> is the same plot as
 <code>jplot(community, Age)</code>. Used for histograms
 (1 numeric), bar charts (1 categorical), and grouped bar charts (2
-categorical). Calls that would otherwise auto-detect to a scatter or
-boxplot produce a helpful error directing you to the formula form.</p>
+categorical), and, asked for with <code>type =</code>, for pie and donut
+charts and 100% stacked bars (see "Parts of a whole" below). Calls
+that would otherwise auto-detect to a scatter or boxplot produce a
+helpful error directing you to the formula form. A range,
+<code>Environment1:Environment5</code>, names every variable from the first to
+the last in the data frame's order, as in <code><a href="jalpha.html">jalpha()</a></code>.</p>
 <p><strong>A labelled variable with a few categories</strong>, such as Region –
 six values or fewer with at least one of them labelled, or whole
 numbers from 0 to 6 – is drawn as categories when nothing says
@@ -302,7 +310,12 @@ gridlines and the legend at the right, <code>"report"</code> with light
 horizontal gridlines, the x axis line alone and the legend at the top. A
 chart's axes and legends are titled by the variables' labels, the name
 where a variable has none; a bar chart of one series shows each bar's
-count. The style is <code>joptions(style = )</code>'s, apa when none is set,
+count, a pie or a donut each slice's percentage and a ranked bar chart
+each bar's (the style's <code>values</code>); a 100% stacked bar shows its
+percentages inside its segments only under the style's
+<code>values.stacked = yes</code>. Percentages are whole numbers, or have one
+decimal place under <code>values.decimals = 1</code>. The style is
+<code>joptions(style = )</code>'s, apa when none is set,
 or the call's <code>style =</code>.</p>
 <p><strong>A chart in a Word file.</strong> Keep a chart with <code>&lt;-</code> and give it
 to <code><a href="jtable.html">jtable()</a></code>: it goes into the Word file as a figure,
@@ -325,7 +338,18 @@ case's distance from its group's mean, or for a paired test each
 pair's difference from the mean difference)</p></li>
 <li><p><code>jst_corr</code>: <code>heatmap</code>, <code>scatter</code> (scatter requires
 exactly 2 variables in the correlation)</p></li>
-<li><p><code>jst_crosstab</code>: <code>bar</code></p></li>
+<li><p><code>jst_crosstab</code>: <code>bar</code> (the default), <code>stacked</code>
+(a 100% stacked bar: one bar per group – the variable on the
+right of the formula – with the row variable's distribution
+within it, the column percentages of the crosstab; for the other
+way round, swap the formula. The chart follows the percentages the
+publication table prints: under a style file whose <code>[crosstab]</code>
+<code>percent.base</code> is <code>row</code>, one bar per category of the row
+variable)</p></li>
+<li><p><code>jst_multi</code> (a <code><a href="jmulti.html">jmulti()</a></code> result): <code>bar</code>,
+a ranked bar chart – one horizontal bar per option in the order of
+the result's table, "None of these" last, each bar's percentage of
+everyone who answered at its end</p></li>
 </ul><p>The shortcut keyword <code>core</code> (default) produces a curated default
 set for the class; <code>all</code> produces every plot the class supports.</p>
 <p>For a <code>jst_lm</code> result, <code>effects</code> draws one plot per variable
@@ -342,11 +366,39 @@ predictors
 against the fitted values or the leverage, are left out with a note.</p>
 <p>Valid plot types for the data-first form: <code>histogram</code>,
 <code>density</code>, <code>bar</code>, <code>scatter</code>, <code>box</code>,
-<code>grouped_bar</code>. A density plot is the histogram's alternative for a
+<code>grouped_bar</code>, <code>pie</code>, <code>donut</code>, <code>stacked</code>. A density
+plot is the histogram's alternative for a
 numeric variable – its kernel density estimate, one curve, or one per
 group of <code>by =</code> laid over each other – and is drawn only when
 asked for with <code>type = "density"</code>.</p>
-<p>In the variable-list form <code>facet =</code> draws one panel per group of
+<p><strong>Parts of a whole.</strong> Three charts show how a whole divides, and
+each is drawn only when asked for by name. They draw a variable by its
+categories whatever its type, each category named by its value label;
+the whole is the cases with an answer. A <code><a href="jnumeric.html">jnumeric()</a></code> or
+<code><a href="jcount.html">jcount()</a></code> registration, which says how the analyses read
+a variable, changes nothing in these charts; <code>numeric =</code> in the
+call shows a labelled variable by its codes.</p><ul><li><p><code>type = "pie"</code> and <code>type = "donut"</code>: one variable as
+one whole. The slices are its categories that have cases, clockwise
+from 12 o'clock in the variable's own order, each labelled beside
+it with its percentage; no legend. A pie shows at most six
+categories (the style's <code>pie.max</code>): a variable with more
+stops, with the line that draws a bar chart. <code>by =</code> and
+<code>facet =</code> are refused – to show a variable within groups,
+draw a 100% stacked bar.</p></li>
+<li><p><code>type = "stacked"</code>: a 100% stacked bar, horizontal bars
+whose segments are a variable's categories and sum to 100. With
+<code>by =</code>, one variable within each group:
+<code>jplot(community, Education, by = Region, type = "stacked")</code>
+draws a bar for each region. With several variables and no
+<code>by =</code>, a set of items that share their answer categories –
+the items of a scale – one bar per item:
+<code>jplot(community, Environment1:Environment5, type = "stacked")</code>.
+The items must share one set of categories (their value labels;
+unlabelled items, their values), and each bar's whole is that
+item's own valid answers. The legend is above the chart in the
+segments' order. A <code><a href="jcrosstab.html">jcrosstab()</a></code> result draws the same
+chart: <code>jplot(ct, which = "stacked")</code>.</p></li>
+</ul><p>In the variable-list form <code>facet =</code> draws one panel per group of
 the variable named, with the groups' value labels as the panel titles:
 the alternative to <code>by =</code> when the groups are many, since colors
 laid over each other stop being readable past a handful. The two can be
@@ -369,14 +421,16 @@ band illustrating the homoskedasticity assumption), <code>none</code> (no band).
 <li><p><code>jplot(jst_ttest)</code>: a group-comparison box plot for a <code><a href="jt.html">jt()</a></code> result, with the group means marked; <code>which = "qq"</code> draws the normal Q-Q plot of its residuals.</p></li>
 <li><p><code>jplot(jst_anova)</code>: a group-comparison box plot for a <code><a href="jaov.html">jaov()</a></code> result, with the group means marked; <code>which = "qq"</code> draws the normal Q-Q plot of its residuals.</p></li>
 <li><p><code>jplot(jst_corr)</code>: a heat-map of the correlation matrix for a <code><a href="jcorr.html">jcorr()</a></code> result, or a scatter plot for a single pair.</p></li>
-<li><p><code>jplot(jst_crosstab)</code>: a grouped bar chart of cell counts for a <code><a href="jcrosstab.html">jcrosstab()</a></code> result.</p></li>
+<li><p><code>jplot(jst_crosstab)</code>: a grouped bar chart of cell counts for a <code><a href="jcrosstab.html">jcrosstab()</a></code> result; <code>which = "stacked"</code> draws the 100% stacked bar, one bar per group.</p></li>
 <li><p><code>jplot(jst_desc)</code>: (planned) direct plotting of a <code><a href="jdesc.html">jdesc()</a></code> result is not yet available; this method points you to the data-first form, for example <code>jplot(data, Variable)</code>.</p></li>
 <li><p><code>jplot(jst_freq)</code>: (planned) direct plotting of a <code><a href="jfreq.html">jfreq()</a></code> result is not yet available; this method points you to the data-first form, for example <code>jplot(data, Variable)</code>.</p></li>
 <li><p><code>jplot(jst_alpha)</code>: a <code><a href="jalpha.html">jalpha()</a></code> result is not drawn; this method says
 so and points you to the data-first form for its items, for example
 <code>jplot(data, Item1)</code>.</p></li>
-<li><p><code>jplot(jst_multi)</code>: a <code><a href="jmulti.html">jmulti()</a></code> result is not drawn; this method says
-so and points you to the data-first form for its items.</p></li>
+<li><p><code>jplot(jst_multi)</code>: the ranked bar chart of a multiple-response set, for a
+<code><a href="jmulti.html">jmulti()</a></code> result: one bar per option in the order of the result's
+table, "None of these" last, each bar's percentage of everyone who
+answered at its end.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -507,7 +561,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu"><a href="jtable.html">jtable</a></span><span class="op">(</span><span class="va">p1</span>, file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Figure1.docx"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Figure 1. Region of residence (N = 103)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   a bar chart, 6 by 4 inches, on a portrait page.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Figure written to /tmp/RtmpGuokn9/Figure1.docx</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Figure written to /tmp/RtmprXDOjw/Figure1.docx</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The report style's look</span></span></span>
@@ -518,6 +572,69 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-plt img"><img src="jplot-18.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Parts of a whole, each asked for by name</span></span></span>
+<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span>, type <span class="op">=</span> <span class="st">"pie"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Pie Chart: Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-plt img"><img src="jplot-19.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span>, type <span class="op">=</span> <span class="st">"donut"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Donut Chart: Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-plt img"><img src="jplot-20.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="co"># A 100% stacked bar: one variable within groups, or a set of items</span></span></span>
+<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">community</span>, <span class="va">Education</span>, by <span class="op">=</span> <span class="va">Region</span>, type <span class="op">=</span> <span class="st">"stacked"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 100% Stacked Bar Chart: Education by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 97 (6 Excluded)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-plt img"><img src="jplot-21.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">community</span>, <span class="va">Environment1</span><span class="op">:</span><span class="va">Environment5</span>, type <span class="op">=</span> <span class="st">"stacked"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 100% Stacked Bar Chart: Environment1 to Environment5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 5 Variable Pool; 84 Complete on All</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-plt img"><img src="jplot-22.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="co"># ... and from a crosstab</span></span></span>
+<span class="r-in"><span><span class="va">ct</span> <span class="op">&lt;-</span> <span class="fu"><a href="jcrosstab.html">jcrosstab</a></span><span class="op">(</span><span class="va">Education</span> <span class="op">~</span> <span class="va">Region</span>, <span class="va">community</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cross-Tabulation</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Auto-listwise         6         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Analysis N           --         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing data   From 103   %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Education</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing      6     5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Crosstab: Education by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education                  1: North    2: South    3: East    4: West     Total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------    --------    --------    -------    -------    ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school           4           6          7          6         23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                    17.4%       26.1%      30.4%      26.1%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate       7           2          6          3         18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                    38.9%       11.1%      33.3%      16.7%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college               4           8          8          5         25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                    16.0%       32.0%      32.0%      20.0%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree          6           2          2          3         13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                    46.2%       15.4%      15.4%      23.1%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree            5           1          6          6         18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                    27.8%        5.6%      33.3%      33.3%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total                        26          19         29         23         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">ct</span>, which <span class="op">=</span> <span class="st">"stacked"</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="jplot-23.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default (omit the data frame in either form)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame set to: community</span>
@@ -527,28 +644,28 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 97 (6 Excluded)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-19.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-24.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Income</span>, line <span class="op">=</span> <span class="st">"lm"</span><span class="op">)</span>  <span class="co"># + regression line</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Scatterplot: WellbeingScore and Income</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 97 (6 Excluded)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-20.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-25.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">Age</span><span class="op">)</span>                                   <span class="co"># histogram</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Histogram: Age</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-21.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-26.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">Region</span>, <span class="va">Volunteer</span><span class="op">)</span>                     <span class="co"># grouped bar chart</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Grouped Bar Chart: Region and Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-22.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-27.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

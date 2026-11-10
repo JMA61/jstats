@@ -17,7 +17,7 @@ variables, numeric codes are displayed alongside labels."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.279</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.280</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -221,7 +221,8 @@ typed, in place of R's own "unused argument".</p></dd>
 frequency table), <code>adjusted_residuals</code> (matrix of adjusted
 standardized residuals), <code>n</code> (total N), <code>model_frame</code> (the
 analysis data frame used for plotting), <code>sample_info</code> (pipeline and
-missing data counts), and if <code>chisq = TRUE</code>: <code>chi_square</code>,
+missing data counts), <code>data_name</code> (the data frame as the call named it),
+and if <code>chisq = TRUE</code>: <code>chi_square</code>,
 <code>df</code>, and <code>p</code> (the Pearson chi-square), <code>chi_method</code>
 (the test's method string), <code>cramers_v</code> (Cramer's V, phi without
 its sign in a 2x2 table), and for 2x2 tables
@@ -524,6 +525,46 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Cramer's V: 0.411</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Keep the result to draw its charts: a grouped bar chart, or a 100%</span></span></span>
+<span class="r-in"><span><span class="co"># stacked bar with one bar per group</span></span></span>
+<span class="r-in"><span><span class="va">ct</span> <span class="op">&lt;-</span> <span class="fu">jcrosstab</span><span class="op">(</span><span class="va">Education</span> <span class="op">~</span> <span class="va">Region</span>, <span class="va">community</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cross-Tabulation</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Auto-listwise         6         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Analysis N           --         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing data   From 103   %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Education</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing      6     5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Crosstab: Education by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education                  1: North    2: South    3: East    4: West     Total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------    --------    --------    -------    -------    ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school           4           6          7          6         23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                    17.4%       26.1%      30.4%      26.1%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate       7           2          6          3         18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                    38.9%       11.1%      33.3%      16.7%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college               4           8          8          5         25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                    16.0%       32.0%      32.0%      20.0%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree          6           2          2          3         13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                    46.2%       15.4%      15.4%      23.1%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree            5           1          6          6         18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                    27.8%        5.6%      33.3%      33.3%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total                        26          19         29         23         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu"><a href="jplot.html">jplot</a></span><span class="op">(</span><span class="va">ct</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="jcrosstab-1.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="fu"><a href="jplot.html">jplot</a></span><span class="op">(</span><span class="va">ct</span>, which <span class="op">=</span> <span class="st">"stacked"</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="jcrosstab-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

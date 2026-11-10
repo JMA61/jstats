@@ -129,7 +129,8 @@ publication table of it with
 [`jfreq`](https://jma61.github.io/jstats/reference/jfreq.md) for one
 variable's frequencies,
 [`jtable`](https://jma61.github.io/jstats/reference/jtable.md) for the
-table;
+table, [`jplot`](https://jma61.github.io/jstats/reference/jplot.md) for
+the chart;
 [`jstats`](https://jma61.github.io/jstats/reference/jstats-package.md)
 for the package overview.
 
@@ -178,11 +179,14 @@ jmulti(svc, Counselling:Financial, rank = FALSE, variable.id = "labels")
 #> None of these       3    33.33
 #> 
 
-# Keep the result to make a publication table of it
+# Keep the result to make a publication table of it, or to draw its
+# ranked bar chart
 m <- jmulti(svc, Counselling:Financial, print = FALSE)
 t1 <- jtable(m)
 #> Table 1. Services used (N = 9)
 #>   1 set of 4 options, on a portrait page.
 #> The table was made in R; no Word file was asked for.
 #> 
+jplot(m)
+
 ```

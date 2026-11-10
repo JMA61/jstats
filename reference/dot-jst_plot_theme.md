@@ -8,7 +8,7 @@ included.
 ## Usage
 
 ``` r
-.jst_plot_theme(look = NULL, device = NULL)
+.jst_plot_theme(look = NULL, device = NULL, flip = FALSE)
 ```
 
 ## Arguments
@@ -22,6 +22,18 @@ included.
   As
   [`.jst_plot_family()`](https://jma61.github.io/jstats/reference/dot-jst_plot_family.md).
 
+- flip:
+
+  Logical(1); TRUE for a chart whose bars run across.
+
 ## Value
 
 A complete ggplot2 theme.
+
+## Details
+
+A chart whose bars run across the page – the ranked bar of a
+multiple-response set, a 100% stacked bar (Session 416) – has its value
+axis along the bottom, so the look's gridlines and axis lines are turned
+with it (`flip`): report's light gridlines run up from the values, and
+its one axis line is the one the bars stand on.

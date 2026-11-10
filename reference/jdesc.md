@@ -34,7 +34,9 @@ jdesc(
 
   Unquoted variable names within `data`. None when `data` is a single
   variable. A [`c()`](https://rdrr.io/r/base/c.html) of names, bare or
-  quoted, is read as the names.
+  quoted, is read as the names. A range in colon notation
+  (`Environment1:Environment5`) names every variable from the first to
+  the last, in the data frame's order.
 
 - by:
 
@@ -153,9 +155,9 @@ jdesc(
 ## Value
 
 Invisibly returns a list of class `jst_desc` containing: `descriptives`
-(data frame of statistics, or NULL for grouped output), and
-`sample_info` (pipeline and missing data counts). Also prints a
-formatted table to the console.
+(data frame of statistics, or NULL for grouped output), `sample_info`
+(pipeline and missing data counts) and `data_name` (the data frame as
+the call named it). Also prints a formatted table to the console.
 
 ## Details
 
@@ -301,6 +303,22 @@ jdesc(WellbeingScore, by = Volunteer)
 #> ---------  -----  -----------  ---  ---  ------  ------
 #> 0: No        54        54       25   76  47.463  11.699
 #> 1: Yes       49        49       29   81  54.673  10.059
+#> 
+jdesc(Environment1:Environment5)      # a range of variables
+#> Descriptive Statistics
+#> Using default data frame: community
+#> 
+#> 103 Cases in the 5 Variable Pool; 84 Complete on All
+#> 
+#> Note: Listwise deletion using jcomplete() would leave 84 cases.
+#> 
+#> Variable      Total  Non_missing  Min  Max   Mean    SD
+#> ------------  -----  -----------  ---  ---  -----  -----
+#> Environment1   103        91       1    5   3.176  1.160
+#> Environment2   103       103       1    5   2.845  1.170
+#> Environment3   103        91       1    5   3.055  1.223
+#> Environment4   103       103       1    5   3.243  1.175
+#> Environment5   103       103       1    5   2.777  1.448
 #> 
 
 # With a vector directly

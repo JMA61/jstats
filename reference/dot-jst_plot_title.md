@@ -18,7 +18,13 @@ names (not labels), matching the user's typed call.
 ## Usage
 
 ``` r
-.jst_plot_title(plot_type, variable_names, by_name = NULL, facet_name = NULL)
+.jst_plot_title(
+  plot_type,
+  variable_names,
+  by_name = NULL,
+  facet_name = NULL,
+  parts = NULL
+)
 ```
 
 ## Arguments
@@ -38,6 +44,13 @@ names (not labels), matching the user's typed call.
 - facet_name:
 
   Optional character string for the facet variable.
+
+- parts:
+
+  Optional character: the variables as the call gave them, a range as "A
+  to B"
+  ([`.jst_resolve_varrange()`](https://jma61.github.io/jstats/reference/dot-jst_resolve_varrange.md)),
+  for a 100% stacked bar's set of items.
 
 ## Details
 
