@@ -61,7 +61,9 @@
 #'   or a numeric vector.
 #' @param ... Unquoted variable names within \code{data}. None when
 #'   \code{data} is a single variable. A \code{c()} of names, bare
-#'   or quoted, is read as the names.
+#'   or quoted, is read as the names. A range in colon notation
+#'   (\code{Environment1:Environment5}) names every variable from the
+#'   first to the last, in the data frame's order.
 #' @param by An optional unquoted grouping variable name. When provided,
 #'   descriptives are computed separately for each group, with a separate
 #'   titled table per variable. Each table's \code{Total} is the
@@ -119,7 +121,8 @@
 #'
 #' @return Invisibly returns a list of class \code{jst_desc} containing:
 #'   \code{descriptives} (data frame of statistics, or NULL for grouped output),
-#'   and \code{sample_info} (pipeline and missing data counts). Also
+#'   \code{sample_info} (pipeline and missing data counts) and
+#'   \code{data_name} (the data frame as the call named it). Also
 #'   prints a formatted table to the console.
 #'
 #' @examples
@@ -136,6 +139,7 @@
 #' jdesc(Age)
 #' jdesc(Income, Age, WellbeingScore)
 #' jdesc(WellbeingScore, by = Volunteer)
+#' jdesc(Environment1:Environment5)      # a range of variables
 #'
 #' # With a vector directly
 #' jdesc(community$Age)
@@ -236,6 +240,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     class(variables) <- "quosures"
   }
   variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
+  # A range, A:B, is every variable from A to B (Session 416), as jalpha()
+  # reads one.
+  variables <- .jst_expand_ranges(variables, data, "jdesc", .jst_data_name,
+                                  default_used = .jst_default_used)
 
   variable_names <- vapply(variables, rlang::quo_name, character(1))
   by_quo         <- rlang::enquo(by)
@@ -628,7 +636,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
       descriptives = NULL,
       descriptives_raw = descriptives_raw,
       by           = by_name,
-      sample_info  = sample_info
+      sample_info  = sample_info,
+      data_name    = .jst_data_name
     )
     class(ret) <- "jst_desc"
     ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
@@ -793,7 +802,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   ret <- list(
     descriptives = descriptives,
     descriptives_raw = descriptives_raw,
-    sample_info  = sample_info
+    sample_info  = sample_info,
+    data_name    = .jst_data_name
   )
   class(ret) <- "jst_desc"
   ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
@@ -1043,7 +1053,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #'   or a vector.
 #' @param ... Unquoted variable name(s) within \code{data}. None when
 #'   \code{data} is a single variable. A \code{c()} of names, bare
-#'   or quoted, is read as the names.
+#'   or quoted, is read as the names. A range in colon notation
+#'   (\code{Environment1:Environment5}) names every variable from the
+#'   first to the last, in the data frame's order.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
@@ -1080,8 +1092,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #'   has none; \code{na}, the system-missing row as a one-row data
 #'   frame, or \code{NULL} when there are none; \code{total},
 #'   \code{valid_count}, and \code{missing}, the case counts; and
-#'   \code{var_label}, the variable's display label) and
-#'   \code{sample_info} (pipeline and missing data counts).
+#'   \code{var_label}, the variable's display label),
+#'   \code{sample_info} (pipeline and missing data counts) and
+#'   \code{data_name} (the data frame as the call named it).
 #'
 #' @examples
 #' # With explicit data frame
@@ -1190,6 +1203,10 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     class(variables) <- "quosures"
   }
   variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
+  # A range, A:B, is every variable from A to B (Session 416), as jalpha()
+  # reads one.
+  variables <- .jst_expand_ranges(variables, data, "jfreq", .jst_data_name,
+                                  default_used = .jst_default_used)
 
   results <- list()
 
@@ -1909,7 +1926,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 
   ret <- list(
     frequencies = results,
-    sample_info = sample_info
+    sample_info = sample_info,
+    data_name   = .jst_data_name
   )
   class(ret) <- "jst_freq"
   ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
@@ -2965,13 +2983,15 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 #' # The options in the data frame's order, named by their labels
 #' jmulti(svc, Counselling:Financial, rank = FALSE, variable.id = "labels")
 #'
-#' # Keep the result to make a publication table of it
+#' # Keep the result to make a publication table of it, or to draw its
+#' # ranked bar chart
 #' m <- jmulti(svc, Counselling:Financial, print = FALSE)
 #' t1 <- jtable(m)
+#' jplot(m)
 #'
 #' @seealso \code{\link{jfreq}} for one variable's frequencies,
-#'   \code{\link{jtable}} for the table; \code{\link{jstats}} for the
-#'   package overview.
+#'   \code{\link{jtable}} for the table, \code{\link{jplot}} for the
+#'   chart; \code{\link{jstats}} for the package overview.
 #'
 #' @export
 jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,

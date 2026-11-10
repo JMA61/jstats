@@ -122,8 +122,9 @@
 #' \strong{Visualization}
 #' \itemize{
 #'   \item \code{\link{jplot}} -- histograms, bar charts, scatterplots,
-#'     and boxplots from a data frame, plus plots of result objects
-#'     from \code{jt()}, \code{jlm()}, etc.
+#'     boxplots, pie and donut charts and 100% stacked bars from a data
+#'     frame, plus plots of result objects from \code{jt()},
+#'     \code{jlm()}, \code{jmulti()}, etc.
 #' }
 #'
 #' \strong{Publication tables}
@@ -882,7 +883,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' emission (console print, AGENTS.md block, SKILL.md) so a saved copy can
 #' be recognized as stale after a package update.
 #' @keywords internal
-.jst_orientation_version <- "3.10"
+.jst_orientation_version <- "3.11"
 
 #' Internal helper: the installed jstats version as a string
 #'
@@ -998,11 +999,13 @@ jai <- function(setup = NULL, path = NULL, ...) {
     "  relationships with `jcorr()` (correlations), `jlm()` (regression,",
     "  numeric outcome), or `jlogistic()` (regression, yes/no outcome);",
     "  cross-tabulate with `jcrosstab()`; check scale reliability with",
-    "  `jalpha()`. The group-comparison and regression functions take a formula",
-    "  (`jt(CommuteTime ~ OwnsHome)`, `jlm(Income ~ Age + Education)`);",
-    "  `jcorr()`, `jalpha()`, `jdesc()`, and `jfreq()` take variable names",
-    "  instead. For anything not listed, check `help(\"jstats\")` for the full",
-    "  function list before reaching for another package.",
+    "  `jalpha()`; tabulate a tick-all-that-apply question, stored as one",
+    "  yes/no item per option, with `jmulti()`. The group-comparison and",
+    "  regression functions take a formula (`jt(CommuteTime ~ OwnsHome)`,",
+    "  `jlm(Income ~ Age + Education)`); `jcorr()`, `jalpha()`, `jmulti()`,",
+    "  `jdesc()`, and `jfreq()` take variable names instead. For anything not",
+    "  listed, check `help(\"jstats\")` for the full function list before",
+    "  reaching for another package.",
     "",
     "- Analysis functions print their results directly. Keep a result with",
     "  `<-` (`m1 <- jlm(...)`) to make a publication table of it with",
@@ -1036,6 +1039,22 @@ jai <- function(setup = NULL, path = NULL, ...) {
     "  not invent a setting, and do not rename a setting or a section. Give",
     "  colors by name (`lightblue`) or six hex digits (`ADD8E6`), then run",
     "  `jstyle(\"myagency\")`, which names any value it cannot use.",
+    "",
+    "- Draw charts with `jplot()`, which chooses the chart from the variables:",
+    "  `jplot(community, Age)` a histogram, `jplot(community, Region)` a bar",
+    "  chart, `jplot(WellbeingScore ~ Age, community)` a scatterplot. Ask for",
+    "  the others by name: `type = \"pie\"` or `type = \"donut\"` for one",
+    "  variable of up to six categories, and `type = \"stacked\"` for a 100%",
+    "  stacked bar -- of one variable within groups,",
+    "  `jplot(community, Education, by = Region, type = \"stacked\")`, or of",
+    "  items that share their answer categories,",
+    "  `jplot(community, Environment1:Environment5, type = \"stacked\")`.",
+    "  `jplot()` also draws a kept result: `jplot(m1)` a model's plots, and",
+    "  `jplot(mr)` a `jmulti()` result's ranked bar chart. A chart kept with",
+    "  `<-` goes into a Word file as a figure, alone or beside built tables:",
+    "  `jtable(list(t1, p1), file = \"Report.docx\")`. A chart's look -- its",
+    "  colors, font and gridlines -- comes from the style, as a table's does:",
+    "  the `[plot]` settings in `?jstyle_settings`.",
     "",
     "- Detailed help and worked examples for each function are available via",
     "  `?jdesc`, `?jdeclare_missing`, and so on.",
@@ -1556,17 +1575,17 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' what to do, the S209 run avoided jstats entirely and reached for haven.
 #' Session 406 (orientation v3.9) added jtable and jstyle with the phrase
 #' naming tables and styles, so a request about a table's look loads the
-#' skill.
+#' skill; Session 416 (v3.11) jmulti, and jplot with the word charts.
 #' @keywords internal
 .jst_skill_description <- function() {
   paste(
     c("Use with the jstats R package or its example datasets community",
       "and clinic. jstats functions include jload, jdesc, jfreq, jscreen,",
-      "jt, jaov, jcorr, jlm, jlogistic, jcrosstab, jalpha, jdeclare_missing,",
-      "juse, jsave, jconvert, jtable, jstyle (publication tables in Word and",
-      ".jstyle table styles). Load this skill before writing jstats code;",
-      "its syntax is newer than model training data and must not be",
-      "guessed."),
+      "jt, jaov, jcorr, jlm, jlogistic, jcrosstab, jalpha, jmulti,",
+      "jdeclare_missing, juse, jsave, jconvert, jplot (charts), jtable,",
+      "jstyle (publication tables in Word and .jstyle table styles). Load",
+      "this skill before writing jstats code; its syntax is newer than",
+      "model training data and must not be guessed."),
     collapse = " ")
 }
 

@@ -4049,5 +4049,12 @@
   assign("temp_df", wrapped$frame, envir = env)
   cl <- as.call(c(list(as.symbol(fn_name), as.symbol("temp_df"), as.symbol(var)),
                   args, list(subset = subset_sub)))
-  eval(cl, env)
+  # The result keeps no data frame name (Session 416): the frame it was
+  # made from is this function's own, and a line built on its name would
+  # name a frame the user does not have.
+  res <- withVisible(eval(cl, env))
+  if (is.list(res$value) && !is.null(res$value[["data_name"]])) {
+    res$value["data_name"] <- list(NULL)
+  }
+  if (res$visible) res$value else invisible(res$value)
 }

@@ -19,7 +19,10 @@
   filter = NULL,
   data_name = NULL,
   rerun = "chart",
-  code_labels = list()
+  code_labels = list(),
+  flip = FALSE,
+  item_ns = NULL,
+  relook = NULL
 )
 }
 \arguments{
@@ -61,6 +64,12 @@ ruling R72's note names in its jrelabel() line.}
 
 \item{code_labels}{By variable of \code{codes_shown}, the codes it does
 label (code = label), for the note's jrelabel() line.}
+
+\item{flip}{TRUE for a chart whose bars run across, whose theme is
+turned with them (\code{.jst_plot_theme()}).}
+
+\item{item_ns}{NULL, or the lowest and highest N of a set of items whose
+Ns differ, for the figure's note (ruling R68).}
 }
 \value{
 The chart.

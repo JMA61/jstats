@@ -37,8 +37,12 @@
 #' \code{jplot(data = community, Age)} is the same plot as
 #' \code{jplot(community, Age)}. Used for histograms
 #' (1 numeric), bar charts (1 categorical), and grouped bar charts (2
-#' categorical). Calls that would otherwise auto-detect to a scatter or
-#' boxplot produce a helpful error directing you to the formula form.
+#' categorical), and, asked for with \code{type =}, for pie and donut
+#' charts and 100% stacked bars (see "Parts of a whole" below). Calls
+#' that would otherwise auto-detect to a scatter or boxplot produce a
+#' helpful error directing you to the formula form. A range,
+#' \code{Environment1:Environment5}, names every variable from the first to
+#' the last in the data frame's order, as in \code{\link{jalpha}()}.
 #'
 #' \strong{A labelled variable with a few categories}, such as Region --
 #' six values or fewer with at least one of them labelled, or whole
@@ -66,7 +70,12 @@
 #' horizontal gridlines, the x axis line alone and the legend at the top. A
 #' chart's axes and legends are titled by the variables' labels, the name
 #' where a variable has none; a bar chart of one series shows each bar's
-#' count. The style is \code{joptions(style = )}'s, apa when none is set,
+#' count, a pie or a donut each slice's percentage and a ranked bar chart
+#' each bar's (the style's \code{values}); a 100% stacked bar shows its
+#' percentages inside its segments only under the style's
+#' \code{values.stacked = yes}. Percentages are whole numbers, or have one
+#' decimal place under \code{values.decimals = 1}. The style is
+#' \code{joptions(style = )}'s, apa when none is set,
 #' or the call's \code{style =}.
 #'
 #' \strong{A chart in a Word file.} Keep a chart with \code{<-} and give it
@@ -93,7 +102,18 @@
 #'     pair's difference from the mean difference)
 #'   \item \code{jst_corr}: \code{heatmap}, \code{scatter} (scatter requires
 #'     exactly 2 variables in the correlation)
-#'   \item \code{jst_crosstab}: \code{bar}
+#'   \item \code{jst_crosstab}: \code{bar} (the default), \code{stacked}
+#'     (a 100% stacked bar: one bar per group -- the variable on the
+#'     right of the formula -- with the row variable's distribution
+#'     within it, the column percentages of the crosstab; for the other
+#'     way round, swap the formula. The chart follows the percentages the
+#'     publication table prints: under a style file whose \code{[crosstab]}
+#'     \code{percent.base} is \code{row}, one bar per category of the row
+#'     variable)
+#'   \item \code{jst_multi} (a \code{\link{jmulti}()} result): \code{bar},
+#'     a ranked bar chart -- one horizontal bar per option in the order of
+#'     the result's table, "None of these" last, each bar's percentage of
+#'     everyone who answered at its end
 #' }
 #'
 #' The shortcut keyword \code{core} (default) produces a curated default
@@ -114,10 +134,42 @@
 #'
 #' Valid plot types for the data-first form: \code{histogram},
 #' \code{density}, \code{bar}, \code{scatter}, \code{box},
-#' \code{grouped_bar}. A density plot is the histogram's alternative for a
+#' \code{grouped_bar}, \code{pie}, \code{donut}, \code{stacked}. A density
+#' plot is the histogram's alternative for a
 #' numeric variable -- its kernel density estimate, one curve, or one per
 #' group of \code{by =} laid over each other -- and is drawn only when
 #' asked for with \code{type = "density"}.
+#'
+#' \strong{Parts of a whole.} Three charts show how a whole divides, and
+#' each is drawn only when asked for by name. They draw a variable by its
+#' categories whatever its type, each category named by its value label;
+#' the whole is the cases with an answer. A \code{\link{jnumeric}()} or
+#' \code{\link{jcount}()} registration, which says how the analyses read
+#' a variable, changes nothing in these charts; \code{numeric =} in the
+#' call shows a labelled variable by its codes.
+#' \itemize{
+#'   \item \code{type = "pie"} and \code{type = "donut"}: one variable as
+#'     one whole. The slices are its categories that have cases, clockwise
+#'     from 12 o'clock in the variable's own order, each labelled beside
+#'     it with its percentage; no legend. A pie shows at most six
+#'     categories (the style's \code{pie.max}): a variable with more
+#'     stops, with the line that draws a bar chart. \code{by =} and
+#'     \code{facet =} are refused -- to show a variable within groups,
+#'     draw a 100% stacked bar.
+#'   \item \code{type = "stacked"}: a 100% stacked bar, horizontal bars
+#'     whose segments are a variable's categories and sum to 100. With
+#'     \code{by =}, one variable within each group:
+#'     \code{jplot(community, Education, by = Region, type = "stacked")}
+#'     draws a bar for each region. With several variables and no
+#'     \code{by =}, a set of items that share their answer categories --
+#'     the items of a scale -- one bar per item:
+#'     \code{jplot(community, Environment1:Environment5, type = "stacked")}.
+#'     The items must share one set of categories (their value labels;
+#'     unlabelled items, their values), and each bar's whole is that
+#'     item's own valid answers. The legend is above the chart in the
+#'     segments' order. A \code{\link{jcrosstab}()} result draws the same
+#'     chart: \code{jplot(ct, which = "stacked")}.
+#' }
 #'
 #' In the variable-list form \code{facet =} draws one panel per group of
 #' the variable named, with the groups' value labels as the panel titles:
@@ -142,7 +194,8 @@
 #'   (Result-object form only.)
 #' @param ... Additional arguments: for the result-object form these are
 #'   passed to class-specific methods; for the data-first form these are
-#'   unquoted variable names (1 or 2).
+#'   unquoted variable names (1 or 2; for \code{type = "stacked"} a set of
+#'   items, which a range such as \code{Q1:Q5} may name).
 #' @param focal Unquoted name of the predictor to place on the
 #'   x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and
 #'   \code{probability} plots. Defaults to the first predictor
@@ -166,13 +219,16 @@
 #' @param r2 Logical. If TRUE (default), displays R-squared in the subtitle
 #'   alongside the equation.
 #' @param by Unquoted variable name for group-coloring (data-first form).
+#'   With \code{type = "stacked"}, the groups: one bar for each.
 #' @param facet Unquoted variable name for one panel per group
 #'   (variable-list form: a histogram, density plot, bar chart or grouped
 #'   bar chart), bare or in quotes. See Details.
 #' @param type Character. Plot type override for the data-first form. One
 #'   of \code{histogram}, \code{density}, \code{bar}, \code{scatter},
-#'   \code{box}, \code{grouped_bar}. If NULL (default), auto-detected
-#'   from variable types; \code{density} is never the automatic choice.
+#'   \code{box}, \code{grouped_bar}, \code{pie}, \code{donut},
+#'   \code{stacked}. If NULL (default), auto-detected
+#'   from variable types; \code{density}, \code{pie}, \code{donut} and
+#'   \code{stacked} are never the automatic choice.
 #' @param line Controls a line overlay on data-first scatter plots. One of
 #'   \code{FALSE} (default; no line), \code{TRUE} (alias for \code{lm}),
 #'   \code{lm}, \code{loess}, \code{connect}.
@@ -257,6 +313,16 @@
 #'
 #' # The report style's look
 #' jplot(community, Region, style = "report")
+#'
+#' # Parts of a whole, each asked for by name
+#' jplot(community, Region, type = "pie")
+#' jplot(community, Region, type = "donut")
+#' # A 100% stacked bar: one variable within groups, or a set of items
+#' jplot(community, Education, by = Region, type = "stacked")
+#' jplot(community, Environment1:Environment5, type = "stacked")
+#' # ... and from a crosstab
+#' ct <- jcrosstab(Education ~ Region, community)
+#' jplot(ct, which = "stacked")
 #'
 #' # Using juse() default (omit the data frame in either form)
 #' juse(community)
@@ -352,12 +418,9 @@ jplot <- function(x, which = "core", ...) {
                          "residuals", "qq", "scale", "cooks",
                          "leverage", "probability", "logit", "roc",
                          "calibration", "binned", "box", "heatmap", "scatter",
-                         "bar"),
+                         "bar", "stacked"),
                        "a plot name")),
-                   list(type = .jst_word_spec(c("histogram", "density", "bar",
-                                                "scatter", "box",
-                                                "grouped_bar"),
-                                              "a plot type"),
+                   list(type = .jst_word_spec(.jst_plot_types, "a plot type"),
                         line = .jst_word_spec(c("lm", "loess", "connect"),
                                               "a line type"),
                         band = .jst_word_spec(c("ci", "pi", "see", "none"),
@@ -552,6 +615,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (!is.null(x_eval) && !x_eval$failed && inherits(x_eval$value, "formula")) {
     .jst_release_warnings(x_eval$warnings)
     by_sub <- substitute(by)
+    # A formula draws a scatterplot or a boxplot (Session 416): any other
+    # type = went on to print its title, an N line and "NULL".
+    .jst_plot_formula_type(type)
     # facet = is the variable-list form's (Capability Slate C3, Session
     # 378): a scatterplot or boxplot by groups takes by =.
     if (!is.null(substitute(facet)) && !missing(facet)) {
@@ -613,7 +679,13 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
   variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
 
-  variable_names <- vapply(variables, rlang::quo_name, character(1))
+  # A range of variables, in the data frame's order (the S412 audit's F5,
+  # taken Session 413; built Session 416): Environment1:Environment5, as
+  # jalpha() and jmulti() take one, for every chart type.
+  .ranges        <- .jst_resolve_varrange(variables, data, "jplot",
+                                          .jst_data_name,
+                                          default_used = .jst_default_used)
+  variable_names <- .ranges$var_names
   by_quo         <- rlang::enquo(by)
   has_by         <- !rlang::quo_is_null(by_quo)
   by_name        <- if (has_by) .jst_one_var_name(by_quo, "jplot", "by =") else NULL
@@ -625,18 +697,28 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   facet_name     <- if (has_facet) .jst_one_var_name(facet_quo, "jplot", "facet =") else NULL
 
   n_vars <- length(variable_names)
+  # A chart of the parts of a whole -- a pie, a donut, a 100% stacked bar
+  # (rulings R66 and R68, Session 412) -- is asked for by name, and read
+  # here, before the variables are counted: a 100% stacked bar takes a set
+  # of items.
+  whole_type <- if (is.character(type) && length(type) == 1L && !is.na(type) &&
+                    type %in% c("pie", "donut", "stacked")) type
   # One sentence a line, each example on a line of its own (Session 369,
   # Fix Slate 17). The over-two example had been jplot(community, Age,
   # Income, by = Region), which stops: two numeric variables want the
-  # formula form.
+  # formula form. Since Session 416 the stop offers the 100% stacked bar,
+  # which draws three or more (the S412 audit's F5).
   if (n_vars == 0) {
     .jst_no_vars_stop("jplot(community, Age)", fn = "jplot")
   }
-  if (n_vars > 2) {
+  if (n_vars > 2 && !identical(whole_type, "stacked")) {
     .jst_stop("only 1 or 2 variables can be plotted at once.\n",
               "To show a variable by the groups of another, add by = to the ",
               "call, for example:\n",
               "  jplot(community, Age, by = Region)\n",
+              "To compare several items that share their answer categories, ",
+              "draw a 100% stacked bar, for example:\n",
+              "  jplot(community, Environment1:Environment5, type = \"stacked\")\n",
               "Or call jplot() once for each variable.", fn = "jplot")
   }
 
@@ -649,6 +731,11 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     .jst_stop("by = and facet = both name ", by_name, ".\n",
               "Name it once: by = colors the groups on one plot, facet = ",
               "draws one panel per group.", fn = "jplot")
+  }
+  # What a pie, a donut and a 100% stacked bar take, before anything is
+  # read (a refused call changes nothing).
+  if (!is.null(whole_type)) {
+    .jst_plot_whole_front(whole_type, variable_names, by_name, facet_name)
   }
 
   # numeric =, categorical = and count = name variables, bare or in quotes
@@ -757,19 +844,27 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     }
   }
 
+  # A pie, a donut and a 100% stacked bar show a variable by its
+  # categories, whatever its class (the S412 audit's F3, taken Session 413:
+  # the redirect a bar chart takes with no type =), each category named by
+  # its value label. A variable the CALL asserts as numeric (numeric =,
+  # count =) is shown by its values. A jnumeric() or jcount() registration
+  # changes nothing here: it says how the analyses read the variable, and
+  # these charts have no reading of it but its categories.
+  whole_numbers <- character(0)
+  if (!is.null(whole_type)) {
+    whole_numbers <- variable_names[variable_names %in% c(numeric, count)]
+    var_types[] <- "categorical"
+    var_types[variable_names %in% whole_numbers] <- "numeric"
+  }
+
   # Auto-detect plot type if not specified
   resolved_type <- type
   if (is.null(resolved_type)) {
     resolved_type <- .jst_auto_plot_type(var_types, n_vars)
   }
 
-  valid_types <- c("histogram", "density", "bar", "scatter", "box",
-                   "grouped_bar")
-  if (!resolved_type %in% valid_types) {
-    .jst_stop("Invalid `type` value: \"", resolved_type, "\".\n",
-         "Valid types: ", paste(sprintf("\"%s\"", valid_types),
-                                 collapse = ", "), ".")
-  }
+  if (!resolved_type %in% .jst_plot_types) .jst_plot_type_stop(resolved_type)
   # A histogram or a density plot (Capability Slate C3, Session 378: the
   # density plot is an alternative to the histogram, never the automatic
   # choice) draws one numeric variable: on two the scatter stop below
@@ -866,6 +961,25 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
          "categorical grouping variable on the right goes on the x-axis.)")
   }
 
+  # -- A pie's limit, and what a 100% stacked bar is drawn from --------------
+  # Both read the data the chart draws, and both stop before the title, as
+  # the scatterplot and boxplot stops above do.
+  whole <- NULL
+  if (resolved_type %in% c("pie", "donut")) {
+    .jst_plot_pie_limit(data[[variable_names[1L]]], variable_names[1L],
+                        resolved_type, .look, .jst_data_name,
+                        variable_names[1L] %in% whole_numbers)
+  } else if (identical(resolved_type, "stacked")) {
+    by_f <- if (has_by) {
+      .jst_plot_convert_labelled(data, character(0), character(0), by_name,
+                                 TRUE)[[by_name]]
+    }
+    whole <- .jst_plot_stacked_counts(data, variable_names, by = by_f,
+                                      as_numbers = whole_numbers,
+                                      asserted = categorical, call = sys.call())
+  }
+  item_set <- identical(resolved_type, "stacked") && !has_by && n_vars > 1L
+
   # -- Note about arguments ignored for this plot type ----------------------
   # line/band/equation/r2 apply only to scatter plots with line = "lm"; one
   # note names any the call gave a plot that does not use them.
@@ -898,15 +1012,25 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   # -- Red title --------------------------------------------------------------
   plot_title <- .jst_plot_title(resolved_type, variable_names, by_name,
-                                facet_name)
+                                facet_name, parts = .ranges$label_parts)
   .cat_red(paste0(plot_title, "\n"))
 
   # Print pipeline messages (default data frame note, filter/complete status)
   if (.jst_default_used) .jst_default_note(.jst_data_name)
   .jst_print_msgs(pipeline$msgs)
-  # The cases the plot draws, and how many it leaves out (Session 349).
-  n_plot <- .jst_plot_n_line(data, c(variable_names, by_name, facet_name),
-                             pipeline$pipeline_counts$n_original)
+  # The cases the plot draws, and how many it leaves out (Session 349). A
+  # set of items is counted item by item, as jfreq() counts its variables
+  # (the S412 audit's F18): the per-variable layout's line, and one N for
+  # the figure only where every item has the same.
+  item_ns <- NULL
+  if (item_set) {
+    item_ns <- .jst_plot_pool_line(data, variable_names,
+                                   pipeline$pipeline_counts$n_original)
+    n_plot  <- if (length(unique(item_ns)) == 1L) item_ns[[1L]] else NA_integer_
+  } else {
+    n_plot <- .jst_plot_n_line(data, c(variable_names, by_name, facet_name),
+                               pipeline$pipeline_counts$n_original)
+  }
   # A variable drawn on a numeric scale holding Inf or -Inf (Session 394):
   # ggplot2 left the case out, under its "Removed 1 rows" warning, though
   # the N line above counted it.
@@ -932,13 +1056,21 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # names by name or by code where no label stood (ruling R72).
   cat_vars <- c(variable_names[var_types == "categorical"],
                 if (has_by) by_name, facet_name)
+  # A set of items is titled by the text its labels share, each item named
+  # by what its label adds (ruling R69).
+  item_names <- if (identical(resolved_type, "stacked") && !has_by) {
+    .jst_plot_item_names(data, variable_names,
+                         by_names = !identical(vlmode, "labels"))
+  }
   frame <- .jst_plot_frame_facts(
     data, resolved_type,
     shown = c(variable_names, by_name, facet_name),
     categorical = cat_vars,
-    title = .jst_plot_default_title(resolved_type, data, variable_names,
-                                    by_name, facet_name),
+    title = if (item_set) item_names$title
+            else .jst_plot_default_title(resolved_type, data, variable_names,
+                                         by_name, facet_name),
     pipeline_counts = pipeline$pipeline_counts, data_name = .jst_data_name)
+  if (item_set && length(unique(item_ns)) > 1L) frame$item_ns <- range(item_ns)
 
   data <- .jst_plot_convert_labelled(data, variable_names, var_types,
                                      by_name, has_by)
@@ -970,7 +1102,20 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                                  axis_labels, by_label, look = .look),
     grouped_bar = .jst_build_grouped_bar(data, variable_names,
                                          axis_labels, facet_name,
-                                         look = .look)
+                                         look = .look),
+    pie         = .jst_build_pie(data, variable_names[1], donut = FALSE,
+                                 look = .look),
+    donut       = .jst_build_pie(data, variable_names[1], donut = TRUE,
+                                 look = .look),
+    stacked     = if (has_by) {
+      .jst_build_stacked(whole, bar_title = by_label,
+                         legend_title = axis_labels[[variable_names[1]]],
+                         sheet_names = c(by_name, variable_names[1]),
+                         look = .look)
+    } else {
+      .jst_build_stacked(whole, bar_labels = item_names$labels,
+                         sheet_names = c("Item", "Response"), look = .look)
+    }
   )
   p <- .jst_plot_finish_built(p, resolved_type, n_plot, frame, .look)
 
@@ -1127,8 +1272,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                    data = built$data, names_shown = frame$names_shown,
                    codes_shown = frame$codes_shown, scales = built$scales,
                    labelled = frame$labelled, look = look,
-                   filter = frame$filter, data_name = frame$data_name,
-                   code_labels = frame$code_labels)
+                   tweak = built$tweak, filter = frame$filter,
+                   data_name = frame$data_name,
+                   code_labels = frame$code_labels, flip = built$flip,
+                   item_ns = frame$item_ns, relook = built$relook)
 }
 
 
@@ -1564,6 +1711,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   out$width  <- as.numeric(out$width)
   out$height <- as.numeric(out$height)
   out$resolution <- as.numeric(out$resolution)
+  out$values.decimals <- as.integer(out$values.decimals)
+  out$pie.max <- as.integer(out$pie.max)
   c(list(style = st$name), out, list(st = st))
 }
 
@@ -1662,12 +1811,25 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' (ruling R64). Every chart jplot() draws takes it, the diagnostics plots
 #' included.
 #'
+#' A chart whose bars run across the page -- the ranked bar of a
+#' multiple-response set, a 100% stacked bar (Session 416) -- has its
+#' value axis along the bottom, so the look's gridlines and axis lines are
+#' turned with it (\code{flip}): report's light gridlines run up from the
+#' values, and its one axis line is the one the bars stand on.
+#'
 #' @param look A look; the chart being drawn's when NULL.
 #' @param device As \code{.jst_plot_family()}.
+#' @param flip Logical(1); TRUE for a chart whose bars run across.
 #' @return A complete ggplot2 theme.
 #' @keywords internal
-.jst_plot_theme <- function(look = NULL, device = NULL) {
+.jst_plot_theme <- function(look = NULL, device = NULL, flip = FALSE) {
   if (is.null(look)) look <- .jst_plot_look_now()
+  if (isTRUE(flip)) {
+    look$gridlines  <- switch(look$gridlines, horizontal = "vertical",
+                              vertical = "horizontal", look$gridlines)
+    look$axis.lines <- switch(look$axis.lines, x = "y", y = "x",
+                              look$axis.lines)
+  }
   fam  <- .jst_plot_family(look$font, device)
   ink  <- "#000000"
   grid <- ggplot2::element_line(colour = paste0("#", look$grid.color), linewidth = 0.4)
@@ -1746,18 +1908,40 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' jtable() can draw the chart again in another style's colors by adding
 #' the scale again (\code{.jst_plot_restyle()}).
 #'
+#' Since Session 416 a scale may also carry what a 100% stacked bar's needs:
+#' the black or white that reads on each series' color, for a value written
+#' inside a segment (\code{contrast}); and a legend's rows, the order its
+#' keys are given in and the labels they take (\code{rows}, \code{breaks},
+#' \code{labels}).
+#'
 #' @param aes "fill" or "colour".
 #' @param levels Character; the series, in order.
 #' @param look A look.
 #' @param guide TRUE for a legend.
+#' @param contrast TRUE for the text color that reads on each series' color.
+#' @param rows NULL, or the legend's rows.
+#' @param breaks NULL, or the series in the order the legend's keys are
+#'   given.
+#' @param labels NULL, or the keys' labels, named by series.
 #' @return A ggplot2 scale.
 #' @keywords internal
-.jst_plot_scale <- function(aes, levels, look, guide = TRUE) {
-  cols <- stats::setNames(.jst_plot_colours(look, length(levels)), levels)
+.jst_plot_scale <- function(aes, levels, look, guide = TRUE, contrast = FALSE,
+                            rows = NULL, breaks = NULL, labels = NULL) {
+  cols <- .jst_plot_colours(look, length(levels))
+  if (isTRUE(contrast)) cols <- .jst_plot_contrast(cols)
+  cols <- stats::setNames(cols, levels)
   fun <- if (identical(aes, "fill")) ggplot2::scale_fill_manual
          else ggplot2::scale_colour_manual
-  fun(values = cols, breaks = levels, limits = levels,
-      guide = if (isTRUE(guide)) "legend" else "none")
+  brk <- if (is.null(breaks)) levels else breaks
+  gd  <- if (!isTRUE(guide)) "none"
+         else if (is.null(rows)) "legend"
+         else ggplot2::guide_legend(nrow = rows)
+  if (is.null(labels)) {
+    fun(values = cols, breaks = brk, limits = levels, guide = gd)
+  } else {
+    fun(values = cols, breaks = brk, limits = levels, guide = gd,
+        labels = unname(labels[brk]))
+  }
 }
 
 #' Internal helper: a variable's label for an axis or a legend
@@ -1871,6 +2055,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #'   "chart" (draw it again) or "analysis" (run the analysis and draw it).
 #' @param code_labels By variable of \code{codes_shown}, the codes it does
 #'   label (code = label), for the note's jrelabel() line.
+#' @param flip TRUE for a chart whose bars run across, whose theme is
+#'   turned with them (\code{.jst_plot_theme()}).
+#' @param item_ns NULL, or the lowest and highest N of a set of items whose
+#'   Ns differ, for the figure's note (ruling R68).
 #' @return The chart.
 #' @keywords internal
 .jst_plot_finish <- function(p, kind, n = NA_integer_, title = NA_character_,
@@ -1878,14 +2066,16 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                              codes_shown = list(), scales = list(),
                              labelled = FALSE, look = NULL, tweak = NULL,
                              filter = NULL, data_name = NULL, rerun = "chart",
-                             code_labels = list()) {
+                             code_labels = list(), flip = FALSE,
+                             item_ns = NULL, relook = NULL) {
   if (is.null(look)) look <- .jst_plot_look_now()
   attr(p, "jstats_figure") <- list(
     kind = kind, n = n, title = title, data = data,
     names_shown = unique(names_shown), codes_shown = codes_shown,
     scales = scales, labelled = isTRUE(labelled), look = look,
     tweak = tweak, filter = filter, data_name = data_name, rerun = rerun,
-    code_labels = code_labels, version = .jst_jstats_version())
+    code_labels = code_labels, flip = isTRUE(flip), item_ns = item_ns,
+    relook = relook, version = .jst_jstats_version())
   if (!inherits(p, "jst_plot")) class(p) <- c("jst_plot", class(p))
   p
 }
@@ -1926,14 +2116,28 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       identical(.jst_plot_family(look$font, device), .jst_plot_family(look$font))) {
     return(p)
   }
-  p <- p + .jst_plot_theme(look, device = device)
-  if (!is.null(f$tweak)) p <- p + f$tweak
-  if (!identical(look$palette, f$look$palette)) {
-    for (s in f$scales) {
-      p <- suppressMessages(p + .jst_plot_scale(s$aes, s$levels, look, s$guide))
-    }
+  # A 100% stacked bar's legend is fitted to the look: its rows, its
+  # labels' lines and where it starts (Session 416).
+  lay <- if (is.list(f$relook) && identical(f$relook$kind, "stacked")) {
+    do.call(.jst_plot_stacked_legend, c(f$relook$args, list(look = look)))
   }
+  scales <- if (is.null(lay)) f$scales else lay$scales
+  tweak  <- if (is.null(lay)) f$tweak  else lay$tweak
+  p <- p + .jst_plot_theme(look, device = device, flip = isTRUE(f$flip))
+  if (!is.null(tweak)) p <- p + tweak
+  if (!identical(look$palette, f$look$palette) || !is.null(lay)) {
+    p <- suppressMessages(.jst_plot_add_scales(p, scales, look))
+  }
+  if (!is.null(lay)) p <- p + ggplot2::labs(fill = lay$title)
+  # The values on its bars and a pie's labels in this look's font and size
+  # (Session 416; the (S415) item: they had kept the look they were drawn
+  # in).
+  p <- .jst_plot_retext(p, look, device = device)
   attr(p, "jstats_figure")$look <- look
+  if (!is.null(lay)) {
+    attr(p, "jstats_figure")$scales <- scales
+    attr(p, "jstats_figure")$tweak  <- tweak
+  }
   p
 }
 
@@ -2051,9 +2255,12 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @param variable_names Character vector of 1 or 2 variable names.
 #' @param by_name Optional character string for the by-variable.
 #' @param facet_name Optional character string for the facet variable.
+#' @param parts Optional character: the variables as the call gave them, a
+#'   range as "A to B" (\code{.jst_resolve_varrange()}), for a 100% stacked
+#'   bar's set of items.
 #' @keywords internal
 .jst_plot_title <- function(plot_type, variable_names, by_name = NULL,
-                            facet_name = NULL) {
+                            facet_name = NULL, parts = NULL) {
   prefix <- switch(
     plot_type,
     histogram   = "Histogram",
@@ -2062,9 +2269,15 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     scatter     = "Scatterplot",
     box         = "Boxplot",
     grouped_bar = "Grouped Bar Chart",
+    pie         = "Pie Chart",
+    donut       = "Donut Chart",
+    stacked     = "100% Stacked Bar Chart",
     "Plot"
   )
-  body <- if (length(variable_names) == 1) {
+  body <- if (identical(plot_type, "stacked") && length(parts) &&
+              (length(variable_names) > 2L || length(parts) == 1L)) {
+    .jst_and_list(parts)
+  } else if (length(variable_names) == 1) {
     variable_names[1]
   } else {
     paste(variable_names[1], "and", variable_names[2])
@@ -2160,7 +2373,11 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @return The ggplot.
 #' @keywords internal
 .jst_plot_add_scales <- function(p, scales, look) {
-  for (s in scales) p <- p + .jst_plot_scale(s$aes, s$levels, look, s$guide)
+  for (s in scales) {
+    p <- p + .jst_plot_scale(s$aes, s$levels, look, s$guide,
+                             contrast = isTRUE(s$contrast), rows = s$rows,
+                             breaks = s$breaks, labels = s$labels)
+  }
   p
 }
 
@@ -2203,9 +2420,14 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @param p The ggplot.
 #' @param scales The scales (\code{.jst_plot_add_scales()}).
 #' @param data The numbers it shows, for the Excel sheet, or NULL.
+#' @param flip TRUE for a chart whose bars run across.
+#' @param tweak NULL, or a theme setting of the chart's own, added again
+#'   when the chart is drawn in another look.
 #' @keywords internal
-.jst_plot_built <- function(p, scales, data = NULL) {
-  attr(p, "jst_built") <- list(scales = scales, data = data)
+.jst_plot_built <- function(p, scales, data = NULL, flip = FALSE,
+                            tweak = NULL, relook = NULL) {
+  attr(p, "jst_built") <- list(scales = scales, data = data, flip = flip,
+                               tweak = tweak, relook = relook)
   p
 }
 
@@ -2253,7 +2475,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (!on) return(NULL)
   size <- look$size * 0.8 / ggplot2::.pt
   fam  <- .jst_plot_family(look$font)
-  if (grouped) {
+  .jst_plot_text_layer(if (grouped) {
     ggplot2::geom_text(
       stat = "count",
       ggplot2::aes(label = ggplot2::after_stat(!!as.symbol("count")),
@@ -2265,7 +2487,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       stat = "count",
       ggplot2::aes(label = ggplot2::after_stat(!!as.symbol("count"))),
       vjust = -0.4, size = size, family = fam, colour = "#000000")
-  }
+  })
 }
 
 #' Internal helper: the counts a bar chart shows, for its Excel sheet
@@ -2763,6 +2985,1015 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 }
 
 
+# -- The report kinds: pie and donut, 100% stacked bar, ranked bar -------------
+#
+# Capability Slate U's charts, build 3 (Session 416): the chart kinds a
+# report uses (rulings R66-R68, okayed Session 412 and final at Session 413).
+# A pie or a donut of one variable, asked for by name and never chosen
+# (R66); the ranked horizontal bar of a multiple-response set, drawn from a
+# jmulti() result (R67); the 100% stacked bar of a set of items, of a
+# variable within groups, or of a jcrosstab() result (R68). Each is drawn
+# from numbers worked out here -- rectangles, polygons and text placed by
+# their own coordinates -- so the picture is the same under every version
+# of ggplot2 the package runs on, and each takes the style's [plot] look.
+
+#' Internal helper: a percentage as a chart writes it
+#'
+#' Whole by default; one decimal under the style's values.decimals = 1
+#' (ruling R70). With its sign: "38%".
+#'
+#' @param p Numeric; percentages.
+#' @param look A look.
+#' @return Character.
+#' @keywords internal
+.jst_plot_pct <- function(p, look) {
+  d <- look$values.decimals
+  d <- if (is.null(d) || is.na(d)) 0L else as.integer(d)
+  paste0(formatC(round(p, d), format = "f", digits = d), "%")
+}
+
+#' Internal helper: a layer of a chart's own text, marked for a redraw
+#'
+#' The values on a chart's bars and segments and a pie's labels are drawn
+#' in the look's font at a share of its size. A chart written to a Word
+#' file in another style is drawn again in that style's look
+#' (\code{.jst_plot_restyle()}), and until Session 416 its values kept the
+#' font and size they were drawn in (the (S415) item). The mark -- the
+#' text's size as a share of the look's -- is how the redraw finds the
+#' layer.
+#'
+#' @param layer A ggplot2 text layer.
+#' @param rel Numeric(1); the text's size as a share of the look's size.
+#' @return The layer, marked.
+#' @keywords internal
+.jst_plot_text_layer <- function(layer, rel = 0.8) {
+  layer$jst_text <- rel
+  layer
+}
+
+#' Internal helper: a chart's own text drawn again in another look
+#'
+#' Each layer \code{.jst_plot_text_layer()} marked is replaced by a copy of
+#' itself in the look's font and at its share of the look's size. The copy
+#' inherits everything else from the layer, which is left as it was, so
+#' the chart the user holds does not change.
+#'
+#' @param p A chart jplot() drew.
+#' @param look The look to draw its text in.
+#' @param device As \code{.jst_plot_family()}.
+#' @return The chart.
+#' @keywords internal
+.jst_plot_retext <- function(p, look, device = NULL) {
+  ls <- tryCatch(p$layers, error = function(e) NULL)
+  if (!is.list(ls) || !length(ls)) return(p)
+  fam  <- .jst_plot_family(look$font, device)
+  done <- FALSE
+  # A copy of a layer with its own text settings. ggproto() reads what a
+  # copy is made from each time the copy is used, by the name it was given
+  # under, so the layer is held in a frame of its own: named as an element
+  # of a list that is then changed, the copy would be a copy of itself.
+  copy <- function(layer, ap) {
+    force(layer)
+    ggplot2::ggproto(NULL, layer, aes_params = ap)
+  }
+  for (i in seq_along(ls)) {
+    rel <- tryCatch(ls[[i]]$jst_text, error = function(e) NULL)
+    if (!is.numeric(rel) || length(rel) != 1L || is.na(rel)) next
+    ap <- ls[[i]]$aes_params
+    if (!is.list(ap)) ap <- list()
+    ap$size   <- look$size * rel / ggplot2::.pt
+    ap$family <- fam
+    ls[[i]] <- copy(ls[[i]], ap)
+    done <- TRUE
+  }
+  if (!done) return(p)
+  q <- tryCatch({ p$layers <- ls; p }, error = function(e) NULL)
+  if (is.null(q)) p else q
+}
+
+#' Internal helper: black or white, whichever reads better on a color
+#'
+#' For a value written inside a segment (ruling R70: "white on the dark
+#' greys and black on the light"): the text color with the higher contrast
+#' against the fill, by the WCAG relative luminance.
+#'
+#' @param cols Character; colors as "#RRGGBB".
+#' @return Character; "#FFFFFF" or "#000000" for each.
+#' @keywords internal
+.jst_plot_contrast <- function(cols) {
+  rgb <- grDevices::col2rgb(cols) / 255
+  lin <- ifelse(rgb <= 0.03928, rgb / 12.92, ((rgb + 0.055) / 1.055)^2.4)
+  if (is.null(dim(lin))) lin <- matrix(lin, nrow = 3L)
+  lum <- 0.2126 * lin[1L, ] + 0.7152 * lin[2L, ] + 0.0722 * lin[3L, ]
+  unname(ifelse((1.05) / (lum + 0.05) > (lum + 0.05) / 0.05, "#FFFFFF", "#000000"))
+}
+
+#' Internal helper: a variable's categories, for a chart of parts of a whole
+#'
+#' A pie, a donut and a 100% stacked bar show a variable by its categories,
+#' whatever its class (the S412 audit's F3: the redirect a bar chart takes
+#' with no type =, here for every variable): a labelled variable by its
+#' codes, each named by its value label; a factor by its levels; any other
+#' variable by its values. Read after the pipeline, so a declared missing
+#' value is no category.
+#'
+#' @param x The variable.
+#' @param as_numbers Logical(1); TRUE for a labelled variable the call
+#'   asserts as numeric (numeric =, count =, or a registration), which is
+#'   shown by its codes.
+#' @return A list: key (each case's category as text, NA where missing),
+#'   keys (the categories, in order), labels (each category's value label,
+#'   NA for none), numeric (TRUE when the categories are numbers) and kind
+#'   ("labelled", "factor", "text" or "number").
+#' @keywords internal
+.jst_plot_categories <- function(x, as_numbers = FALSE) {
+  miss <- is.na(x)
+  if (is.factor(x)) {
+    f <- droplevels(x)
+    return(list(key = as.character(f), keys = levels(f),
+                labels = rep(NA_character_, nlevels(f)), numeric = FALSE,
+                kind = "factor"))
+  }
+  raw <- unclass(x)
+  attributes(raw) <- NULL
+  raw[miss] <- NA
+  if (is.character(raw)) {
+    keys <- levels(factor(raw))
+    labs <- if (haven::is.labelled(x)) .jst_value_label_of(keys, labelled::val_labels(x))
+            else rep(NA_character_, length(keys))
+    return(list(key = raw, keys = keys, labels = labs, numeric = FALSE,
+                kind = if (haven::is.labelled(x) && any(!is.na(labs))) "labelled" else "text"))
+  }
+  if (is.logical(raw)) raw <- as.numeric(raw)
+  if (!is.numeric(raw)) raw <- as.character(raw)
+  codes <- sort(unique(raw[!miss]))
+  labs  <- if (haven::is.labelled(x) && !isTRUE(as_numbers)) {
+    .jst_value_label_of(codes, labelled::val_labels(x))
+  } else rep(NA_character_, length(codes))
+  key <- as.character(raw)
+  list(key = key, keys = as.character(codes), labels = labs,
+       numeric = is.numeric(raw),
+       kind = if (any(!is.na(labs))) "labelled"
+              else if (is.numeric(raw)) "number" else "text")
+}
+
+#' Internal helper: the names a chart gives a set of categories
+#'
+#' Each category by its value label, else by its code; where two names
+#' print alike, those categories as "code: label" (the Session 407 rule,
+#' as \code{.jst_code_factor()} names a variable's categories).
+#'
+#' @param keys Character; the categories.
+#' @param labels Character; each one's value label, NA for none.
+#' @return Character; the names, unique.
+#' @keywords internal
+.jst_plot_category_names <- function(keys, labels) {
+  nm    <- ifelse(is.na(labels), keys, labels)
+  clash <- nm %in% nm[duplicated(nm)]
+  nm[clash] <- ifelse(is.na(labels[clash]), keys[clash],
+                      paste0(keys[clash], ": ", labels[clash]))
+  if (anyDuplicated(nm)) nm <- make.unique(nm, sep = " ")
+  nm
+}
+
+#' Internal helper: the value labels of a variable's valid codes
+#'
+#' For the test that a set of items shares its categories (ruling R68; the
+#' Session 414 lean: "compared by value-label sets"): the labels of the
+#' codes that are not declared missing, by code.
+#'
+#' @param x The variable.
+#' @return A named character vector (code = label) sorted by code, or NULL
+#'   for a variable with no value labels.
+#' @keywords internal
+.jst_plot_label_set <- function(x) {
+  if (!haven::is.labelled(x)) return(NULL)
+  vl <- labelled::val_labels(x)
+  if (!length(vl)) return(NULL)
+  v    <- unclass(vl)
+  attributes(v) <- NULL
+  keep <- !is.na(v)
+  nav  <- attr(x, "na_values", exact = TRUE)
+  nar  <- attr(x, "na_range", exact = TRUE)
+  if (length(nav)) keep <- keep & !(v %in% nav)
+  if (length(nar) == 2L && is.numeric(v)) keep <- keep & !(v >= nar[1L] & v <= nar[2L])
+  if (!any(keep)) return(NULL)
+  s <- stats::setNames(names(vl)[keep], as.character(v[keep]))
+  s[order(names(s))]
+}
+
+#' Internal helper: the counts a 100% stacked bar is drawn from
+#'
+#' Ruling R68's two data-first routes. A SET OF ITEMS, one bar per item:
+#' the items must share their categories -- labelled items the same
+#' value-label set, an unlabelled item's values among it, and items of
+#' one kind (the Session 414 lean) -- or the call stops with the by = line.
+#' Each bar's whole is that item's valid answers. A VARIABLE WITHIN
+#' GROUPS, one bar per group of by =, the whole each group's cases with a
+#' value on the variable. A variable of more than 20 values stops, as it
+#' stops jcrosstab(), unless categorical = names it.
+#'
+#' @param data The frame after the pipeline.
+#' @param items Character; the variables stacked.
+#' @param by NULL, or the grouping variable as a factor, one value per row
+#'   of data.
+#' @param as_numbers Character; the items the call asserts as numeric.
+#' @param asserted Character; the items categorical = names.
+#' @param call The call as typed, for the line the 20-value stop offers.
+#' @return A list: cells (bar, cat, n, as factors and a count), bars and
+#'   cats (their names in order) and ns (each bar's whole).
+#' @keywords internal
+.jst_plot_stacked_counts <- function(data, items, by = NULL,
+                                     as_numbers = character(0),
+                                     asserted = character(0), call = NULL) {
+  cats <- lapply(items, function(v) {
+    .jst_plot_categories(data[[v]], as_numbers = v %in% as_numbers)
+  })
+  names(cats) <- items
+  share_stop <- function(a, b) {
+    .jst_stop(b, "'s categories differ from ", a, "'s.\n",
+              "The items of a 100% stacked bar share one set of answer ",
+              "categories.\n",
+              "To show one variable within the groups of another, add by = to ",
+              "the call, for example:\n",
+              "  jplot(community, Education, by = Region, type = \"stacked\")",
+              fn = "jplot")
+  }
+  if (length(items) > 1L) {
+    sets  <- lapply(items, function(v) {
+      if (v %in% as_numbers) NULL else .jst_plot_label_set(data[[v]])
+    })
+    names(sets) <- items
+    lab_i <- items[!vapply(sets, is.null, logical(1))]
+    if (length(lab_i)) {
+      ref <- lab_i[1L]
+      for (v in lab_i[-1L]) {
+        if (!identical(sets[[v]], sets[[ref]])) share_stop(ref, v)
+      }
+      for (v in setdiff(items, lab_i)) {
+        if (!all(cats[[v]]$keys %in% names(sets[[ref]])) ||
+            !identical(cats[[v]]$numeric, cats[[ref]]$numeric)) share_stop(ref, v)
+      }
+    } else {
+      num <- vapply(cats, function(k) isTRUE(k$numeric), logical(1))
+      if (length(unique(num)) > 1L) {
+        share_stop(items[1L], items[which(num != num[1L])[1L]])
+      }
+    }
+  }
+  # The categories of the chart: every item's, in one order -- by code
+  # where the codes are numbers, else as they are first met.
+  keys <- unique(unlist(lapply(cats, `[[`, "keys")))
+  if (all(vapply(cats, function(k) isTRUE(k$numeric), logical(1)))) {
+    keys <- keys[order(as.numeric(keys))]
+  }
+  labs <- rep(NA_character_, length(keys))
+  for (k in cats) {
+    hit <- match(keys, k$keys)
+    new <- is.na(labs) & !is.na(hit)
+    labs[new] <- k$labels[hit[new]]
+  }
+  # More than 20 values (jcrosstab()'s cap, Session 375): a variable
+  # measured on a scale, stacked by mistake.
+  over <- vapply(items, function(v) length(cats[[v]]$keys) > 20L, logical(1)) &
+          !(items %in% asserted)
+  if (any(over)) {
+    v <- items[over]
+    n <- vapply(v, function(i) length(cats[[i]]$keys), integer(1))
+    one <- length(v) == 1L
+    counts <- if (one) paste0(.jst_fmt_n(n), " different values")
+              else if (length(unique(n)) == 1L) paste0(.jst_fmt_n(n[1L]),
+                                                       " different values each")
+              else paste0(.jst_and_list(.jst_fmt_n(n)), " different values")
+    line <- NULL
+    if (is.call(call)) {
+      keep <- unique(c(asserted, v))
+      cl <- call
+      cl[[1L]] <- as.name("jplot")
+      cl$categorical <- if (length(keep) == 1L) as.name(keep)
+                        else as.call(c(as.name("c"), lapply(keep, as.name)))
+      line <- .jst_term_text(cl)
+    }
+    .jst_stop(.jst_and_list(v), if (one) " has " else " have ", counts, ".\n",
+              "A 100% stacked bar shows 20 at most.",
+              if (!is.null(line)) paste0(
+                "\nTo show every value anyway, name ", if (one) "it" else "them",
+                " in categorical =:\n  ", line),
+              fn = "jplot")
+  }
+  cat_names <- .jst_plot_category_names(keys, labs)
+  if (is.null(by)) {
+    bars <- items
+    tab  <- do.call(rbind, lapply(items, function(v) {
+      n <- as.integer(table(factor(cats[[v]]$key, levels = keys)))
+      data.frame(bar = v, cat = cat_names, n = n, stringsAsFactors = FALSE)
+    }))
+  } else {
+    g  <- if (is.factor(by)) by else factor(by)
+    ok <- !is.na(g) & !is.na(cats[[1L]]$key)
+    g  <- droplevels(g[ok])
+    bars <- levels(g)
+    tt <- table(g, factor(cats[[1L]]$key[ok], levels = keys))
+    tab <- data.frame(bar = rep(bars, times = length(keys)),
+                      cat = rep(cat_names, each = length(bars)),
+                      n = as.integer(tt), stringsAsFactors = FALSE)
+  }
+  # A category no bar holds is not drawn (as a bar chart leaves out a
+  # value no case holds).
+  used <- cat_names[cat_names %in% tab$cat[tab$n > 0L]]
+  tab  <- tab[tab$cat %in% used, , drop = FALSE]
+  tot  <- tapply(tab$n, factor(tab$bar, levels = bars), sum)
+  bars <- bars[tot[bars] > 0L]
+  tab  <- tab[tab$bar %in% bars, , drop = FALSE]
+  tab$bar <- factor(tab$bar, levels = bars)
+  tab$cat <- factor(tab$cat, levels = used)
+  rownames(tab) <- NULL
+  list(cells = tab, bars = bars, cats = used,
+       ns = stats::setNames(as.integer(tot[bars]), bars))
+}
+
+#' Internal helper: about how wide a text is drawn, in inches
+#'
+#' A chart is laid out before a graphics device has measured its text, so
+#' the width of a legend or of an axis's labels is reckoned from the
+#' characters: each at about the share of its font size it takes in Arial
+#' or Helvetica (narrow letters and punctuation about a quarter to a third,
+#' capitals about seven tenths, m and w nearly nine tenths, the rest a
+#' little over half; a double-width character the whole size), which reads
+#' within about three percent of the width drawn. A monospaced face takes
+#' six tenths for every character. The widest line counts.
+#'
+#' @param s Character; one or more texts, each perhaps of several lines.
+#' @param pt Numeric(1); the font size, in points.
+#' @param family Character(1); the font family, as
+#'   \code{.jst_plot_family()} returns it.
+#' @return Numeric, one for each text: the widest line's width in inches.
+#' @keywords internal
+.jst_plot_text_in <- function(s, pt, family = "sans") {
+  mono <- identical(family, "mono")
+  one <- function(line) {
+    ch <- strsplit(line, "", fixed = TRUE)[[1L]]
+    if (!length(ch)) return(0)
+    wide <- .jst_dw(ch) > 1L
+    if (mono) return(sum(ifelse(wide, 1.2, 0.6)))
+    em <- rep(0.56, length(ch))
+    em[ch %in% LETTERS] <- 0.70
+    em[ch %in% c(" ", "I", "f", "t", "r", ".", ",", ":", ";", "!", "|", "(",
+                 ")", "-", "/", "[", "]")] <- 0.31
+    em[ch %in% c("i", "j", "l", "'")] <- 0.23
+    em[ch %in% c("m", "w", "M", "W", "%", "@")] <- 0.88
+    em[wide] <- 1
+    sum(em)
+  }
+  vapply(as.character(s), function(x) {
+    lines <- strsplit(x, "\n", fixed = TRUE)[[1L]]
+    if (!length(lines)) return(0)
+    max(vapply(lines, one, numeric(1))) * pt / 72
+  }, numeric(1), USE.NAMES = FALSE)
+}
+
+#' Internal helper: how far a text's reckoned width is trusted
+#'
+#' For the faces every device draws as "sans", "serif" or "mono" the
+#' reckoning is close: a text is taken as up to 4 percent wider where it
+#' must fit, and 5 percent narrower where something is moved by its width.
+#' Any other face may be wider or narrower than those: 12 percent wider, 15
+#' percent narrower.
+#'
+#' @param family Character(1); the font family.
+#' @return Numeric(2), named over and under: the factors.
+#' @keywords internal
+.jst_plot_text_trust <- function(family) {
+  if (family %in% c("sans", "serif", "mono")) c(over = 1.04, under = 0.95)
+  else c(over = 1.12, under = 0.85)
+}
+
+#' Internal helper: the rows, labels and title of a legend above a chart
+#'
+#' One row where the keys and their labels fit the room there is, else two
+#' (ruling R68: "two rows when it must"). Before a label is broken the
+#' legend's title, which stands at the keys' left, is put on shorter lines
+#' (14 columns), which costs a two-row legend no height; only then are the
+#' labels put on lines as short as it takes for two rows to fit -- 22
+#' columns, 18, 14 or 11. The widths are reckoned from the text
+#' (\code{.jst_plot_text_in()}): a legend's text is drawn at eight tenths
+#' of the look's size and its title at the whole size; each key takes
+#' about four tenths of an inch with its spacing; and a legend's keys stand
+#' in columns, each as wide as its widest key.
+#'
+#' @param labels Character; the keys' labels, in the segments' order.
+#' @param title Character(1) or NULL; the legend's title.
+#' @param look A look.
+#' @param room Numeric(1); the width the legend may take, in inches.
+#' @return A list: rows (1 or 2), labels (the labels as drawn, named by the
+#'   labels given) and title (the title as drawn, or NULL).
+#' @keywords internal
+.jst_plot_legend_fit <- function(labels, title, look, room = look$width) {
+  k     <- length(labels)
+  fam   <- .jst_plot_family(look$font)
+  over  <- .jst_plot_text_trust(fam)[["over"]]
+  gap   <- look$size / 144
+  key   <- 0.26 + 2 * gap
+  has_title <- !is.null(title) && nzchar(title)
+  titles <- if (has_title) unique(c(title, .jst_plot_wrap(title, 14L))) else list(NULL)
+  left  <- function(t) {
+    if (is.null(t)) 0 else .jst_plot_text_in(t, look$size, fam) * over + gap + 0.02
+  }
+  need  <- function(labs, rows) {
+    w   <- .jst_plot_text_in(labs, look$size * 0.8, fam) * over + key
+    top <- ceiling(k / rows)
+    col <- vapply(seq_len(top), function(j) max(w[seq(j, k, by = top)]), numeric(1))
+    sum(col)
+  }
+  plain <- stats::setNames(labels, labels)
+  lines <- function(wd) {
+    if (is.na(wd)) plain
+    else stats::setNames(vapply(labels, function(s) .jst_plot_wrap(s, wd),
+                                character(1)), labels)
+  }
+  for (t in titles) {
+    if (k < 3L || need(labels, 1L) <= room - left(t)) {
+      return(list(rows = 1L, labels = plain, title = t))
+    }
+  }
+  out <- plain
+  for (wd in c(NA, 22L, 18L, 14L, 11L)) {
+    out <- lines(wd)
+    for (t in titles) {
+      if (need(out, 2L) <= room - left(t)) return(list(rows = 2L, labels = out, title = t))
+    }
+  }
+  list(rows = 2L, labels = out, title = titles[[length(titles)]])
+}
+
+#' Internal helper: a legend's keys in reading order over two rows
+#'
+#' ggplot2 lays a legend's keys out down its columns. Given in this order,
+#' the keys of a two-row legend read left to right along the first row and
+#' then the second, the order of the segments they name (ruling R68).
+#'
+#' @param levels Character; the keys, in the segments' order.
+#' @param rows Integer(1); the legend's rows.
+#' @return Character; the keys in the order to give the scale.
+#' @keywords internal
+.jst_plot_legend_order <- function(levels, rows) {
+  n <- length(levels)
+  if (rows != 2L || n < 3L) return(levels)
+  top <- ceiling(n / 2)
+  idx <- as.vector(rbind(seq_len(top), top + seq_len(top)))
+  levels[idx[idx <= n]]
+}
+
+#' Internal helper: a 100% stacked bar's legend, fitted to a look
+#'
+#' The legend above the chart (ruling R68), from the picture's left edge:
+#' ggplot2 sets a legend above a chart from the left edge of the bars, so
+#' it is moved left by about the width of the bars' labels, which leaves it
+#' the picture's width. The move is reckoned a little short, so the legend
+#' never starts off the picture, and the room it is fitted to
+#' (\code{.jst_plot_legend_fit()}) is short by as much. Called when the
+#' chart is built and again when it is drawn in another style's look
+#' (\code{.jst_plot_restyle()}), whose text may be larger or whose figure
+#' narrower.
+#'
+#' @param cats Character; the segments' categories, in order.
+#' @param legend_title Character(1) or NULL, as drawn.
+#' @param axis_lab Character; the bars' labels, as drawn.
+#' @param bar_title Character(1) or NULL; the title of the bars' axis.
+#' @param values Logical(1); whether the segments hold their values, whose
+#'   text takes a color scale of its own.
+#' @param look A look.
+#' @return A list: scales (the chart's scale specs), tweak (the theme
+#'   settings added after the look's theme) and title (the legend's title
+#'   as it is drawn, or NULL).
+#' @keywords internal
+.jst_plot_stacked_legend <- function(cats, legend_title, axis_lab, bar_title,
+                                     values, look) {
+  fam    <- .jst_plot_family(look$font)
+  trust  <- .jst_plot_text_trust(fam)
+  lab_in <- max(.jst_plot_text_in(axis_lab, look$size * 0.8, fam))
+  lab_w  <- lab_in * trust[["under"]] + 0.03 +
+            (if (is.null(bar_title)) 0 else look$size / 72 + 0.03)
+  fit <- .jst_plot_legend_fit(
+    cats, legend_title, look,
+    room = look$width - look$size / 72 - 0.1 -
+           lab_in * (trust[["over"]] - trust[["under"]]))
+  sc <- list(list(aes = "fill", levels = cats, guide = TRUE, rows = fit$rows,
+                  breaks = .jst_plot_legend_order(cats, fit$rows),
+                  labels = fit$labels))
+  if (isTRUE(values)) {
+    sc <- c(sc, list(list(aes = "colour", levels = cats, guide = FALSE,
+                          contrast = TRUE)))
+  }
+  list(scales = sc,
+       tweak = ggplot2::theme(
+         legend.position = "top", legend.justification = "left",
+         legend.box.margin = ggplot2::margin(0, 0, 0, -lab_w, unit = "in")),
+       title = fit$title)
+}
+
+#' Internal helper: draw a 100% stacked bar
+#'
+#' Ruling R68 (Session 412; its orientation ruled Session 413): horizontal
+#' bars in their natural order, the first at the top; each bar's segments
+#' its categories in order, dark to light, summing to 100 percent of the
+#' bar's whole; the look's axes and gridlines, turned for bars that run
+#' across; the legend ABOVE the chart in the segments' order, in both
+#' built-in styles (an amendment of ruling R64 for this kind). No values in
+#' the segments unless the style's values.stacked says yes, and then none
+#' in a segment under 6 percent (ruling R70).
+#'
+#' @param counts A list as \code{.jst_plot_stacked_counts()} returns.
+#' @param bar_labels Named character; each bar's label on the axis.
+#' @param bar_title Character(1) or NULL; the title of the bars' axis.
+#' @param legend_title Character(1) or NULL.
+#' @param sheet_names Character(2); the heads of the data sheet's bar and
+#'   category columns.
+#' @param look A look.
+#' @return The chart, as a builder returns it (\code{.jst_plot_built()}).
+#' @keywords internal
+.jst_build_stacked <- function(counts, bar_labels = NULL, bar_title = NULL,
+                               legend_title = NULL,
+                               sheet_names = c("Group", "Category"),
+                               look = .jst_plot_look_now()) {
+  cells <- counts$cells
+  bars  <- counts$bars
+  cats  <- counts$cats
+  cells <- cells[order(cells$bar, cells$cat), , drop = FALSE]
+  tot   <- counts$ns[as.character(cells$bar)]
+  cells$pct  <- 100 * cells$n / tot
+  cells$xmax <- stats::ave(cells$pct, cells$bar, FUN = cumsum)
+  cells$xmin <- cells$xmax - cells$pct
+  cells$y    <- -as.integer(cells$bar)
+  cells$ymin <- cells$y - 0.36
+  cells$ymax <- cells$y + 0.36
+  cells$xmid <- (cells$xmin + cells$xmax) / 2
+  draw  <- cells[cells$n > 0L, , drop = FALSE]
+  if (is.null(bar_labels)) bar_labels <- stats::setNames(bars, bars)
+  axis_lab <- vapply(bars, function(b) .jst_plot_wrap(bar_labels[[b]], 30L),
+                     character(1))
+  if (!is.null(legend_title)) legend_title <- .jst_plot_wrap(legend_title, 24L)
+  show   <- identical(look$values.stacked, "yes")
+  relook <- list(kind = "stacked",
+                 args = list(cats = cats, legend_title = legend_title,
+                             axis_lab = unname(axis_lab), bar_title = bar_title,
+                             values = show))
+  lay   <- do.call(.jst_plot_stacked_legend, c(relook$args, list(look = look)))
+  sc    <- lay$scales
+  tweak <- lay$tweak
+  legend_title <- lay$title
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_rect(
+      data = draw,
+      ggplot2::aes(xmin = .data$xmin, xmax = .data$xmax, ymin = .data$ymin,
+                   ymax = .data$ymax, fill = .data$cat),
+      colour = "white", linewidth = 0.3)
+  if (show) {
+    lab <- draw[draw$pct >= 6, , drop = FALSE]
+    lab$label <- .jst_plot_pct(lab$pct, look)
+    p <- p + .jst_plot_text_layer(ggplot2::geom_text(
+      data = lab,
+      ggplot2::aes(x = .data$xmid, y = .data$y, label = .data$label,
+                   colour = .data$cat),
+      size = look$size * 0.8 / ggplot2::.pt,
+      family = .jst_plot_family(look$font), show.legend = FALSE))
+  }
+  p <- p +
+    ggplot2::scale_x_continuous(limits = c(0, 100), breaks = seq(0, 100, 20),
+                                expand = ggplot2::expansion(mult = c(0, 0.02))) +
+    ggplot2::scale_y_continuous(breaks = -seq_along(bars), labels = unname(axis_lab),
+                                limits = c(-length(bars) - 0.6, -0.4),
+                                expand = c(0, 0)) +
+    ggplot2::labs(x = "Percentage of cases", y = bar_title, fill = legend_title)
+  p <- .jst_plot_add_scales(p, sc, look) + .jst_plot_theme(look, flip = TRUE) + tweak
+  sheet <- data.frame(as.character(cells$bar), as.character(cells$cat),
+                      cells$n, cells$pct, stringsAsFactors = FALSE)
+  names(sheet) <- c(sheet_names, "n", "Percent")
+  .jst_plot_built(p, sc, sheet, flip = TRUE, tweak = tweak, relook = relook)
+}
+
+#' Internal helper: a pie's labels kept apart
+#'
+#' The labels on one side of a pie, top to bottom, each at least its own
+#' height from the next, and each as near the height its slice asks for as
+#' that allows: an isotonic fit of the heights asked for (ruling R66:
+#' "labels that would collide pushed apart").
+#'
+#' @param y Numeric; the heights asked for.
+#' @param h Numeric; each label's height.
+#' @param lo,hi Numeric(1); the lowest and highest a label may sit.
+#' @return Numeric; the heights given, in the order of y.
+#' @keywords internal
+.jst_pie_spread <- function(y, h, lo = -1.2, hi = 1.2) {
+  n <- length(y)
+  if (n < 2L) return(pmin(pmax(y, lo), hi))
+  o   <- order(y)                       # bottom to top
+  ys  <- y[o]; hs <- h[o]
+  sep <- (hs[-n] + hs[-1L]) / 2 + 0.02  # the room between neighbors
+  off <- c(0, cumsum(sep))
+  fit <- stats::isoreg(ys - off)$yf + off
+  if (max(fit) > hi) fit <- fit - (max(fit) - hi)
+  if (min(fit) < lo) fit <- fit + (lo - min(fit))
+  out <- numeric(n)
+  out[o] <- fit
+  out
+}
+
+#' Internal helper: draw a pie or a donut chart
+#'
+#' Ruling R66 (Session 412; final Session 413): one variable as one whole,
+#' its categories with cases the slices, clockwise from 12 o'clock in the
+#' variable's own order -- the order jfreq() prints -- darkest first; each
+#' slice labelled outside it with its category and, under the style's
+#' values = yes, its percentage; no legend; labels that would collide
+#' pushed apart and joined to their slices by a thin line. A donut's hole
+#' is half the radius, and empty.
+#'
+#' @param data The frame, the variable a factor or a vector.
+#' @param x_name Character(1); the variable.
+#' @param donut Logical(1).
+#' @param look A look.
+#' @return The chart, as a builder returns it (\code{.jst_plot_built()}).
+#' @keywords internal
+.jst_build_pie <- function(data, x_name, donut = FALSE,
+                           look = .jst_plot_look_now()) {
+  x <- data[[x_name]]
+  if (!is.factor(x)) x <- factor(x)
+  x <- droplevels(x[!is.na(x)])
+  lv   <- levels(x)
+  n    <- as.integer(table(x))
+  frac <- n / sum(n)
+  pct  <- 100 * frac
+  a1   <- 2 * pi * cumsum(frac)
+  a0   <- c(0, a1[-length(a1)])
+  arc  <- function(from, to, r, k) {
+    th <- seq(from, to, length.out = k)
+    cbind(r * sin(th), r * cos(th))
+  }
+  polys <- lapply(seq_along(lv), function(i) {
+    k   <- max(2L, as.integer(ceiling(180 * frac[i])) + 1L)
+    out <- arc(a0[i], a1[i], 1, k)
+    pts <- if (donut) rbind(out, arc(a1[i], a0[i], 0.5, k)) else rbind(c(0, 0), out)
+    data.frame(px = pts[, 1L], py = pts[, 2L],
+               slice = factor(lv[i], levels = lv), stringsAsFactors = FALSE)
+  })
+  poly_df <- do.call(rbind, polys)
+
+  # The labels: each beside its slice, on the slice's side of the pie, on
+  # lines short enough for the room between the pie and the picture's edge.
+  show  <- identical(look$values, "yes")
+  raw   <- if (show) paste0(lv, " (", .jst_plot_pct(pct, look), ")") else lv
+  xr <- 1.95; yr <- 1.25; R <- 1.14
+  # A line of text, in the picture's units: the figure's size sets how many
+  # inches a unit is drawn at.
+  unit_in <- min((look$height - 0.25) / (2 * yr), (look$width - 0.25) / (2 * xr))
+  line_h  <- (look$size * 0.8 * 1.15 / 72) / unit_in
+  fam   <- .jst_plot_family(look$font)
+  over  <- .jst_plot_text_trust(fam)[["over"]]
+  fit   <- function(s, room) {
+    out <- s
+    for (wd in c(28L, 24L, 20L, 17L, 14L, 11L)) {
+      out <- .jst_plot_wrap(s, wd)
+      if (.jst_plot_text_in(out, look$size * 0.8, fam) * over <= room) break
+    }
+    out
+  }
+  mid  <- (a0 + a1) / 2
+  side <- ifelse(sin(mid) >= -1e-9, 1, -1)
+  y0   <- R * cos(mid)
+  at   <- abs(R * sin(mid))        # how far out each label starts
+  for (pass in 1:3) {
+    text  <- vapply(seq_along(lv), function(i) {
+      fit(raw[i], (xr - at[i]) * unit_in - 0.04)
+    }, character(1))
+    lines <- lengths(strsplit(text, "\n", fixed = TRUE))
+    y <- y0
+    for (s in c(1, -1)) {
+      on <- side == s
+      if (any(on)) {
+        y[on] <- .jst_pie_spread(y0[on], lines[on] * line_h, -yr + 0.05, yr - 0.05)
+      }
+    }
+    out <- pmax(abs(R * sin(mid)), sqrt(pmax(0, R^2 - y^2)))
+    if (all(out <= at + 1e-9)) break
+    at <- pmax(at, out)            # a label pushed outward has less room
+  }
+  moved <- abs(y - y0) > 0.02
+  x  <- side * out
+  lab_df <- data.frame(x = x, y = y, label = text, hjust = ifelse(side > 0, 0, 1),
+                       stringsAsFactors = FALSE)
+  seg_df <- data.frame(x = 1.02 * sin(mid), y = 1.02 * cos(mid),
+                       xend = x - side * 0.03, yend = y)[moved, , drop = FALSE]
+
+  sc <- list(list(aes = "fill", levels = lv, guide = FALSE))
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_polygon(
+      data = poly_df,
+      ggplot2::aes(x = .data$px, y = .data$py, group = .data$slice,
+                   fill = .data$slice),
+      colour = if (length(lv) > 1L) "white" else NA, linewidth = 0.5)
+  if (nrow(seg_df)) {
+    p <- p + ggplot2::geom_segment(
+      data = seg_df,
+      ggplot2::aes(x = .data$x, y = .data$y, xend = .data$xend, yend = .data$yend),
+      colour = "#595959", linewidth = 0.3)
+  }
+  p <- p + .jst_plot_text_layer(ggplot2::geom_text(
+      data = lab_df,
+      ggplot2::aes(x = .data$x, y = .data$y, label = .data$label,
+                   hjust = .data$hjust),
+      size = look$size * 0.8 / ggplot2::.pt, family = .jst_plot_family(look$font),
+      colour = "#000000", lineheight = 0.95)) +
+    ggplot2::coord_fixed(ratio = 1, xlim = c(-xr, xr), ylim = c(-yr, yr),
+                         expand = FALSE, clip = "off") +
+    ggplot2::labs(x = NULL, y = NULL)
+  tweak <- ggplot2::theme(
+    axis.line = ggplot2::element_blank(), axis.line.x = ggplot2::element_blank(),
+    axis.line.y = ggplot2::element_blank(), axis.text = ggplot2::element_blank(),
+    axis.ticks = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(),
+    axis.ticks.y = ggplot2::element_blank(), axis.title = ggplot2::element_blank(),
+    panel.grid.major.x = ggplot2::element_blank(),
+    panel.grid.major.y = ggplot2::element_blank(), legend.position = "none")
+  p <- .jst_plot_add_scales(p, sc, look) + .jst_plot_theme(look) + tweak
+  sheet <- data.frame(lv, n, pct, stringsAsFactors = FALSE)
+  names(sheet) <- c(x_name, "n", "Percent")
+  .jst_plot_built(p, sc, sheet, tweak = tweak)
+}
+
+#' Internal helper: draw the ranked bar of a multiple-response set
+#'
+#' Ruling R67 (Session 412): one horizontal bar per option, in the order of
+#' the result's table -- most chosen first, or the data frame's order where
+#' the table keeps it -- with "None of these" last after a small gap,
+#' whatever its size; each bar's percentage of everyone who answered at
+#' its end (ruling R70: one series, under the style's values = yes); one
+#' color; the value axis titled "Percentage of respondents" and running to
+#' the next ten above the longest bar (the S412 audit's F15); the look's
+#' axes and gridlines, turned for bars that run across.
+#'
+#' @param rows A data frame: label (each bar's), percent, n, and none
+#'   (TRUE for a "None of these" row).
+#' @param look A look.
+#' @return The chart, as a builder returns it (\code{.jst_plot_built()}).
+#' @keywords internal
+.jst_build_ranked <- function(rows, look = .jst_plot_look_now()) {
+  k    <- nrow(rows)
+  gap  <- cumsum(c(0, diff(as.integer(rows$none)) > 0) * 0.5)
+  rows$y    <- -(seq_len(k) + gap)
+  rows$ymin <- rows$y - 0.36
+  rows$ymax <- rows$y + 0.36
+  rows$text <- .jst_plot_pct(rows$percent, look)
+  # The axis runs to the next ten above the longest bar's PRINTED value
+  # (the S412 audit's F15): 39.6 prints "40%", and its axis ends at 50.
+  dec   <- look$values.decimals
+  shown <- round(rows$percent, if (is.null(dec) || is.na(dec)) 0L else as.integer(dec))
+  top  <- min(100, 10 * (floor(max(shown, 0) / 10) + 1))
+  step <- if (top <= 60) 10 else 20
+  axis_lab <- vapply(rows$label, function(s) .jst_plot_wrap(s, 30L), character(1))
+  sc <- list(list(aes = "fill", levels = "1", guide = FALSE))
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_rect(
+      data = rows,
+      ggplot2::aes(xmin = 0, xmax = .data$percent, ymin = .data$ymin,
+                   ymax = .data$ymax, fill = "1"))
+  if (identical(look$values, "yes")) {
+    p <- p + .jst_plot_text_layer(ggplot2::geom_text(
+      data = rows,
+      ggplot2::aes(x = .data$percent, y = .data$y, label = .data$text),
+      hjust = -0.2, size = look$size * 0.8 / ggplot2::.pt,
+      family = .jst_plot_family(look$font), colour = "#000000"))
+  }
+  p <- p +
+    ggplot2::scale_x_continuous(limits = c(0, top), breaks = seq(0, top, step),
+                                expand = ggplot2::expansion(mult = c(0, 0.1))) +
+    ggplot2::scale_y_continuous(breaks = rows$y, labels = unname(axis_lab),
+                                limits = c(min(rows$y) - 0.6, -0.4),
+                                expand = c(0, 0)) +
+    ggplot2::coord_cartesian(clip = "off") +
+    ggplot2::labs(x = "Percentage of respondents", y = NULL)
+  p <- .jst_plot_add_scales(p, sc, look) + .jst_plot_theme(look, flip = TRUE)
+  sheet <- data.frame(Option = rows$label, n = rows$n, Percent = rows$percent,
+                      stringsAsFactors = FALSE)
+  .jst_plot_built(p, sc, sheet, flip = TRUE)
+}
+
+#' Internal helper: the N line of a chart of several items
+#'
+#' A 100% stacked bar of a set of items counts each item on its own valid
+#' answers, as jfreq() counts each variable, so its N statement is the
+#' per-variable layout's (the S412 audit's F18): the cases in the pool and
+#' the number of items, with those complete on every item when the items'
+#' Ns differ, and the cases a filter left out beside it.
+#'
+#' @param data The frame the chart is drawn from, after the pipeline.
+#' @param items Character; the items.
+#' @param n_original Integer; the data frame's rows before the pipeline.
+#' @return Each item's valid N, invisibly; prints the line.
+#' @keywords internal
+.jst_plot_pool_line <- function(data, items, n_original) {
+  ns <- vapply(items, function(v) sum(!is.na(data[[v]])), integer(1))
+  n_pool <- nrow(data)
+  line <- if (length(unique(ns)) > 1L) {
+    sprintf("%d Cases in the %d Variable Pool; %d Complete on All", n_pool,
+            length(items), sum(stats::complete.cases(data[, items, drop = FALSE])))
+  } else {
+    sprintf("%d Cases in the %d Variable Pool", n_pool, length(items))
+  }
+  n_exc <- n_original - n_pool
+  cat("\n", line, if (isTRUE(n_exc > 0L)) paste0(" (", n_exc, " Excluded)"),
+      "\n\n", sep = "")
+  invisible(ns)
+}
+
+#' Internal helper: what a set of items is titled and how each is named
+#'
+#' Ruling R69: a set of items is titled by the text its labels share, each
+#' item named by what its label adds to it, as jmulti() titles a
+#' multiple-response set (\code{.jst_multi_shared()}); labels that share no
+#' text title the chart "Responses by Item" and name each item by its
+#' label. An item with no label is named by its name. Under labels =
+#' "names" every item is named by its name.
+#'
+#' @param data The frame.
+#' @param items Character; the items.
+#' @param by_names Logical(1); TRUE to name the items by their names.
+#' @return A list: title (character(1)) and labels (named character, one
+#'   per item).
+#' @keywords internal
+.jst_plot_item_names <- function(data, items, by_names = FALSE) {
+  labs <- vapply(items, function(v) {
+    l <- attr(data[[v]], "label", exact = TRUE)
+    if (is.character(l) && length(l) == 1L && !is.na(l) && nzchar(trimws(l))) l
+    else NA_character_
+  }, character(1))
+  sh <- if (length(items) > 1L) .jst_multi_shared(labs)
+        else list(title = NA_character_, cut = "")
+  nm <- vapply(seq_along(items), function(i) {
+    if (isTRUE(by_names) || is.na(labs[i])) items[i]
+    else .jst_multi_option(labs[i], sh)
+  }, character(1))
+  list(title = if (length(items) == 1L) {
+                 if (is.na(labs[1L])) items[1L] else unname(labs[1L])
+               } else if (is.na(sh$title)) "Responses by Item" else sh$title,
+       labels = stats::setNames(nm, items))
+}
+
+
+#' Internal constant: the chart types of jplot()'s data-first forms
+#'
+#' One list for the bare-word check, the check of \code{type =} and the
+#' stop that names them. A scatterplot and a boxplot are drawn from a
+#' formula; the rest from a data frame and its variables. The last three
+#' (Session 416; rulings R66 and R68) are drawn only when asked for.
+#' @keywords internal
+.jst_plot_types <- c("histogram", "density", "bar", "scatter", "box",
+                     "grouped_bar", "pie", "donut", "stacked")
+
+#' Internal helper: the stop for a type = jplot() does not draw
+#' @param type The call's \code{type}.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_plot_type_stop <- function(type) {
+  .jst_stop("Invalid `type` value: \"", type, "\".\n",
+            "Valid types: ", paste(sprintf("\"%s\"", .jst_plot_types),
+                                   collapse = ", "), ".", fn = "jplot")
+}
+
+#' Internal helper: the type = of a chart drawn from a formula
+#'
+#' A formula draws a scatterplot or a boxplot. Until Session 416 any other
+#' \code{type =} given with a formula -- a histogram, a bar chart, a name
+#' jplot() does not know -- went on to print its title and an N line and
+#' then "NULL", no chart having been drawn. It stops, with the line that
+#' draws that kind of chart: a generic example, since the kind named may
+#' not suit the variables of the formula.
+#'
+#' @param type The call's \code{type}.
+#' @return NULL, invisibly; stops for a type a formula does not draw.
+#' @keywords internal
+.jst_plot_formula_type <- function(type) {
+  if (is.null(type)) return(invisible(NULL))
+  if (!is.character(type) || length(type) != 1L || is.na(type) ||
+      !type %in% .jst_plot_types) {
+    .jst_plot_type_stop(type)
+  }
+  if (type %in% c("scatter", "box")) return(invisible(NULL))
+  what <- switch(type,
+    histogram   = c("a histogram", "the variable",
+                    "jplot(community, Age, type = \"histogram\")"),
+    density     = c("a density plot", "the variable",
+                    "jplot(community, Age, type = \"density\")"),
+    bar         = c("a bar chart", "the variable",
+                    "jplot(community, Region, type = \"bar\")"),
+    grouped_bar = c("a grouped bar chart", "the two variables",
+                    "jplot(community, Region, Volunteer)"),
+    pie         = c("a pie chart", "the variable",
+                    "jplot(community, Region, type = \"pie\")"),
+    donut       = c("a donut chart", "the variable",
+                    "jplot(community, Region, type = \"donut\")"),
+    stacked     = c("a 100% stacked bar", "the variable and its groups",
+                    "jplot(community, Education, by = Region, type = \"stacked\")"))
+  .jst_stop("type = \"", type, "\" is not a chart of a formula, which draws a ",
+            "scatterplot or a boxplot.\n",
+            "For ", what[1L], ", name ", what[2L],
+            " after the data frame, for example:\n  ", what[3L], fn = "jplot")
+}
+
+#' Internal helper: what a pie, a donut and a 100% stacked bar take
+#'
+#' The front-door stops of the three kinds (rulings R66 and R68), before
+#' anything is read. A pie or a donut shows ONE variable as ONE whole: two
+#' or more variables stop, and so do by = and facet =, pointing to the 100%
+#' stacked bar (the report manuals: several breakdowns as stacked bars, not
+#' several pies). A 100% stacked bar takes a set of items, or one variable
+#' and by =: an item named twice, facet =, and by = beside several
+#' variables stop. The lines offered are generic examples: a line built
+#' from the call could stop again on the variables it names.
+#'
+#' @param type "pie", "donut" or "stacked".
+#' @param vars Character; the variables.
+#' @param by_name,facet_name Character(1) or NULL.
+#' @return NULL, invisibly; or stops.
+#' @keywords internal
+.jst_plot_whole_front <- function(type, vars, by_name = NULL, facet_name = NULL) {
+  stacked_line <- "  jplot(community, Education, by = Region, type = \"stacked\")"
+  if (type %in% c("pie", "donut")) {
+    noun <- if (identical(type, "pie")) "a pie chart" else "a donut chart"
+    if (length(vars) > 1L) {
+      .jst_stop(noun, " shows one variable, and this call gives ",
+                .jst_and_list(vars), ".\n",
+                "Name one variable, and run the call once for each.",
+                fn = "jplot")
+    }
+    grp <- c(if (!is.null(by_name)) "by =", if (!is.null(facet_name)) "facet =")
+    if (length(grp)) {
+      .jst_stop(noun, " shows one variable as one whole, so it takes no ",
+                paste(grp, collapse = " or "), ".\n",
+                "To show a variable within the groups of another, draw a 100% ",
+                "stacked bar, for example:\n", stacked_line, fn = "jplot")
+    }
+    return(invisible(NULL))
+  }
+  twice <- unique(vars[duplicated(vars)])
+  if (length(twice)) {
+    .jst_stop(.jst_and_list(twice), " ", .jst_plural(length(twice), "is", "are"),
+              " named twice.\nName each item once.", fn = "jplot")
+  }
+  if (!is.null(facet_name)) {
+    .jst_stop("facet = is not available for a 100% stacked bar, whose bars are ",
+              "the groups.\n",
+              "Name the grouping variable with by =, for example:\n",
+              stacked_line, fn = "jplot")
+  }
+  if (!is.null(by_name) && length(vars) > 1L) {
+    .jst_stop("with by =, a 100% stacked bar shows one variable within each ",
+              "group, and this call gives ", .jst_and_list(vars), ".\n",
+              "Name one variable, or leave by = out to compare the items.",
+              fn = "jplot")
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: the stop for a pie or a donut of too many categories
+#'
+#' Ruling R66: a pie or a donut shows at most the style's pie.max
+#' categories -- 6 in both built-in styles, a setting taking 2 to 6 -- of
+#' those that have cases. Past it the call stops with two ways on, the bar
+#' chart and combining categories with jrecode(); it never switches to a
+#' bar chart by itself. The count is of the categories, whatever the
+#' variable's class (the S412 audit's F3).
+#'
+#' @param x The variable, after the pipeline.
+#' @param v Character(1); its name.
+#' @param type "pie" or "donut".
+#' @param look The look, for pie.max.
+#' @param data_name Character(1) or NULL; the data frame's name.
+#' @param as_numbers Logical(1); TRUE when the call asserts the variable as
+#'   numeric.
+#' @return NULL, invisibly; or stops.
+#' @keywords internal
+.jst_plot_pie_limit <- function(x, v, type, look, data_name, as_numbers = FALSE) {
+  cats <- .jst_plot_categories(x, as_numbers = as_numbers)
+  k    <- length(cats$keys)
+  most <- look$pie.max
+  if (k <= most) return(invisible(NULL))
+  noun <- if (identical(type, "pie")) "pie chart" else "donut chart"
+  # The bar chart of a labelled variable is asked for with categorical =,
+  # which names its bars by the value labels; type = "bar" keeps the codes
+  # (ruling R38), and is the line for a variable of numbers.
+  how <- if (identical(cats$kind, "labelled")) paste0("categorical = ", v)
+         else "type = \"bar\""
+  .jst_stop(v, " has ", .jst_fmt_n(k),
+            if (identical(cats$kind, "number")) " different values" else " categories",
+            ".\nA ", noun, " shows ", most, " at most.\n",
+            "Draw a bar chart instead:\n",
+            "  jplot(", if (!is.null(data_name)) data_name else "MyData", ", ", v,
+            ", ", how, ")\n",
+            "Or combine categories with jrecode() first, then draw the ", noun,
+            ".", fn = "jplot")
+}
+
+
 # -- Internal helpers for jplot ------------------------------------------------
 
 #' Internal constant: the results jplot() draws through .jst_resolve_which()
@@ -2772,7 +4003,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' (Session 377).
 #' @keywords internal
 .jst_plot_result_classes <- c("jst_lm", "jst_logistic", "jst_ttest",
-                              "jst_anova", "jst_corr", "jst_crosstab")
+                              "jst_anova", "jst_corr", "jst_crosstab",
+                              "jst_multi")
 
 #' Internal helper: resolve the `which` argument for jplot dispatch methods
 #'
@@ -2854,7 +4086,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # that made it.
   maker <- c(jst_lm = "jlm", jst_logistic = "jlogistic", jst_ttest = "jt",
              jst_anova = "jaov", jst_corr = "jcorr",
-             jst_crosstab = "jcrosstab")[class_name]
+             jst_crosstab = "jcrosstab", jst_multi = "jmulti")[class_name]
   owner <- if (is.na(maker)) "this result" else paste0("a ", maker, "() result")
   takes <- .jst_takes_names("which", all_plots,
                             lead = c("\"core\"", "\"all\""))
@@ -3310,10 +4542,14 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     dt <- attr(p, "jst_data")
     if (is.null(dt)) dt <- .jst_plot_points_sheet(p)
     tw <- attr(p, "jst_tweak")
-    for (a in c("jst_title", "jst_n", "jst_scales", "jst_data", "jst_tweak")) {
+    kd <- if (!is.null(attr(p, "jst_kind"))) attr(p, "jst_kind") else nm
+    fl <- isTRUE(attr(p, "jst_flip"))
+    rl <- attr(p, "jst_relook")
+    for (a in c("jst_title", "jst_n", "jst_scales", "jst_data", "jst_tweak",
+                "jst_kind", "jst_flip", "jst_relook")) {
       attr(p, a) <- NULL
     }
-    plots[[nm]] <- .jst_plot_finish(p, kind = nm, n = pn, title = t, data = dt,
+    plots[[nm]] <- .jst_plot_finish(p, kind = kd, n = pn, title = t, data = dt,
                                     names_shown = gaps$names_shown,
                                     codes_shown = gaps$codes_shown,
                                     scales = sc, labelled = gaps$labelled,
@@ -3321,7 +4557,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                                     filter = .jst_plot_filter_facts(x$sample_info),
                                     data_name = gaps$data_name,
                                     rerun = "analysis",
-                                    code_labels = code_labels)
+                                    code_labels = code_labels, flip = fl,
+                                    relook = rl)
   }
   plots
 }
@@ -4675,7 +5912,7 @@ jplot.jst_corr <- function(x, which = "core", ..., style = NULL) {
 
 # -- jplot.jst_crosstab --------------------------------------------------------
 
-#' @describeIn jplot a grouped bar chart of cell counts for a \code{jcrosstab()} result.
+#' @describeIn jplot a grouped bar chart of cell counts for a \code{jcrosstab()} result; \code{which = "stacked"} draws the 100% stacked bar, one bar per group.
 #' @export
 #' @importFrom rlang .data
 jplot.jst_crosstab <- function(x, which = "core", ..., style = NULL) {
@@ -4690,24 +5927,36 @@ jplot.jst_crosstab <- function(x, which = "core", ..., style = NULL) {
   .old_look <- .jst_plot_look_set(look)
   on.exit(.jst_plot_look_restore(.old_look), add = TRUE)
 
-  plot_set <- .jst_resolve_which(which, core = "bar", all_plots = "bar",
+  plot_set <- .jst_resolve_which(which, core = "bar",
+                                 all_plots = c("bar", "stacked"),
                                  class_name = "jst_crosstab")
 
   plots <- list()
 
-  if ("bar" %in% plot_set) {
-    obs <- x$observed
-    row_labels <- rownames(obs)
-    col_labels <- colnames(obs)
-    if (tail(row_labels, 1) == "Total") {
-      obs <- obs[-nrow(obs), , drop = FALSE]
-      row_labels <- row_labels[-length(row_labels)]
-    }
-    if (tail(col_labels, 1) == "Total") {
-      obs <- obs[, -ncol(obs), drop = FALSE]
-      col_labels <- col_labels[-length(col_labels)]
-    }
+  # The table's counts, its Total row and column aside, and its two
+  # variables as their plots title them: by label (Session 415, the S412
+  # audit's F4).
+  obs <- x$observed
+  row_labels <- rownames(obs)
+  col_labels <- colnames(obs)
+  if (tail(row_labels, 1) == "Total") {
+    obs <- obs[-nrow(obs), , drop = FALSE]
+    row_labels <- row_labels[-length(row_labels)]
+  }
+  if (tail(col_labels, 1) == "Total") {
+    obs <- obs[, -ncol(obs), drop = FALSE]
+    col_labels <- col_labels[-length(col_labels)]
+  }
+  rv <- attr(x$row_categories, "variable")
+  cv <- attr(x$col_categories, "variable")
+  vlab <- function(a, wrap = TRUE) {
+    if (is.null(a)) return(NULL)
+    l <- unname(a["label"]); nm <- unname(a["name"])
+    if (is.na(l) || !nzchar(l)) nm else if (wrap) .jst_plot_wrap(l) else l
+  }
+  vname <- function(a, other) if (is.null(a)) other else unname(a["name"])
 
+  if ("bar" %in% plot_set) {
     bar_df <- expand.grid(
       row = factor(row_labels, levels = row_labels),
       col = factor(col_labels, levels = col_labels),
@@ -4716,15 +5965,8 @@ jplot.jst_crosstab <- function(x, which = "core", ..., style = NULL) {
     bar_df$count <- as.vector(as.matrix(obs))
 
     # The column variable's categories side by side in the look's colors,
-    # the row variable along the axis, each titled by its label (Session
-    # 415: the S412 audit's F4; ruling R64's legend with its title).
-    rv <- attr(x$row_categories, "variable")
-    cv <- attr(x$col_categories, "variable")
-    vlab <- function(a, wrap = TRUE) {
-      if (is.null(a)) return(NULL)
-      l <- unname(a["label"]); nm <- unname(a["name"])
-      if (is.na(l) || !nzchar(l)) nm else if (wrap) .jst_plot_wrap(l) else l
-    }
+    # the row variable along the axis, each titled by its label (ruling
+    # R64's legend with its title).
     sc <- list(list(aes = "fill", levels = col_labels, guide = TRUE))
     p <- ggplot2::ggplot(bar_df,
                          ggplot2::aes(x = .data$row, y = .data$count,
@@ -4732,11 +5974,11 @@ jplot.jst_crosstab <- function(x, which = "core", ..., style = NULL) {
       ggplot2::geom_col(position = ggplot2::position_dodge(width = 0.8),
                         width = 0.7) +
       (if (identical(look$values.grouped, "yes"))
-        ggplot2::geom_text(ggplot2::aes(label = .data$count, group = .data$col),
-                           position = ggplot2::position_dodge(width = 0.8),
-                           vjust = -0.4, size = look$size * 0.8 / ggplot2::.pt,
-                           family = .jst_plot_family(look$font),
-                           colour = "#000000")) +
+        .jst_plot_text_layer(ggplot2::geom_text(
+          ggplot2::aes(label = .data$count, group = .data$col),
+          position = ggplot2::position_dodge(width = 0.8),
+          vjust = -0.4, size = look$size * 0.8 / ggplot2::.pt,
+          family = .jst_plot_family(look$font), colour = "#000000"))) +
       ggplot2::labs(x = vlab(rv), y = "Count", fill = vlab(cv)) +
       .jst_plot_zero_y(count = TRUE) +
       .jst_plot_theme()
@@ -4748,12 +5990,67 @@ jplot.jst_crosstab <- function(x, which = "core", ..., style = NULL) {
     attr(p, "jst_data") <- {
       sh <- data.frame(as.character(bar_df$row), as.character(bar_df$col),
                        bar_df$count, stringsAsFactors = FALSE)
-      names(sh) <- c(if (is.null(rv)) "Row" else unname(rv["name"]),
-                     if (is.null(cv)) "Column" else unname(cv["name"]), "n")
+      names(sh) <- c(vname(rv, "Row"), vname(cv, "Column"), "n")
       sh
     }
     print(p)
     plots$bar <- p
+  }
+
+  # The 100% stacked bar (ruling R68; its orientation ruled Session 413, the
+  # S412 audit's F1): one bar per group -- the column variable, the right
+  # side of the formula -- with the row variable's distribution within it,
+  # the percentages of the Word crosstab table. The chart follows the
+  # style's [crosstab] percent.base: under row, a bar per category of the
+  # row variable; under column and total, a bar per group, since the parts
+  # of one bar sum to 100. The other way round is the formula swapped.
+  if ("stacked" %in% plot_set) {
+    by_row <- identical(.jst_style_key(look$st, "crosstab", "percent.base"), "row")
+    m <- as.matrix(obs)
+    cells <- if (by_row) {
+      data.frame(bar = rep(row_labels, times = length(col_labels)),
+                 cat = rep(col_labels, each = length(row_labels)),
+                 n = as.integer(m), stringsAsFactors = FALSE)
+    } else {
+      data.frame(bar = rep(col_labels, each = length(row_labels)),
+                 cat = rep(row_labels, times = length(col_labels)),
+                 n = as.integer(m), stringsAsFactors = FALSE)
+    }
+    bars <- if (by_row) row_labels else col_labels
+    cats <- if (by_row) col_labels else row_labels
+    tot  <- tapply(cells$n, factor(cells$bar, levels = bars), sum)
+    bars <- bars[tot[bars] > 0L]
+    cats <- cats[cats %in% cells$cat[cells$n > 0L]]
+    cells <- cells[cells$bar %in% bars & cells$cat %in% cats, , drop = FALSE]
+    cells$bar <- factor(cells$bar, levels = bars)
+    cells$cat <- factor(cells$cat, levels = cats)
+    bar_var <- if (by_row) rv else cv
+    cat_var <- if (by_row) cv else rv
+    p <- .jst_build_stacked(
+      list(cells = cells, bars = bars, cats = cats,
+           ns = stats::setNames(as.integer(tot[bars]), bars)),
+      bar_title = vlab(bar_var), legend_title = vlab(cat_var),
+      sheet_names = c(vname(bar_var, "Group"), vname(cat_var, "Category")),
+      look = look)
+    built <- attr(p, "jst_built", exact = TRUE)
+    attr(p, "jst_built") <- NULL
+    # The title names what each bar holds, then what the bars are (ruling
+    # R69's "<variable> by <group>"): the row variable by the column
+    # variable, and turned with the bars under percent.base = row.
+    attr(p, "jst_title") <- if (!is.null(rv) && !is.null(cv)) {
+      paste(vlab(cat_var, FALSE), "by", vlab(bar_var, FALSE))
+    }
+    attr(p, "jst_scales") <- built$scales
+    attr(p, "jst_data")   <- built$data
+    attr(p, "jst_tweak")  <- built$tweak
+    attr(p, "jst_relook") <- built$relook
+    attr(p, "jst_flip")   <- TRUE
+    print(p)
+    plots$stacked <- p
+  }
+  if (length(plots) > 1L) {
+    .jst_group_plot_list(c(bar = "Bar Chart",
+                           stacked = "100% Stacked Bar Chart")[names(plots)])
   }
 
   .jst_return_plots(.jst_plot_mark_results(
@@ -4795,11 +6092,60 @@ jplot.jst_alpha <- function(x, which = "core", ...) {
   .jst_plot_result_stop(x, substitute(x), .jst_plot_items_line(x))
 }
 
-#' @describeIn jplot a \code{jmulti()} result is not drawn; this method says
-#'   so and points you to the data-first form for its items.
+#' @describeIn jplot the ranked bar chart of a multiple-response set, for a
+#'   \code{jmulti()} result: one bar per option in the order of the result's
+#'   table, "None of these" last, each bar's percentage of everyone who
+#'   answered at its end.
 #' @export
-jplot.jst_multi <- function(x, which = "core", ...) {
-  .jst_plot_result_stop(x, substitute(x), .jst_plot_items_line(x))
+#' @importFrom rlang .data
+jplot.jst_multi <- function(x, which = "core", ..., style = NULL) {
+
+  .jst_check_args(
+    rlang::enquos(...),
+    aliases = c(diagnostics = "which", plots = "which",
+                show = "which", type = "which"),
+    fn_name = "jplot"
+  )
+  look <- .jst_plot_look(style)
+  .old_look <- .jst_plot_look_set(look)
+  on.exit(.jst_plot_look_restore(.old_look), add = TRUE)
+
+  plot_set <- .jst_resolve_which(which, core = "bar", all_plots = "bar",
+                                 class_name = "jst_multi")
+  rr <- x$rows_raw
+  if (!is.data.frame(rr) || !nrow(rr)) {
+    .jst_stop("this jmulti() result does not hold what the chart is drawn ",
+              "from.\nRun jmulti() again, then draw the chart.", fn = "jplot")
+  }
+
+  plots <- list()
+  if ("bar" %in% plot_set) {
+    # Each bar named as the multiple-response table names its row (ruling
+    # R67: the chart matches its table): the option's text, an item with no
+    # label by its name, and jstats's own row by the style's none.label.
+    none_label <- .jst_style_key(look$st, "multiresponse", "none.label")
+    rows <- data.frame(
+      label = ifelse(rr$kind == "none", none_label,
+                     ifelse(is.na(rr$option), rr$item, rr$option)),
+      percent = rr$percent, n = rr$n, none = rr$kind != "item",
+      stringsAsFactors = FALSE)
+    p <- .jst_build_ranked(rows, look = look)
+    built <- attr(p, "jst_built", exact = TRUE)
+    attr(p, "jst_built") <- NULL
+    attr(p, "jst_title") <- if (is.character(x$title) && length(x$title) == 1L &&
+                                !is.na(x$title) && nzchar(x$title)) x$title
+                            else "Options Chosen"
+    attr(p, "jst_scales") <- built$scales
+    attr(p, "jst_data")   <- built$data
+    attr(p, "jst_flip")   <- TRUE
+    attr(p, "jst_kind")   <- "ranked"
+    print(p)
+    plots$bar <- p
+  }
+
+  .jst_return_plots(.jst_plot_mark_results(
+    plots, x, n = if (!is.null(x$n)) as.numeric(x$n) else NA,
+    shown = x$items))
 }
 
 #' Internal: jplot()'s note on arguments the plot drawn does not use
@@ -4932,6 +6278,27 @@ jplot.jst_multi <- function(x, which = "core", ...) {
             ..., fn = "jplot")
 }
 
+#' Internal helper: the data frame's name a result or a chart keeps, where
+#' an offered line can be built on it
+#'
+#' A result keeps the data frame as its call gave it (data_name: every
+#' analysis result since Session 416, jlm()'s since Session 403), which may
+#' be an expression -- \code{d[d$Age > 30, ]}. A line that changes the
+#' frame (\code{jrelabel(..., modify = TRUE)}) runs only on a plain name;
+#' one that reads it runs on a place such as \code{lst$d} too. Anything
+#' else, and a result that keeps no name, gives NULL, and the line names
+#' the placeholder MyData.
+#'
+#' @param dn The name as kept, or NULL.
+#' @param place Logical(1); whether a place will do.
+#' @return Character(1) or NULL.
+#' @keywords internal
+.jst_kept_data_name <- function(dn, place = FALSE) {
+  if (!is.character(dn) || length(dn) != 1L || is.na(dn) || !nzchar(dn)) return(NULL)
+  kind <- tryCatch(.jst_data_arg_kind(str2lang(dn)), error = function(e) "expression")
+  if (identical(kind, "name") || (isTRUE(place) && identical(kind, "place"))) dn
+}
+
 #' Internal: the line a result jplot() does not draw offers
 #'
 #' Its items, drawn from the data frame it was made from: the frame's name
@@ -4944,11 +6311,11 @@ jplot.jst_multi <- function(x, which = "core", ...) {
   items <- if (inherits(x, "jst_alpha") && is.data.frame(x$items_raw)) x$items_raw$item
            else if (inherits(x, "jst_multi")) x$items
   items <- items[!is.na(items)]
-  dn <- if (is.character(x$data_name) && length(x$data_name) == 1L &&
-            !is.na(x$data_name) && nzchar(x$data_name)) x$data_name else "MyData"
+  dn <- .jst_kept_data_name(x$data_name, place = TRUE)
+  if (is.null(dn)) dn <- "MyData"
   v <- if (length(items)) items[[1L]] else "Variable"
   paste0("A chart is drawn from the variables of a data frame, or from a jlm(), ",
-         "jlogistic(), jt(), jaov(), jcorr() or jcrosstab() result.\n",
+         "jlogistic(), jt(), jaov(), jcorr(), jcrosstab() or jmulti() result.\n",
          "To draw an item, give jplot() the data frame and the item, for example:\n",
          "  jplot(", dn, ", ", v, ")")
 }

@@ -136,7 +136,8 @@ Invisibly returns a list of class \code{jst_crosstab} containing:
 frequency table), \code{adjusted_residuals} (matrix of adjusted
 standardized residuals), \code{n} (total N), \code{model_frame} (the
 analysis data frame used for plotting), \code{sample_info} (pipeline and
-missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
+missing data counts), \code{data_name} (the data frame as the call named it),
+and if \code{chisq = TRUE}: \code{chi_square},
 \code{df}, and \code{p} (the Pearson chi-square), \code{chi_method}
 (the test's method string), \code{cramers_v} (Cramer's V, phi without
 its sign in a 2x2 table), and for 2x2 tables
@@ -183,6 +184,12 @@ jcrosstab(Education ~ Volunteer, data = community, residuals = "adjusted")
 juse(community)
 jcrosstab(Education ~ Volunteer)
 jcrosstab(Education ~ Volunteer, chisq = TRUE)
+
+# Keep the result to draw its charts: a grouped bar chart, or a 100\%
+# stacked bar with one bar per group
+ct <- jcrosstab(Education ~ Region, community)
+jplot(ct)
+jplot(ct, which = "stacked")
 
 }
 \seealso{

@@ -126,7 +126,8 @@ Invisibly returns a list of class \code{jst_ttest} containing:
 data frame used for plotting), \code{test_type}, \code{formula},
 \code{descriptives}, \code{t}, \code{df}, \code{p}, \code{mean_difference},
 \code{ci} (95\% CI), \code{cohens_d}, \code{d_label}, \code{n},
-\code{sample_info} (pipeline and missing data counts), and
+\code{sample_info} (pipeline and missing data counts),
+\code{data_name} (the data frame as the call named it), and
 \code{levene}: Levene's test as printed, a list of \code{F},
 \code{df1}, \code{df2}, \code{p} and \code{note} -- the verdict of the
 note under a significant test (\code{"acceptable"}, \code{"unreliable"}

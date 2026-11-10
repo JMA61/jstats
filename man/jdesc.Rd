@@ -25,7 +25,9 @@ or a numeric vector.}
 
 \item{...}{Unquoted variable names within \code{data}. None when
 \code{data} is a single variable. A \code{c()} of names, bare
-or quoted, is read as the names.}
+or quoted, is read as the names. A range in colon notation
+(\code{Environment1:Environment5}) names every variable from the
+first to the last, in the data frame's order.}
 
 \item{by}{An optional unquoted grouping variable name. When provided,
 descriptives are computed separately for each group, with a separate
@@ -118,7 +120,8 @@ wants no output: see \code{\link{joutput}}.}
 \value{
 Invisibly returns a list of class \code{jst_desc} containing:
 \code{descriptives} (data frame of statistics, or NULL for grouped output),
-and \code{sample_info} (pipeline and missing data counts). Also
+\code{sample_info} (pipeline and missing data counts) and
+\code{data_name} (the data frame as the call named it). Also
 prints a formatted table to the console.
 }
 \description{
@@ -185,6 +188,7 @@ juse(community)
 jdesc(Age)
 jdesc(Income, Age, WellbeingScore)
 jdesc(WellbeingScore, by = Volunteer)
+jdesc(Environment1:Environment5)      # a range of variables
 
 # With a vector directly
 jdesc(community$Age)

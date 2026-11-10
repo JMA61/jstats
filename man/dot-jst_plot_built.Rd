@@ -4,7 +4,14 @@
 \alias{.jst_plot_built}
 \title{Internal helper: a builder's chart, with the scales that carry its colors}
 \usage{
-.jst_plot_built(p, scales, data = NULL)
+.jst_plot_built(
+  p,
+  scales,
+  data = NULL,
+  flip = FALSE,
+  tweak = NULL,
+  relook = NULL
+)
 }
 \arguments{
 \item{p}{The ggplot.}
@@ -12,6 +19,11 @@
 \item{scales}{The scales (\code{.jst_plot_add_scales()}).}
 
 \item{data}{The numbers it shows, for the Excel sheet, or NULL.}
+
+\item{flip}{TRUE for a chart whose bars run across.}
+
+\item{tweak}{NULL, or a theme setting of the chart's own, added again
+when the chart is drawn in another look.}
 }
 \description{
 Internal helper: a builder's chart, with the scales that carry its colors

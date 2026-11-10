@@ -129,8 +129,9 @@ inferred from the file extension
 \strong{Visualization}
 \itemize{
 \item \code{\link{jplot}} -- histograms, bar charts, scatterplots,
-and boxplots from a data frame, plus plots of result objects
-from \code{jt()}, \code{jlm()}, etc.
+boxplots, pie and donut charts and 100\% stacked bars from a data
+frame, plus plots of result objects from \code{jt()},
+\code{jlm()}, \code{jmulti()}, etc.
 }
 
 \strong{Publication tables}

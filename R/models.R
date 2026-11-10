@@ -5981,8 +5981,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 #' @return Invisibly returns a list of class \code{jst_alpha} containing:
 #'   \code{alpha} (Cronbach's alpha), \code{n_items}, \code{n_used},
 #'   \code{n_excluded}, \code{item_statistics}, \code{item_total_statistics},
-#'   and \code{sample_info} (pipeline and missing data counts).
-#'   item statistics data frame, and item-total statistics data frame.
+#'   \code{sample_info} (pipeline and missing data counts) and
+#'   \code{data_name} (the data frame as the call named it).
 #'
 #' @examples
 #' # With explicit data frame
@@ -6330,7 +6330,8 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
     item_total_statistics = item_total_table,
     sample_info           = sample_info,
     alpha_raw             = alpha_raw,
-    items_raw             = items_raw
+    items_raw             = items_raw,
+    data_name             = .jst_data_name
   )
   class(ret) <- "jst_alpha"
   ret <- .jst_stamp_result(ret)   # Session 399: the version that made it

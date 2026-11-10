@@ -139,7 +139,8 @@ Invisibly returns a list of class \code{jst_anova} containing:
 \code{model_frame} (the analysis data frame used for plotting),
 \code{test_type}, \code{formula}, \code{descriptives}, \code{f},
 \code{df1}, \code{df2}, \code{p}, \code{eta_squared}, \code{n},
-\code{sample_info} (pipeline and missing data counts), and
+\code{sample_info} (pipeline and missing data counts),
+\code{data_name} (the data frame as the call named it), and
 \code{posthoc} (the pairwise comparisons as an unrounded data frame,
 with \code{test} naming the method; \code{NULL} when post-hoc tests
 were not requested), and \code{levene}: Levene's test as printed, a

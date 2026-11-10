@@ -4,7 +4,13 @@
 \alias{.jst_plot_title}
 \title{Internal helper: build a red-title string for jplot.default output}
 \usage{
-.jst_plot_title(plot_type, variable_names, by_name = NULL, facet_name = NULL)
+.jst_plot_title(
+  plot_type,
+  variable_names,
+  by_name = NULL,
+  facet_name = NULL,
+  parts = NULL
+)
 }
 \arguments{
 \item{plot_type}{Character, one of the valid resolved types.}
@@ -14,6 +20,10 @@
 \item{by_name}{Optional character string for the by-variable.}
 
 \item{facet_name}{Optional character string for the facet variable.}
+
+\item{parts}{Optional character: the variables as the call gave them, a
+range as "A to B" (\code{.jst_resolve_varrange()}), for a 100\% stacked
+bar's set of items.}
 }
 \description{
 Produces titles like:

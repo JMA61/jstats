@@ -98,6 +98,55 @@
   list(var_names = var_names, label_parts = label_parts)
 }
 
+#' Internal helper: a list of variables with its ranges written out
+#'
+#' For a function that reads its variables one by one from the quosures
+#' (jdesc(), jfreq()): each range \code{A:B} is replaced by the variables
+#' from A to B in the data frame's order, each a quosure of its own, so the
+#' call reads as if every one had been named (Session 416; the (S413)
+#' item). The range is checked as \code{.jst_resolve_varrange()} checks it
+#' for jalpha(), jsum(), javg(), jmulti() and jplot(): an endpoint that is
+#' not a variable takes the not-found stop, and endpoints the wrong way
+#' round the stop that gives them reversed. Anything that is not a range
+#' passes through untouched, an empty slot among them.
+#'
+#' @param quos_list A list of quosures.
+#' @param data The data frame.
+#' @param fn_name Character(1); the calling function.
+#' @param data_name Character(1) or NULL; the data frame's name.
+#' @param default_used Logical(1), as \code{.jst_resolve_varrange()}.
+#' @return The list, each range written out.
+#' @keywords internal
+.jst_expand_ranges <- function(quos_list, data, fn_name, data_name = NULL,
+                               default_used = FALSE) {
+  is_range <- vapply(quos_list, function(q) {
+    if (rlang::quo_is_missing(q)) return(FALSE)
+    e <- rlang::quo_get_expr(q)
+    is.call(e) && identical(e[[1L]], as.name(":"))
+  }, logical(1))
+  if (!any(is_range)) return(quos_list)
+  out <- list()
+  nms <- character(0)
+  old <- names(quos_list)
+  if (is.null(old)) old <- rep("", length(quos_list))
+  for (i in seq_along(quos_list)) {
+    q <- quos_list[[i]]
+    if (!is_range[i]) {
+      out <- c(out, list(q))
+      nms <- c(nms, old[i])
+      next
+    }
+    vars <- .jst_resolve_varrange(list(q), data, fn_name, data_name,
+                                  default_used = default_used)$var_names
+    env  <- rlang::quo_get_env(q)
+    out  <- c(out, lapply(vars, function(v) rlang::new_quosure(as.name(v), env = env)))
+    nms  <- c(nms, rep("", length(vars)))
+  }
+  names(out) <- nms
+  class(out) <- class(quos_list)
+  out
+}
+
 
 # -- jsum ----------------------------------------------------------------------
 

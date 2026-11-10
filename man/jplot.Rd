@@ -62,7 +62,7 @@ jplot(x, which = "core", ...)
 
 \method{jplot}{jst_alpha}(x, which = "core", ...)
 
-\method{jplot}{jst_multi}(x, which = "core", ...)
+\method{jplot}{jst_multi}(x, which = "core", ..., style = NULL)
 }
 \arguments{
 \item{x}{A result object from one of the package's analysis functions
@@ -74,14 +74,18 @@ one or more specific plot names valid for the object's class.
 
 \item{...}{Additional arguments: for the result-object form these are
 passed to class-specific methods; for the data-first form these are
-unquoted variable names (1 or 2).}
+unquoted variable names (1 or 2; for \code{type = "stacked"} a set of
+items, which a range such as \code{Q1:Q5} may name).}
 
-\item{by}{Unquoted variable name for group-coloring (data-first form).}
+\item{by}{Unquoted variable name for group-coloring (data-first form).
+With \code{type = "stacked"}, the groups: one bar for each.}
 
 \item{type}{Character. Plot type override for the data-first form. One
 of \code{histogram}, \code{density}, \code{bar}, \code{scatter},
-\code{box}, \code{grouped_bar}. If NULL (default), auto-detected
-from variable types; \code{density} is never the automatic choice.}
+\code{box}, \code{grouped_bar}, \code{pie}, \code{donut},
+\code{stacked}. If NULL (default), auto-detected
+from variable types; \code{density}, \code{pie}, \code{donut} and
+\code{stacked} are never the automatic choice.}
 
 \item{line}{Controls a line overlay on data-first scatter plots. One of
 \code{FALSE} (default; no line), \code{TRUE} (alias for \code{lm}),
@@ -204,8 +208,12 @@ given either positionally or as \code{data = }:
 \code{jplot(data = community, Age)} is the same plot as
 \code{jplot(community, Age)}. Used for histograms
 (1 numeric), bar charts (1 categorical), and grouped bar charts (2
-categorical). Calls that would otherwise auto-detect to a scatter or
-boxplot produce a helpful error directing you to the formula form.
+categorical), and, asked for with \code{type =}, for pie and donut
+charts and 100\% stacked bars (see "Parts of a whole" below). Calls
+that would otherwise auto-detect to a scatter or boxplot produce a
+helpful error directing you to the formula form. A range,
+\code{Environment1:Environment5}, names every variable from the first to
+the last in the data frame's order, as in \code{\link{jalpha}()}.
 
 \strong{A labelled variable with a few categories}, such as Region --
 six values or fewer with at least one of them labelled, or whole
@@ -233,7 +241,12 @@ gridlines and the legend at the right, \code{"report"} with light
 horizontal gridlines, the x axis line alone and the legend at the top. A
 chart's axes and legends are titled by the variables' labels, the name
 where a variable has none; a bar chart of one series shows each bar's
-count. The style is \code{joptions(style = )}'s, apa when none is set,
+count, a pie or a donut each slice's percentage and a ranked bar chart
+each bar's (the style's \code{values}); a 100\% stacked bar shows its
+percentages inside its segments only under the style's
+\code{values.stacked = yes}. Percentages are whole numbers, or have one
+decimal place under \code{values.decimals = 1}. The style is
+\code{joptions(style = )}'s, apa when none is set,
 or the call's \code{style =}.
 
 \strong{A chart in a Word file.} Keep a chart with \code{<-} and give it
@@ -260,7 +273,18 @@ case's distance from its group's mean, or for a paired test each
 pair's difference from the mean difference)
 \item \code{jst_corr}: \code{heatmap}, \code{scatter} (scatter requires
 exactly 2 variables in the correlation)
-\item \code{jst_crosstab}: \code{bar}
+\item \code{jst_crosstab}: \code{bar} (the default), \code{stacked}
+(a 100\% stacked bar: one bar per group -- the variable on the
+right of the formula -- with the row variable's distribution
+within it, the column percentages of the crosstab; for the other
+way round, swap the formula. The chart follows the percentages the
+publication table prints: under a style file whose \code{[crosstab]}
+\code{percent.base} is \code{row}, one bar per category of the row
+variable)
+\item \code{jst_multi} (a \code{\link{jmulti}()} result): \code{bar},
+a ranked bar chart -- one horizontal bar per option in the order of
+the result's table, "None of these" last, each bar's percentage of
+everyone who answered at its end
 }
 
 The shortcut keyword \code{core} (default) produces a curated default
@@ -281,10 +305,42 @@ against the fitted values or the leverage, are left out with a note.
 
 Valid plot types for the data-first form: \code{histogram},
 \code{density}, \code{bar}, \code{scatter}, \code{box},
-\code{grouped_bar}. A density plot is the histogram's alternative for a
+\code{grouped_bar}, \code{pie}, \code{donut}, \code{stacked}. A density
+plot is the histogram's alternative for a
 numeric variable -- its kernel density estimate, one curve, or one per
 group of \code{by =} laid over each other -- and is drawn only when
 asked for with \code{type = "density"}.
+
+\strong{Parts of a whole.} Three charts show how a whole divides, and
+each is drawn only when asked for by name. They draw a variable by its
+categories whatever its type, each category named by its value label;
+the whole is the cases with an answer. A \code{\link{jnumeric}()} or
+\code{\link{jcount}()} registration, which says how the analyses read
+a variable, changes nothing in these charts; \code{numeric =} in the
+call shows a labelled variable by its codes.
+\itemize{
+\item \code{type = "pie"} and \code{type = "donut"}: one variable as
+one whole. The slices are its categories that have cases, clockwise
+from 12 o'clock in the variable's own order, each labelled beside
+it with its percentage; no legend. A pie shows at most six
+categories (the style's \code{pie.max}): a variable with more
+stops, with the line that draws a bar chart. \code{by =} and
+\code{facet =} are refused -- to show a variable within groups,
+draw a 100\% stacked bar.
+\item \code{type = "stacked"}: a 100\% stacked bar, horizontal bars
+whose segments are a variable's categories and sum to 100. With
+\code{by =}, one variable within each group:
+\code{jplot(community, Education, by = Region, type = "stacked")}
+draws a bar for each region. With several variables and no
+\code{by =}, a set of items that share their answer categories --
+the items of a scale -- one bar per item:
+\code{jplot(community, Environment1:Environment5, type = "stacked")}.
+The items must share one set of categories (their value labels;
+unlabelled items, their values), and each bar's whole is that
+item's own valid answers. The legend is above the chart in the
+segments' order. A \code{\link{jcrosstab}()} result draws the same
+chart: \code{jplot(ct, which = "stacked")}.
+}
 
 In the variable-list form \code{facet =} draws one panel per group of
 the variable named, with the groups' value labels as the panel titles:
@@ -316,7 +372,7 @@ band illustrating the homoskedasticity assumption), \code{none} (no band).
 
 \item \code{jplot(jst_corr)}: a heat-map of the correlation matrix for a \code{jcorr()} result, or a scatter plot for a single pair.
 
-\item \code{jplot(jst_crosstab)}: a grouped bar chart of cell counts for a \code{jcrosstab()} result.
+\item \code{jplot(jst_crosstab)}: a grouped bar chart of cell counts for a \code{jcrosstab()} result; \code{which = "stacked"} draws the 100\% stacked bar, one bar per group.
 
 \item \code{jplot(jst_desc)}: (planned) direct plotting of a \code{jdesc()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
 
@@ -326,8 +382,10 @@ band illustrating the homoskedasticity assumption), \code{none} (no band).
 so and points you to the data-first form for its items, for example
 \code{jplot(data, Item1)}.
 
-\item \code{jplot(jst_multi)}: a \code{jmulti()} result is not drawn; this method says
-so and points you to the data-first form for its items.
+\item \code{jplot(jst_multi)}: the ranked bar chart of a multiple-response set, for a
+\code{jmulti()} result: one bar per option in the order of the result's
+table, "None of these" last, each bar's percentage of everyone who
+answered at its end.
 
 }}
 \examples{
@@ -361,6 +419,16 @@ jtable(p1, file = file.path(tempdir(), "Figure1.docx"), overwrite = TRUE)
 
 # The report style's look
 jplot(community, Region, style = "report")
+
+# Parts of a whole, each asked for by name
+jplot(community, Region, type = "pie")
+jplot(community, Region, type = "donut")
+# A 100\% stacked bar: one variable within groups, or a set of items
+jplot(community, Education, by = Region, type = "stacked")
+jplot(community, Environment1:Environment5, type = "stacked")
+# ... and from a crosstab
+ct <- jcrosstab(Education ~ Region, community)
+jplot(ct, which = "stacked")
 
 # Using juse() default (omit the data frame in either form)
 juse(community)

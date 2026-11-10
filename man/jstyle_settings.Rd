@@ -251,6 +251,9 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{legend.position}}{where a chart's legend goes, with its title: right | top | bottom (top and bottom start at the left) | none. Takes one of right | top | bottom | none. In apa: \code{right}; in report: \code{top}.}
 \item{\code{values}}{yes: each bar's value just beyond its end, on a chart of one series, such as a bar chart of one variable | no. Takes one of yes | no. In apa: \code{yes}.}
 \item{\code{values.grouped}}{the same on a chart of several series, such as grouped bars: no | yes. Takes one of no | yes. In apa: \code{no}.}
+\item{\code{values.stacked}}{yes: a 100\% stacked bar's percentages inside its segments, none in a segment under 6 percent | no. Takes one of no | yes. In apa: \code{no}.}
+\item{\code{values.decimals}}{the decimal places of a percentage a chart shows, on a pie's slices, at a ranked bar's end or in a stacked bar's segments: 0 or 1. Takes a whole number from 0 to 1. In apa: \code{0}.}
+\item{\code{pie.max}}{the most categories a pie or a donut chart shows; a variable with more stops, with the line that draws a bar chart. Takes a whole number from 2 to 6. In apa: \code{6}.}
 \item{\code{width}}{a figure's width in a Word file, in inches. Takes a number from 1 to 20. In apa: \code{6}.}
 \item{\code{height}}{a figure's height in a Word file, in inches. Takes a number from 1 to 20. In apa: \code{4}.}
 \item{\code{resolution}}{the resolution of a figure's picture, in dots per inch. Takes a whole number from 72 to 1200. In apa: \code{300}.}

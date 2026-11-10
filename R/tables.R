@@ -314,6 +314,12 @@
     values          = "yes",           # each bar's value beyond its end, on a
                                        # chart of one series (ruling R70)
     values.grouped  = "no",            # the same on a chart of several series
+    values.stacked  = "no",            # a 100% stacked bar's percentages, inside
+                                       # its segments (R70; Session 416)
+    values.decimals = 0,               # the decimals of a percentage a chart
+                                       # shows: 0 or 1 (R70)
+    pie.max         = 6,               # the most categories a pie or a donut
+                                       # shows, 2 to 6 (ruling R66)
     width           = 6,               # a figure in a Word file, in inches
     height          = 4,
     resolution      = 300,             # the picture's dots per inch (R65)
@@ -749,6 +755,15 @@
     values.grouped  = list(kind = "choice", choices = c("no", "yes"),
                            about = c("the same on a chart of several series, such as grouped bars: no |",
                                      "yes")),
+    values.stacked  = list(kind = "choice", choices = c("no", "yes"),
+                           about = c("yes: a 100% stacked bar's percentages inside its segments, none in a",
+                                     "segment under 6 percent | no")),
+    values.decimals = list(kind = "integer", min = 0, max = 1,
+                           about = c("the decimal places of a percentage a chart shows, on a pie's slices,",
+                                     "at a ranked bar's end or in a stacked bar's segments: 0 or 1")),
+    pie.max         = list(kind = "integer", min = 2, max = 6,
+                           about = c("the most categories a pie or a donut chart shows; a variable with",
+                                     "more stops, with the line that draws a bar chart")),
     width           = list(kind = "number", min = 1, max = 20,
                            about = "a figure's width in a Word file, in inches"),
     height          = list(kind = "number", min = 1, max = 20,
@@ -763,6 +778,11 @@
                                      "ask for one: none | pdf | eps"))
   )
 )
+
+# The sentence a multiple-response table and its chart carry in the note
+# (ruling R61; one home since Session 416, when the chart joined the table).
+.jst_table_choice_note <- paste0("Respondents could choose more than one, so the ",
+                               "percentages sum to more than 100.")
 
 # The table types, as messages name them, in the file's section order.
 .jst_style_type_nouns <- c(descriptives = "a descriptives table",
@@ -3869,10 +3889,7 @@
   np <- .jst_table_n_parts(key("n.position"),
                            paste0("*N* = ", .jst_tbl_count(md$n, thou)))
   general <- c(np$note, .jst_table_filter_note(results, set_title, style, type))
-  if (identical(key("choice.note"), "yes")) {
-    general <- c(general, paste0("Respondents could choose more than one, so the ",
-                                 "percentages sum to more than 100."))
-  }
+  if (identical(key("choice.note"), "yes")) general <- c(general, .jst_table_choice_note)
   if (!is.null(note)) general <- c(general, note)
 
   .jst_table_new(
@@ -5686,13 +5703,32 @@
           else if (!is.null(f) && is.character(f$title) && length(f$title) == 1L &&
                    !is.na(f$title) && nzchar(f$title)) f$title
   n <- if (!is.null(f) && length(f$n) == 1L && !is.na(f$n)) f$n
-  np <- .jst_table_n_parts(key("n.position"),
-                           if (!is.null(n))
-                             paste0("*N* = ", .jst_tbl_count(n, key("thousands"))))
+  # A set of items whose Ns differ (a 100% stacked bar; ruling R68) gives
+  # their range in the note, where a table gives the ns that vary within it
+  # (ruling R59), and nothing after the title.
+  item_ns <- if (!is.null(f) && is.numeric(f$item_ns) && length(f$item_ns) == 2L &&
+                 !anyNA(f$item_ns)) f$item_ns
+  count <- function(v) .jst_tbl_count(v, key("thousands"))
+  np <- if (!is.null(item_ns)) {
+    .jst_table_n_parts(key("n.position"),
+                       paste0("Item *n*s range from ", count(item_ns[1L]), " to ",
+                              count(item_ns[2L])), TRUE)
+  } else {
+    .jst_table_n_parts(key("n.position"),
+                       if (!is.null(n)) paste0("*N* = ", count(n)))
+  }
   general <- c(np$note,
                if (!is.null(f$filter)) {
                  .jst_table_filter_note(list(list(sample_info = f$filter)),
                                         "the figure", st, "figure")
+               },
+               # The ranked bar of a multiple-response set carries its
+               # table's sentence (ruling R67), which the same setting
+               # leaves out (ruling R53).
+               if (!is.null(f) && identical(f$kind, "ranked") &&
+                   identical(.jst_style_key(st, "multiresponse", "choice.note"),
+                             "yes")) {
+                 .jst_table_choice_note
                },
                note)
   structure(list(
@@ -5734,6 +5770,10 @@
     density     = "a density plot",
     bar         = "a bar chart",
     grouped_bar = "a grouped bar chart",
+    pie         = "a pie chart",
+    donut       = "a donut chart",
+    stacked     = "a 100% stacked bar chart",
+    ranked      = "a ranked bar chart",
     scatter     = "a scatterplot",
     box         = "a box plot",
     fit         = "a fit plot",
@@ -6144,7 +6184,11 @@
                                        ", and ", cp[length(cp)], ","),
                            " without ", if (one) "a value label." else "value labels."))
   }
-  frame <- if (is.null(gaps$data_name)) "MyData" else gaps$data_name
+  # The frame by its name where the result or the chart keeps a plain one
+  # (every analysis result since Session 416); MyData for an expression,
+  # which modify = TRUE cannot change, and for an older result.
+  frame <- .jst_kept_data_name(gaps$data_name)
+  if (is.null(frame)) frame <- "MyData"
   line <- if (length(nm)) {
     paste0("jrelabel(", frame, ", ", nm[1L], ", var.label = \"...\", modify = TRUE)")
   } else {

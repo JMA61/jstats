@@ -21,7 +21,9 @@ or a vector.}
 
 \item{...}{Unquoted variable name(s) within \code{data}. None when
 \code{data} is a single variable. A \code{c()} of names, bare
-or quoted, is read as the names.}
+or quoted, is read as the names. A range in colon notation
+(\code{Environment1:Environment5}) names every variable from the
+first to the last, in the data frame's order.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only. Applied after
@@ -90,8 +92,9 @@ declared-missing rows as a data frame, empty when the variable
 has none; \code{na}, the system-missing row as a one-row data
 frame, or \code{NULL} when there are none; \code{total},
 \code{valid_count}, and \code{missing}, the case counts; and
-\code{var_label}, the variable's display label) and
-\code{sample_info} (pipeline and missing data counts).
+\code{var_label}, the variable's display label),
+\code{sample_info} (pipeline and missing data counts) and
+\code{data_name} (the data frame as the call named it).
 }
 \description{
 Prints an SPSS-style frequency table (Freq, Total \%, Valid \%, Cum. \%) for

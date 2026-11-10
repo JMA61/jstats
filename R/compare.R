@@ -539,7 +539,8 @@
 #'   data frame used for plotting), \code{test_type}, \code{formula},
 #'   \code{descriptives}, \code{t}, \code{df}, \code{p}, \code{mean_difference},
 #'   \code{ci} (95% CI), \code{cohens_d}, \code{d_label}, \code{n},
-#'   \code{sample_info} (pipeline and missing data counts), and
+#'   \code{sample_info} (pipeline and missing data counts),
+#'   \code{data_name} (the data frame as the call named it), and
 #'   \code{levene}: Levene's test as printed, a list of \code{F},
 #'   \code{df1}, \code{df2}, \code{p} and \code{note} -- the verdict of the
 #'   note under a significant test (\code{"acceptable"}, \code{"unreliable"}
@@ -1056,7 +1057,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     n               = n_analysis,
     sample_info     = sample_info,
     levene          = levene_ret,
-    residuals       = t_resid
+    residuals       = t_resid,
+    data_name       = .jst_data_name
   )
   class(ret) <- "jst_ttest"
   ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
@@ -1222,7 +1224,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   \code{model_frame} (the analysis data frame used for plotting),
 #'   \code{test_type}, \code{formula}, \code{descriptives}, \code{f},
 #'   \code{df1}, \code{df2}, \code{p}, \code{eta_squared}, \code{n},
-#'   \code{sample_info} (pipeline and missing data counts), and
+#'   \code{sample_info} (pipeline and missing data counts),
+#'   \code{data_name} (the data frame as the call named it), and
 #'   \code{posthoc} (the pairwise comparisons as an unrounded data frame,
 #'   with \code{test} naming the method; \code{NULL} when post-hoc tests
 #'   were not requested), and \code{levene}: Levene's test as printed, a
@@ -1824,7 +1827,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     sample_info  = sample_info,
     posthoc      = posthoc_tbl,
     levene       = levene_ret,
-    residuals    = aov_resid
+    residuals    = aov_resid,
+    data_name    = .jst_data_name
   )
   class(ret) <- "jst_anova"
   ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
@@ -2171,7 +2175,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   frequency table), \code{adjusted_residuals} (matrix of adjusted
 #'   standardized residuals), \code{n} (total N), \code{model_frame} (the
 #'   analysis data frame used for plotting), \code{sample_info} (pipeline and
-#'   missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
+#'   missing data counts), \code{data_name} (the data frame as the call named it),
+#'   and if \code{chisq = TRUE}: \code{chi_square},
 #'   \code{df}, and \code{p} (the Pearson chi-square), \code{chi_method}
 #'   (the test's method string), \code{cramers_v} (Cramer's V, phi without
 #'   its sign in a 2x2 table), and for 2x2 tables
@@ -2199,6 +2204,12 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' juse(community)
 #' jcrosstab(Education ~ Volunteer)
 #' jcrosstab(Education ~ Volunteer, chisq = TRUE)
+#'
+#' # Keep the result to draw its charts: a grouped bar chart, or a 100%
+#' # stacked bar with one bar per group
+#' ct <- jcrosstab(Education ~ Region, community)
+#' jplot(ct)
+#' jplot(ct, which = "stacked")
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -2786,7 +2797,8 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     model_frame        = mf,
     sample_info        = sample_info,
     row_categories     = row_categories,
-    col_categories     = col_categories
+    col_categories     = col_categories,
+    data_name          = .jst_data_name
   )
   if (chisq) {
     ret$chi_square <- chi_result$statistic

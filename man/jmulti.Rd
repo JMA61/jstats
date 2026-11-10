@@ -121,13 +121,15 @@ jmulti(svc, Counselling:Financial)
 # The options in the data frame's order, named by their labels
 jmulti(svc, Counselling:Financial, rank = FALSE, variable.id = "labels")
 
-# Keep the result to make a publication table of it
+# Keep the result to make a publication table of it, or to draw its
+# ranked bar chart
 m <- jmulti(svc, Counselling:Financial, print = FALSE)
 t1 <- jtable(m)
+jplot(m)
 
 }
 \seealso{
 \code{\link{jfreq}} for one variable's frequencies,
-\code{\link{jtable}} for the table; \code{\link{jstats}} for the
-package overview.
+\code{\link{jtable}} for the table, \code{\link{jplot}} for the
+chart; \code{\link{jstats}} for the package overview.
 }

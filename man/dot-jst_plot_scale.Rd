@@ -4,7 +4,16 @@
 \alias{.jst_plot_scale}
 \title{Internal helper: a fill or color scale in a look's colors}
 \usage{
-.jst_plot_scale(aes, levels, look, guide = TRUE)
+.jst_plot_scale(
+  aes,
+  levels,
+  look,
+  guide = TRUE,
+  contrast = FALSE,
+  rows = NULL,
+  breaks = NULL,
+  labels = NULL
+)
 }
 \arguments{
 \item{aes}{"fill" or "colour".}
@@ -14,6 +23,15 @@
 \item{look}{A look.}
 
 \item{guide}{TRUE for a legend.}
+
+\item{contrast}{TRUE for the text color that reads on each series' color.}
+
+\item{rows}{NULL, or the legend's rows.}
+
+\item{breaks}{NULL, or the series in the order the legend's keys are
+given.}
+
+\item{labels}{NULL, or the keys' labels, named by series.}
 }
 \value{
 A ggplot2 scale.
@@ -23,5 +41,12 @@ Every color a chart of variables draws comes from one of these scales --
 a single series as a constant mapped to its one color, guide off -- so
 jtable() can draw the chart again in another style's colors by adding
 the scale again (\code{.jst_plot_restyle()}).
+}
+\details{
+Since Session 416 a scale may also carry what a 100\% stacked bar's needs:
+the black or white that reads on each series' color, for a value written
+inside a segment (\code{contrast}); and a legend's rows, the order its
+keys are given in and the labels they take (\code{rows}, \code{breaks},
+\code{labels}).
 }
 \keyword{internal}

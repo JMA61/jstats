@@ -4,12 +4,14 @@
 \alias{.jst_plot_theme}
 \title{Internal helper: a chart's theme in a style's look}
 \usage{
-.jst_plot_theme(look = NULL, device = NULL)
+.jst_plot_theme(look = NULL, device = NULL, flip = FALSE)
 }
 \arguments{
 \item{look}{A look; the chart being drawn's when NULL.}
 
 \item{device}{As \code{.jst_plot_family()}.}
+
+\item{flip}{Logical(1); TRUE for a chart whose bars run across.}
 }
 \value{
 A complete ggplot2 theme.
@@ -19,5 +21,12 @@ White, its text black in the style's font and size, the axis lines and
 gridlines the style names, the legend where it says with its title
 (ruling R64). Every chart jplot() draws takes it, the diagnostics plots
 included.
+}
+\details{
+A chart whose bars run across the page -- the ranked bar of a
+multiple-response set, a 100\% stacked bar (Session 416) -- has its
+value axis along the bottom, so the look's gridlines and axis lines are
+turned with it (\code{flip}): report's light gridlines run up from the
+values, and its one axis line is the one the bars stand on.
 }
 \keyword{internal}
