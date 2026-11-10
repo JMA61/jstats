@@ -25,7 +25,7 @@ open = TRUE) opens the file in the editor instead of printing it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.277</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.278</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -129,13 +129,18 @@ style it copies named on its based.on line, and only the settings given,
 which is all a small change needs. A general setting is given by its
 name; a table type's settings go in a list named for its section:
 <code>jstyle("apa", save.as = "myapa", font = "Arial", regression =
-list(fit.rows = c("r2", "n")))</code>.</p>
+list(fit.rows = c("r2", "n")))</code>. A short file takes everything else from
+its base, so it travels with it: a file based on a style of your own
+works on another computer, or from another folder, only where that
+style can be found too. A base given by its path is written by its path,
+which is where jstats finds it; a base given by its name is looked for
+in the folders below.</p>
 <p>A style file is plain text: a setting is a name, an equals sign and a
 value; a <code>#</code> starts a note; the general settings come first, then
 one section per table type, <code>[descriptives]</code>, <code>[frequencies]</code>,
 <code>[regression]</code>, <code>[logistic]</code>, <code>[correlation]</code>,
-<code>[ttest]</code>, <code>[anova]</code>, <code>[crosstab]</code> and
-<code>[reliability]</code>. A setting the file leaves out comes from the style
+<code>[ttest]</code>, <code>[anova]</code>, <code>[crosstab]</code>, <code>[reliability]</code>
+and <code>[multiresponse]</code>. A setting the file leaves out comes from the style
 its <code>based.on</code> line names. <code><a href="jstyle_settings.html">jstyle_settings</a></code> lists every
 setting and what it takes. jstats looks for a style named in a call in
 the style folder (<code>joptions(style.dir = )</code>), the working directory
@@ -190,8 +195,9 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> paper             = a4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> caption.form      = apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> caption.position  = row</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> caption.size      = 12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.size      = size</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> caption.fill      = none</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.text      = 000000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> header.fill       = none</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> header.text       = 000000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> header.bold       = no</span>
@@ -202,7 +208,11 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> note.label        = Note.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> note.label.italic = yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> note.position     = row</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> note.size         = 12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.size         = size</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.sentences    = paragraph</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.order        = apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> source.position   = note</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> source.label      = Source:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> n.position        = title</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> decimals          = 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> leading.zero      = no</span>
@@ -303,6 +313,7 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> sd.label      = SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> t.label       = t</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> df.label      = df</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> df.position   = head</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> p.label       = p</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> d.label       = d</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> diff.label    = Mean difference</span>
@@ -320,6 +331,7 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> sd.label      = SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> f.label       = F</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> df.label      = df</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> df.position   = head</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> p.label       = p</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> eta2.label    = η²</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> group.spanner = yes</span>
@@ -354,6 +366,15 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> item.total.note        = yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> group.headings         = italic</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [multiresponse]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title         = {set}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns       = n, percent</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label    = Option</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> n.label       = n</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> percent.label = %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> none.label    = None of these</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> choice.note   = yes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"report"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Style: report</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   built into jstats</span>
@@ -364,8 +385,9 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> paper             = a4              # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> caption.form      = report</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> caption.position  = row             # from apa</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> caption.size      = 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.size      = size            # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> caption.fill      = none            # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> caption.text      = 000000          # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> header.fill       = D9D9D9</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> header.text       = 000000          # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> header.bold       = yes</span>
@@ -376,7 +398,11 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> note.label        = Note:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> note.label.italic = no</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> note.position     = row             # from apa</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> note.size         = 9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.size         = size - 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.sentences    = lines</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> note.order        = report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> source.position   = line</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> source.label      = Source:         # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> n.position        = title           # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> decimals          = 2               # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> leading.zero      = yes</span>
@@ -477,6 +503,7 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> sd.label      = SD                          # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> t.label       = t                           # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> df.label      = df                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> df.position   = column</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> p.label       = p                           # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> d.label       = d                           # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> diff.label    = Mean difference             # from apa</span>
@@ -494,6 +521,7 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> sd.label      = SD                          # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> f.label       = F                           # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> df.label      = df                          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> df.position   = column</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> p.label       = p                           # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> eta2.label    = η²                          # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> group.spanner = yes                         # from apa</span>
@@ -528,14 +556,23 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> item.total.note        = yes                         # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> group.headings         = italic                      # from apa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [multiresponse]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> title         = {set}          # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> columns       = n, percent     # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stub.label    = Option         # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> n.label       = n              # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> percent.label = %              # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> none.label    = None of these  # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> choice.note   = yes            # from apa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A complete copy to edit, and a short one holding two changes</span></span></span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"apa"</span>, save.as <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"myjournal"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpsEqweS/myjournal.jstyle</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpLJH66q/myjournal.jstyle</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"apa"</span>, save.as <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"myapa"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
 <span class="r-in"><span>       font <span class="op">=</span> <span class="st">"Arial"</span>, regression <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fit.rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"r2"</span>, <span class="st">"n"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpsEqweS/myapa.jstyle</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpLJH66q/myapa.jstyle</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

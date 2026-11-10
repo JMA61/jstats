@@ -27,7 +27,7 @@ written in a style file as the letter itself; this page names it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.277</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.278</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -102,10 +102,13 @@ fit.rows = r2, n
 <dd><p>row: the table's first row, repeated with the header on a new page | paragraph: above the table. Takes one of row | paragraph. In apa: <code>row</code>.</p></dd>
 
 <dt><code>caption.size</code></dt>
-<dd><p>the caption's text size, in points. Takes a number from 6 to 72. In apa: <code>12</code>; in report: <code>10</code>.</p></dd>
+<dd><p>the caption's text size, in points, or size for the text size (size - 1 a point smaller), so it moves when size does. Takes a number from 6 to 72, or size, or size and a number such as size - 1. In apa: <code>size</code>.</p></dd>
 
 <dt><code>caption.fill</code></dt>
 <dd><p>a color filling the caption row (caption.position = row), header for the header's fill and text color, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or header, or none. In apa: <code>none</code>.</p></dd>
+
+<dt><code>caption.text</code></dt>
+<dd><p>the color of the caption's text (under caption.fill = header, the header's text color). Takes a color name such as lightblue, or six hex digits such as ADD8E6. In apa: <code>000000</code>.</p></dd>
 
 <dt><code>header.fill</code></dt>
 <dd><p>a color filling the header cells, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or none. In apa: <code>none</code>; in report: <code>D9D9D9</code>.</p></dd>
@@ -138,7 +141,19 @@ fit.rows = r2, n
 <dd><p>row: the table's last row | paragraph: under the table. Takes one of row | paragraph. In apa: <code>row</code>.</p></dd>
 
 <dt><code>note.size</code></dt>
-<dd><p>the notes' text size, in points. Takes a number from 6 to 72. In apa: <code>12</code>; in report: <code>9</code>.</p></dd>
+<dd><p>the notes' text size, in points, or size for the text size (size - 1 a point smaller), so it moves when size does. Takes a number from 6 to 72, or size, or size and a number such as size - 1. In apa: <code>size</code>; in report: <code>size - 1</code>.</p></dd>
+
+<dt><code>note.sentences</code></dt>
+<dd><p>paragraph: the general note in one paragraph, as APA sets it | lines: each of its sentences, and each specific note, on a line of its own. Takes one of paragraph | lines. In apa: <code>paragraph</code>; in report: <code>lines</code>.</p></dd>
+
+<dt><code>note.order</code></dt>
+<dd><p>apa: the general note, then the specific notes, then the probability note | report: the probability note, the specific notes, then the general note. Takes one of apa | report. In apa: <code>apa</code>; in report: <code>report</code>.</p></dd>
+
+<dt><code>source.position</code></dt>
+<dd><p>where a call's source = goes: note (the general note's last sentence) | line (a line of its own, last, after source.label). Takes one of note | line. In apa: <code>note</code>; in report: <code>line</code>.</p></dd>
+
+<dt><code>source.label</code></dt>
+<dd><p>the word the source line opens on, upright: Source: | Sources:. Takes any text, or nothing. In apa: <code>Source:</code>.</p></dd>
 
 <dt><code>n.position</code></dt>
 <dd><p>where N, the number of cases, goes: note (the general note opens on it) | title ("(N = 103)" after the title; a table with several ns, such as Ns that differ or a t test's groups, gives them in the note) | none. Takes one of note | title | none. In apa: <code>title</code>.</p></dd>
@@ -432,7 +447,10 @@ fit.rows = r2, n
 <dd><p>the head of the t column. Takes any text, or nothing. In apa: <code>t</code>.</p></dd>
 
 <dt><code>df.label</code></dt>
-<dd><p>the head of the df column, when the tests' df differ. Takes any text, or nothing. In apa: <code>df</code>.</p></dd>
+<dd><p>the head of the df column. Takes any text, or nothing. In apa: <code>df</code>.</p></dd>
+
+<dt><code>df.position</code></dt>
+<dd><p>head: the df in the statistic's head, t(101), when every row shares them, else a df column | column: a df column. Takes one of head | column. In apa: <code>head</code>; in report: <code>column</code>.</p></dd>
 
 <dt><code>p.label</code></dt>
 <dd><p>the head of the p column. Takes any text, or nothing. In apa: <code>p</code>.</p></dd>
@@ -482,7 +500,10 @@ fit.rows = r2, n
 <dd><p>the head of the f column. Takes any text, or nothing. In apa: <code>F</code>.</p></dd>
 
 <dt><code>df.label</code></dt>
-<dd><p>the head of the df column, when the tests' df differ. Takes any text, or nothing. In apa: <code>df</code>.</p></dd>
+<dd><p>the head of the df column. Takes any text, or nothing. In apa: <code>df</code>.</p></dd>
+
+<dt><code>df.position</code></dt>
+<dd><p>head: the df in the statistic's head, F(3, 99), when every row shares them, else a df column | column: a df column. Takes one of head | column. In apa: <code>head</code>; in report: <code>column</code>.</p></dd>
 
 <dt><code>p.label</code></dt>
 <dd><p>the head of the p column. Takes any text, or nothing. In apa: <code>p</code>.</p></dd>
@@ -580,6 +601,32 @@ fit.rows = r2, n
 
 <dt><code>group.headings</code></dt>
 <dd><p>how a scale's name row is set: italic | bold | plain. Takes one of italic | bold | plain. In apa: <code>italic</code>.</p></dd>
+
+
+</dl></div>
+    <div class="section level2">
+    <h2 id="-multiresponse-a-multiple-response-table">[multiresponse]: a multiple-response table<a class="anchor" aria-label="anchor" href="#-multiresponse-a-multiple-response-table"></a></h2>
+
+<dl><dt><code>title</code></dt>
+<dd><p>the title when the call gives none; {set} is the text the items' labels share, else Options Chosen. Takes any text. In apa: <code>{set}</code>.</p></dd>
+
+<dt><code>columns</code></dt>
+<dd><p>the columns, in order: n (those who chose the option), percent (of everyone who answered). Takes one or more of n, percent, in order, separated by commas. In apa: <code>n, percent</code>.</p></dd>
+
+<dt><code>stub.label</code></dt>
+<dd><p>the first column's head. Takes any text, or nothing. In apa: <code>Option</code>.</p></dd>
+
+<dt><code>n.label</code></dt>
+<dd><p>the head of the n column. Takes any text, or nothing. In apa: <code>n</code>.</p></dd>
+
+<dt><code>percent.label</code></dt>
+<dd><p>the head of the percent column. Takes any text, or nothing. In apa: <code>%</code>.</p></dd>
+
+<dt><code>none.label</code></dt>
+<dd><p>the label of the row of those who answered and chose none. Takes any text. In apa: <code>None of these</code>.</p></dd>
+
+<dt><code>choice.note</code></dt>
+<dd><p>yes: the note says respondents could choose more than one, so the percentages sum to more than 100 | no. Takes one of yes | no. In apa: <code>yes</code>.</p></dd>
 
 
 </dl></div>

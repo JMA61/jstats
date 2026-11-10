@@ -22,3 +22,13 @@ this one.
 ``` r
 .jst_style_report
 ```
+
+## Details
+
+Session 414 (rulings R74, R75, R77 and R79, Session 413): the caption
+follows size, as apa's does, and the note is a point smaller than size
+("size - 1"), so a file based on report that sets size keeps that
+relationship; the general note a sentence a line (Jeff's practice); the
+notes in the report manuals' order, the source on a line of its own,
+last; a t test's and an ANOVA's df in a column of their own, so a reader
+who does not know APA's form does not read the number as N.

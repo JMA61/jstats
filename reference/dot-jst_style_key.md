@@ -24,3 +24,12 @@ no layer holds is an internal error: the built-in list is complete.
 - key:
 
   Character(1); the key.
+
+## Value
+
+The value. A size that follows the text size – caption.size and
+note.size written "size" or "size - 1" (ruling R77, Session 413: a file
+that sets size moves them with it) – is returned as the number it comes
+to;
+[`.jst_style_key_raw()`](https://jma61.github.io/jstats/reference/dot-jst_style_key_raw.md)
+gives it as written.

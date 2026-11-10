@@ -6,8 +6,9 @@ saying what it holds and the page it is on (the page turned, the text
 stepped down, long labels wrapped, as the Word file has them); then
 where the file went ("Table written to ", "3 tables written to ",
 replacing a file that was there), or, when no file was asked for, that
-none was written – at joutput("full") with the lines that write the
-table and show it. A call that writes built tables adds, at
+the table was made in R – at joutput("full") with the line that writes
+the table and the one that prints a kept table (the presentation
+review's entry 8, Session 414). A call that writes built tables adds, at
 joutput("full"), the tables that could have been one.
 
 ## Usage

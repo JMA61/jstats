@@ -37,6 +37,10 @@ package's GitHub repository.
 - [`jfreq`](https://jma61.github.io/jstats/reference/jfreq.md) –
   frequency tables for one or more variables
 
+- [`jmulti`](https://jma61.github.io/jstats/reference/jmulti.md) – a
+  multiple-response question: how many chose each option of a set of
+  yes/no items
+
 - [`jcorr`](https://jma61.github.io/jstats/reference/jcorr.md) – Pearson
   or Spearman correlations with significance tests
 

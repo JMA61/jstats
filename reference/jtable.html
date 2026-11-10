@@ -17,7 +17,7 @@ file of your own (see jstyle)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.277</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.278</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,6 +60,7 @@ file of your own (see <code><a href="jstyle.html">jstyle</a></code>).</p>
 <span>  markers <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  title <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  note <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  source <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  file <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  style <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -90,7 +91,8 @@ side, headed "Model 1", "Model 2", ... or by the list's names; a list
 of <code><a href="jt.html">jt()</a></code>, <code><a href="jaov.html">jaov()</a></code> or <code><a href="jcrosstab.html">jcrosstab()</a></code> results with one
 grouping variable stacks a row or a block per outcome; a list of
 <code><a href="jalpha.html">jalpha()</a></code> results stacks the scales, each under its name. A
-<code><a href="jcorr.html">jcorr()</a></code> result is a table of its own. Or a table <code>jtable()</code>
+<code><a href="jcorr.html">jcorr()</a></code> result is a table of its own, and so is a
+<code><a href="jmulti.html">jmulti()</a></code> result. Or a table <code>jtable()</code>
 has already built, or a list of them: they go to the file as they
 are, in the order given.</p></dd>
 
@@ -116,14 +118,25 @@ reliability table an item's.</p></dd>
 <dt id="arg-title">title<a class="anchor" aria-label="anchor" href="#arg-title"></a></dt>
 <dd><p>The table's title; the style's title when NULL (a
 regression table's names the outcome, a t-test, ANOVA or crosstab's
-the grouping variable). <code>*text*</code> sets a word in
-italics.</p></dd>
+the grouping variable, a multiple-response table's is the text its
+items' labels share). A title given here fills the same placeholders
+the style's does – <code>{outcome}</code>, <code>{group}</code>,
+<code>{set}</code> – so <code>title = "Ages by {group}"</code> names the grouping
+variable. <code>*text*</code> sets a word in italics.</p></dd>
 
 
 <dt id="arg-note">note<a class="anchor" aria-label="anchor" href="#arg-note"></a></dt>
 <dd><p>The general note's text, after what the style writes
 there (N or the ns when they go there, a filter, a reference
 category); <code>*text*</code> sets a word in italics. NULL for none.</p></dd>
+
+
+<dt id="arg-source">source<a class="anchor" aria-label="anchor" href="#arg-source"></a></dt>
+<dd><p>The table's source, in quotes, for example
+<code>source = "Australian Bureau of Statistics (2025)"</code>; the style
+places it: under apa the general note's last sentence, under report a
+line of its own under the notes, after "Source:" (the style's
+<code>source.position</code> and <code>source.label</code>). NULL for none.</p></dd>
 
 
 <dt id="arg-file">file<a class="anchor" aria-label="anchor" href="#arg-file"></a></dt>
@@ -200,7 +213,10 @@ crosstab from <code><a href="jcrosstab.html">jcrosstab</a></code> results of one
 each row variable's categories with their counts and percentages in
 each group, and the chi-square test; and a reliability table from
 <code><a href="jalpha.html">jalpha</a></code> results – each item's mean, standard deviation,
-corrected item-total correlation and alpha if the item is deleted. The
+corrected item-total correlation and alpha if the item is deleted; and a
+multiple-response table from a <code><a href="jmulti.html">jmulti</a></code> result – how many
+chose each option of a set of yes/no items, and what percentage of
+everyone who answered. The
 variables of a descriptives or frequency table go under role headings
 when <code>headings</code> names them, and each specific note's variables are
 marked when <code>markers</code> names them. A filter the analysis applied
@@ -247,7 +263,7 @@ for every setting a style holds.</p></div>
 <span class="r-in"><span><span class="va">t1</span> <span class="op">&lt;-</span> <span class="fu">jtable</span><span class="op">(</span><span class="va">d1</span>, title <span class="op">=</span> <span class="st">"Descriptive Statistics for Study Variables"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Table 1. Descriptive Statistics for Study Variables (N = 103)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   2 variables, on a portrait page.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> No file was written.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> The table was made in R; no Word file was asked for.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">t1</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Table 1</span>
@@ -267,7 +283,7 @@ for every setting a style holds.</p></div>
 <span class="r-in"><span>             overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Table 1. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   2 models side by side, on a portrait page.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Table written to /tmp/RtmpsEqweS/Table2.docx</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Table written to /tmp/RtmpLJH66q/Table2.docx</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Several tables in one file: build each, then give them together</span></span></span>
@@ -277,7 +293,7 @@ for every setting a style holds.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   2 variables, on a portrait page.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Table 2. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   2 models side by side, on a portrait page.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 tables written to /tmp/RtmpsEqweS/Tables.docx</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 tables written to /tmp/RtmpLJH66q/Tables.docx</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">doc</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Table 1</span>

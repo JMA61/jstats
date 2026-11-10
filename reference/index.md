@@ -8,6 +8,8 @@ First look at variables and at the dataset as a whole.
   Descriptive statistics for one or more variables
 - [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md) :
   SPSS-like frequency tables for categorical variables
+- [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md) :
+  Multiple-response set: how many chose each option
 - [`jscreen()`](https://jma61.github.io/jstats/reference/jscreen.md) :
   Data screening overview
 

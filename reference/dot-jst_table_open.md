@@ -34,3 +34,11 @@ both and open nothing.
 ## Value
 
 TRUE when the file was handed to the opener, invisibly.
+
+## Details
+
+A computer with no program set for .docx files makes the opener fail (on
+Windows, shell.exec()'s error; elsewhere, no browser set): the error and
+any warning are caught and a note says the file was written and no
+program opened it, so the call still returns its table (the (S410) item,
+Session 414, on its lean's default).

@@ -70,8 +70,9 @@ table type only.
 
 - `caption.size`:
 
-  the caption's text size, in points. Takes a number from 6 to 72. In
-  apa: `12`; in report: `10`.
+  the caption's text size, in points, or size for the text size (size -
+  1 a point smaller), so it moves when size does. Takes a number from 6
+  to 72, or size, or size and a number such as size - 1. In apa: `size`.
 
 - `caption.fill`:
 
@@ -79,6 +80,12 @@ table type only.
   the header's fill and text color, or none. Takes a color name such as
   lightblue, or six hex digits such as ADD8E6; or header, or none. In
   apa: `none`.
+
+- `caption.text`:
+
+  the color of the caption's text (under caption.fill = header, the
+  header's text color). Takes a color name such as lightblue, or six hex
+  digits such as ADD8E6. In apa: `000000`.
 
 - `header.fill`:
 
@@ -136,8 +143,35 @@ table type only.
 
 - `note.size`:
 
-  the notes' text size, in points. Takes a number from 6 to 72. In apa:
-  `12`; in report: `9`.
+  the notes' text size, in points, or size for the text size (size - 1 a
+  point smaller), so it moves when size does. Takes a number from 6 to
+  72, or size, or size and a number such as size - 1. In apa: `size`; in
+  report: `size - 1`.
+
+- `note.sentences`:
+
+  paragraph: the general note in one paragraph, as APA sets it \| lines:
+  each of its sentences, and each specific note, on a line of its own.
+  Takes one of paragraph \| lines. In apa: `paragraph`; in report:
+  `lines`.
+
+- `note.order`:
+
+  apa: the general note, then the specific notes, then the probability
+  note \| report: the probability note, the specific notes, then the
+  general note. Takes one of apa \| report. In apa: `apa`; in report:
+  `report`.
+
+- `source.position`:
+
+  where a call's source = goes: note (the general note's last sentence)
+  \| line (a line of its own, last, after source.label). Takes one of
+  note \| line. In apa: `note`; in report: `line`.
+
+- `source.label`:
+
+  the word the source line opens on, upright: Source: \| Sources:. Takes
+  any text, or nothing. In apa: `Source:`.
 
 - `n.position`:
 
@@ -591,8 +625,13 @@ table type only.
 
 - `df.label`:
 
-  the head of the df column, when the tests' df differ. Takes any text,
-  or nothing. In apa: `df`.
+  the head of the df column. Takes any text, or nothing. In apa: `df`.
+
+- `df.position`:
+
+  head: the df in the statistic's head, t(101), when every row shares
+  them, else a df column \| column: a df column. Takes one of head \|
+  column. In apa: `head`; in report: `column`.
 
 - `p.label`:
 
@@ -664,8 +703,13 @@ table type only.
 
 - `df.label`:
 
-  the head of the df column, when the tests' df differ. Takes any text,
-  or nothing. In apa: `df`.
+  the head of the df column. Takes any text, or nothing. In apa: `df`.
+
+- `df.position`:
+
+  head: the df in the statistic's head, F(3, 99), when every row shares
+  them, else a df column \| column: a df column. Takes one of head \|
+  column. In apa: `head`; in report: `column`.
 
 - `p.label`:
 
@@ -811,3 +855,40 @@ table type only.
 
   how a scale's name row is set: italic \| bold \| plain. Takes one of
   italic \| bold \| plain. In apa: `italic`.
+
+## \[multiresponse\]: a multiple-response table
+
+- `title`:
+
+  the title when the call gives none; {set} is the text the items'
+  labels share, else Options Chosen. Takes any text. In apa: `{set}`.
+
+- `columns`:
+
+  the columns, in order: n (those who chose the option), percent (of
+  everyone who answered). Takes one or more of n, percent, in order,
+  separated by commas. In apa: `n, percent`.
+
+- `stub.label`:
+
+  the first column's head. Takes any text, or nothing. In apa: `Option`.
+
+- `n.label`:
+
+  the head of the n column. Takes any text, or nothing. In apa: `n`.
+
+- `percent.label`:
+
+  the head of the percent column. Takes any text, or nothing. In apa:
+  `%`.
+
+- `none.label`:
+
+  the label of the row of those who answered and chose none. Takes any
+  text. In apa: `None of these`.
+
+- `choice.note`:
+
+  yes: the note says respondents could choose more than one, so the
+  percentages sum to more than 100 \| no. Takes one of yes \| no. In
+  apa: `yes`.

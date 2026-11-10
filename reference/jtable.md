@@ -16,6 +16,7 @@ jtable(
   markers = NULL,
   title = NULL,
   note = NULL,
+  source = NULL,
   file = NULL,
   style = NULL,
   overwrite = FALSE,
@@ -55,8 +56,10 @@ print(x, ...)
   [`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md)
   results stacks the scales, each under its name. A
   [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md) result
-  is a table of its own. Or a table `jtable()` has already built, or a
-  list of them: they go to the file as they are, in the order given.
+  is a table of its own, and so is a
+  [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md)
+  result. Or a table `jtable()` has already built, or a list of them:
+  they go to the file as they are, in the order given.
 
 - headings:
 
@@ -79,13 +82,25 @@ print(x, ...)
 
   The table's title; the style's title when NULL (a regression table's
   names the outcome, a t-test, ANOVA or crosstab's the grouping
-  variable). `*text*` sets a word in italics.
+  variable, a multiple-response table's is the text its items' labels
+  share). A title given here fills the same placeholders the style's
+  does – `{outcome}`, `{group}`, `{set}` – so
+  `title = "Ages by {group}"` names the grouping variable. `*text*` sets
+  a word in italics.
 
 - note:
 
   The general note's text, after what the style writes there (N or the
   ns when they go there, a filter, a reference category); `*text*` sets
   a word in italics. NULL for none.
+
+- source:
+
+  The table's source, in quotes, for example
+  `source = "Australian Bureau of Statistics (2025)"`; the style places
+  it: under apa the general note's last sentence, under report a line of
+  its own under the notes, after "Source:" (the style's
+  `source.position` and `source.label`). NULL for none.
 
 - file:
 
@@ -168,10 +183,13 @@ their counts and percentages in each group, and the chi-square test; and
 a reliability table from
 [`jalpha`](https://jma61.github.io/jstats/reference/jalpha.md) results –
 each item's mean, standard deviation, corrected item-total correlation
-and alpha if the item is deleted. The variables of a descriptives or
-frequency table go under role headings when `headings` names them, and
-each specific note's variables are marked when `markers` names them. A
-filter the analysis applied
+and alpha if the item is deleted; and a multiple-response table from a
+[`jmulti`](https://jma61.github.io/jstats/reference/jmulti.md) result –
+how many chose each option of a set of yes/no items, and what percentage
+of everyone who answered. The variables of a descriptives or frequency
+table go under role headings when `headings` names them, and each
+specific note's variables are marked when `markers` names them. A filter
+the analysis applied
 ([`jsubset`](https://jma61.github.io/jstats/reference/jsubset.md),
 `subset =`) is named in the general note.
 
@@ -222,7 +240,7 @@ d1 <- jdesc(community, Age, Income, print = FALSE)
 t1 <- jtable(d1, title = "Descriptive Statistics for Study Variables")
 #> Table 1. Descriptive Statistics for Study Variables (N = 103)
 #>   2 variables, on a portrait page.
-#> No file was written.
+#> The table was made in R; no Word file was asked for.
 #> 
 print(t1)
 #> Table 1
@@ -242,7 +260,7 @@ t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
              overwrite = TRUE)
 #> Table 1. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> Table written to /tmp/RtmpsEqweS/Table2.docx
+#> Table written to /tmp/RtmpLJH66q/Table2.docx
 #> 
 
 # Several tables in one file: build each, then give them together
@@ -252,7 +270,7 @@ doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
 #>   2 variables, on a portrait page.
 #> Table 2. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> 2 tables written to /tmp/RtmpsEqweS/Tables.docx
+#> 2 tables written to /tmp/RtmpLJH66q/Tables.docx
 #> 
 print(doc)
 #> Table 1

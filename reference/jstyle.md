@@ -75,13 +75,18 @@ style it copies named on its based.on line, and only the settings given,
 which is all a small change needs. A general setting is given by its
 name; a table type's settings go in a list named for its section:
 `jstyle("apa", save.as = "myapa", font = "Arial", regression = list(fit.rows = c("r2", "n")))`.
+A short file takes everything else from its base, so it travels with it:
+a file based on a style of your own works on another computer, or from
+another folder, only where that style can be found too. A base given by
+its path is written by its path, which is where jstats finds it; a base
+given by its name is looked for in the folders below.
 
 A style file is plain text: a setting is a name, an equals sign and a
 value; a `#` starts a note; the general settings come first, then one
 section per table type, `[descriptives]`, `[frequencies]`,
 `[regression]`, `[logistic]`, `[correlation]`, `[ttest]`, `[anova]`,
-`[crosstab]` and `[reliability]`. A setting the file leaves out comes
-from the style its `based.on` line names.
+`[crosstab]`, `[reliability]` and `[multiresponse]`. A setting the file
+leaves out comes from the style its `based.on` line names.
 [`jstyle_settings`](https://jma61.github.io/jstats/reference/jstyle_settings.md)
 lists every setting and what it takes. jstats looks for a style named in
 a call in the style folder (`joptions(style.dir = )`), the working
@@ -139,8 +144,9 @@ jstyle("apa")
 #> paper             = a4
 #> caption.form      = apa
 #> caption.position  = row
-#> caption.size      = 12
+#> caption.size      = size
 #> caption.fill      = none
+#> caption.text      = 000000
 #> header.fill       = none
 #> header.text       = 000000
 #> header.bold       = no
@@ -151,7 +157,11 @@ jstyle("apa")
 #> note.label        = Note.
 #> note.label.italic = yes
 #> note.position     = row
-#> note.size         = 12
+#> note.size         = size
+#> note.sentences    = paragraph
+#> note.order        = apa
+#> source.position   = note
+#> source.label      = Source:
 #> n.position        = title
 #> decimals          = 2
 #> leading.zero      = no
@@ -252,6 +262,7 @@ jstyle("apa")
 #> sd.label      = SD
 #> t.label       = t
 #> df.label      = df
+#> df.position   = head
 #> p.label       = p
 #> d.label       = d
 #> diff.label    = Mean difference
@@ -269,6 +280,7 @@ jstyle("apa")
 #> sd.label      = SD
 #> f.label       = F
 #> df.label      = df
+#> df.position   = head
 #> p.label       = p
 #> eta2.label    = η²
 #> group.spanner = yes
@@ -303,6 +315,15 @@ jstyle("apa")
 #> item.total.note        = yes
 #> group.headings         = italic
 #> 
+#> [multiresponse]
+#> title         = {set}
+#> columns       = n, percent
+#> stub.label    = Option
+#> n.label       = n
+#> percent.label = %
+#> none.label    = None of these
+#> choice.note   = yes
+#> 
 jstyle("report")
 #> Style: report
 #>   built into jstats
@@ -313,8 +334,9 @@ jstyle("report")
 #> paper             = a4              # from apa
 #> caption.form      = report
 #> caption.position  = row             # from apa
-#> caption.size      = 10
+#> caption.size      = size            # from apa
 #> caption.fill      = none            # from apa
+#> caption.text      = 000000          # from apa
 #> header.fill       = D9D9D9
 #> header.text       = 000000          # from apa
 #> header.bold       = yes
@@ -325,7 +347,11 @@ jstyle("report")
 #> note.label        = Note:
 #> note.label.italic = no
 #> note.position     = row             # from apa
-#> note.size         = 9
+#> note.size         = size - 1
+#> note.sentences    = lines
+#> note.order        = report
+#> source.position   = line
+#> source.label      = Source:         # from apa
 #> n.position        = title           # from apa
 #> decimals          = 2               # from apa
 #> leading.zero      = yes
@@ -426,6 +452,7 @@ jstyle("report")
 #> sd.label      = SD                          # from apa
 #> t.label       = t                           # from apa
 #> df.label      = df                          # from apa
+#> df.position   = column
 #> p.label       = p                           # from apa
 #> d.label       = d                           # from apa
 #> diff.label    = Mean difference             # from apa
@@ -443,6 +470,7 @@ jstyle("report")
 #> sd.label      = SD                          # from apa
 #> f.label       = F                           # from apa
 #> df.label      = df                          # from apa
+#> df.position   = column
 #> p.label       = p                           # from apa
 #> eta2.label    = η²                          # from apa
 #> group.spanner = yes                         # from apa
@@ -477,13 +505,22 @@ jstyle("report")
 #> item.total.note        = yes                         # from apa
 #> group.headings         = italic                      # from apa
 #> 
+#> [multiresponse]
+#> title         = {set}          # from apa
+#> columns       = n, percent     # from apa
+#> stub.label    = Option         # from apa
+#> n.label       = n              # from apa
+#> percent.label = %              # from apa
+#> none.label    = None of these  # from apa
+#> choice.note   = yes            # from apa
+#> 
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/RtmpsEqweS/myjournal.jstyle
+#> Style written to /tmp/RtmpLJH66q/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/RtmpsEqweS/myapa.jstyle
+#> Style written to /tmp/RtmpLJH66q/myapa.jstyle
 #> 
 ```
