@@ -11,7 +11,8 @@
   replaced = FALSE,
   asked = FALSE,
   hint = FALSE,
-  how = NULL
+  how = NULL,
+  extra = NULL
 )
 }
 \arguments{
@@ -27,6 +28,9 @@
 for a declined write).}
 
 \item{hint, how}{As \code{.jst_table_finish()}.}
+
+\item{extra}{The files written beside the Word file for its figures
+(\code{.jst_figure_files()}), or NULL.}
 }
 \description{
 Ruling R57 (Session 406): what a jtable() call prints in place of the

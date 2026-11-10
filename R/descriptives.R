@@ -64,7 +64,7 @@
 #'   or quoted, is read as the names.
 #' @param by An optional unquoted grouping variable name. When provided,
 #'   descriptives are computed separately for each group, with a separate
-#'   titled table per dependent variable. Each table's \code{Total} is the
+#'   titled table per variable. Each table's \code{Total} is the
 #'   group's size and \code{Non_missing} the cases in it with a value on
 #'   that variable, the same two columns as the ungrouped table. A case
 #'   with a missing value on the grouping variable belongs to no group and

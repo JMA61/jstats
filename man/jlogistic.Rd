@@ -27,11 +27,11 @@ jlogistic(
 )
 }
 \arguments{
-\item{formula}{A model formula, e.g. \code{DV ~ IV1 + IV2}. The DV
-must be a binary variable coded 0/1, and a variable of the data: a
+\item{formula}{A model formula, e.g. \code{Outcome ~ Predictor1 +
+Predictor2}. The outcome must be a binary variable coded 0/1, and a variable of the data: a
 computed term on the left, such as \code{I(Score > 50)}, is refused,
 so create the 0/1 variable first. Transformed predictor terms such
-as \code{log(IV1)} are computed automatically and used throughout the
+as \code{log(Predictor1)} are computed automatically and used throughout the
 output.}
 
 \item{data}{A data frame containing variables referenced in \code{formula}.}
@@ -61,7 +61,7 @@ have value labels, named bare or in quotes, several with \code{c()}.}
 they lack value labels, named bare or in quotes, several with
 \code{c()}: \code{categorical = Region}.}
 
-\item{count}{Optional. Independent variables to treat as counts for this
+\item{count}{Optional. Predictors to treat as counts for this
 call (the per-call counterpart of \code{jcount()}), named bare or in
 quotes, several with \code{c()}. A count predictor is numeric-like, so it enters the
 model exactly as \code{numeric} would; the argument is provided for
@@ -224,7 +224,7 @@ model test, model summary statistics, and a coefficients table with
 Gelman-standardized coefficients and odds ratios (Exp(b)).
 }
 \details{
-The dependent variable must be coded 0/1. If it is not, the function
+The outcome must be coded 0/1. If it is not, the function
 stops with a clear error message and suggests the appropriate
 \code{jrecode()} command.
 
@@ -252,8 +252,8 @@ those that evaluate to one numeric or logical column. Terms that produce
 several columns (\code{poly(x, 2)}, spline bases) or a categorical
 result (\code{cut(x, 3)}) are not supported inline: create the derived
 variable as a column of the data first, then name that column in the
-formula. (The dependent variable must be a plain 0/1 dichotomy, so a
-transform applies to predictors, not the response.)
+formula. (The outcome must be a plain 0/1 dichotomy, so a
+transform applies to predictors, not the outcome.)
 A categorical variable may be compared but not transformed.
 \code{I(x == 2)}, \code{I(x \%in\% c(1, 3))} and, for a text variable,
 \code{I(x == "web")} each enter the model as a TRUE/FALSE predictor, as

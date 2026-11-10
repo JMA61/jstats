@@ -4,7 +4,7 @@
 \alias{.jst_docx_caption_pars}
 \title{Internal helper: the caption paragraphs of a table}
 \usage{
-.jst_docx_caption_pars(tbl, style, number, color = NULL)
+.jst_docx_caption_pars(tbl, style, number, color = NULL, word = "Table")
 }
 \arguments{
 \item{tbl}{A jst_table.}
@@ -17,6 +17,10 @@
 the style's caption.text (Session 409: the header's text colour, on a
 caption bar that follows the header; ruling R78, Session 413: a
 caption.text of the style's own otherwise, black by default).}
+
+\item{word}{"Table", or "Figure" for a figure (ruling R63). A figure
+with no title -- a chart drawn by hand with none, given none -- has its
+number alone.}
 }
 \value{
 Character; one or two paragraphs' XML.

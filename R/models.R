@@ -1644,15 +1644,15 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     idx <- top_n(df$resid, n_label)
     p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$fitted, y = .data$resid)) +
       ggplot2::geom_point(alpha = 0.5) +
-      ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-      ggplot2::geom_smooth(method = "loess", se = FALSE, color = "steelblue",
+      ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = .jst_plot_ink$mark) +
+      ggplot2::geom_smooth(method = "loess", se = FALSE, color = .jst_plot_ink$line,
                            formula = y ~ x) +
       ggplot2::geom_text(data = df[idx, ],
                          ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
+                         hjust = -0.2, size = 3, color = .jst_plot_ink$mark) +
       ggplot2::labs(title = "Residuals vs Fitted",
                     x = "Fitted Values", y = "Residuals") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     smooth_print(p, "Residuals vs Fitted")
     plots$residuals <- p
   }
@@ -1671,14 +1671,14 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                                               y = .data$sample)) +
       ggplot2::geom_point(alpha = 0.5) +
       ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
-                           color = "red") +
+                           color = .jst_plot_ink$mark) +
       ggplot2::geom_text(data = df_qq[idx, ],
                          ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
+                         hjust = -0.2, size = 3, color = .jst_plot_ink$mark) +
       ggplot2::labs(title = "Normal Q-Q",
                     x = "Theoretical Quantiles",
                     y = "Standardized Residuals") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     plain_print(p, "Normal Q-Q")
     plots$qq <- p
   }
@@ -1689,15 +1689,15 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$fitted,
                                            y = .data$sqrt_std_resid)) +
       ggplot2::geom_point(alpha = 0.5) +
-      ggplot2::geom_smooth(method = "loess", se = FALSE, color = "steelblue",
+      ggplot2::geom_smooth(method = "loess", se = FALSE, color = .jst_plot_ink$line,
                            formula = y ~ x) +
       ggplot2::geom_text(data = df[idx, ],
                          ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
+                         hjust = -0.2, size = 3, color = .jst_plot_ink$mark) +
       ggplot2::labs(title = "Scale-Location",
                     x = "Fitted Values",
                     y = expression(sqrt("|Standardized Residuals|"))) +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     smooth_print(p, "Scale-Location")
     plots$scale <- p
   }
@@ -1707,15 +1707,15 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     idx <- top_n(df$cooks, n_label)
     p <- ggplot2::ggplot(df, ggplot2::aes(x = seq_along(.data$cooks),
                                            y = .data$cooks)) +
-      ggplot2::geom_col(alpha = 0.5, fill = "steelblue") +
+      ggplot2::geom_col(alpha = 0.5, fill = .jst_plot_ink$line) +
       ggplot2::geom_hline(yintercept = 4 / nrow(df), linetype = "dashed",
-                          color = "red") +
+                          color = .jst_plot_ink$mark) +
       ggplot2::geom_text(data = df[idx, ],
                          ggplot2::aes(x = idx, label = .data$obs),
-                         vjust = -0.5, size = 3, color = "red") +
+                         vjust = -0.5, size = 3, color = .jst_plot_ink$mark) +
       ggplot2::labs(title = "Cook's Distance",
                     x = "Observation", y = "Cook's Distance") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     plain_print(p, "Cook's Distance")
     plots$cooks <- p
   }
@@ -1731,14 +1731,14 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                                            y = .data$std_resid)) +
       ggplot2::geom_point(alpha = 0.5) +
       ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
-      ggplot2::geom_smooth(method = "loess", se = FALSE, color = "steelblue",
+      ggplot2::geom_smooth(method = "loess", se = FALSE, color = .jst_plot_ink$line,
                            formula = y ~ x) +
       ggplot2::geom_text(data = df[idx, ],
                          ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
+                         hjust = -0.2, size = 3, color = .jst_plot_ink$mark) +
       ggplot2::labs(title = "Residuals vs Leverage",
                     x = "Leverage", y = "Standardized Residuals") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     smooth_print(p, "Residuals vs Leverage")
     plots$leverage <- p
   }
@@ -1891,17 +1891,17 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                          ggplot2::aes(x = .data$bin_mean_pred,
                                       y = .data$bin_mean_resid)) +
       ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
-                          color = "red") +
+                          color = .jst_plot_ink$mark) +
       ggplot2::geom_line(ggplot2::aes(y = .data$upper),
                          color = "grey60", linetype = "dotted") +
       ggplot2::geom_line(ggplot2::aes(y = .data$lower),
                          color = "grey60", linetype = "dotted") +
-      ggplot2::geom_point(alpha = 0.7, color = "steelblue") +
+      ggplot2::geom_point(alpha = 0.7, color = .jst_plot_ink$line) +
       ggplot2::labs(title = "Binned Residuals",
                     x = "Mean Predicted Probability (bin)",
                     y = "Mean Residual (bin)",
                     subtitle = "Dotted lines: approximate 95% bounds under a well-fit model") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     gg_print(p, "Binned Residuals")
     plots$binned <- p
   }
@@ -1927,7 +1927,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     p <- ggplot2::ggplot(roc_df, ggplot2::aes(x = .data$fpr, y = .data$tpr)) +
       ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
                            color = "grey60") +
-      ggplot2::geom_line(color = "steelblue", linewidth = 0.8) +
+      ggplot2::geom_line(color = .jst_plot_ink$line, linewidth = 0.8) +
       ggplot2::annotate("text", x = 0.7, y = 0.1, label = auc_text,
                         hjust = 0, size = 4.2, color = "#333333") +
       ggplot2::coord_equal() +
@@ -1936,7 +1936,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
       ggplot2::labs(title = "ROC Curve",
                     x = "False Positive Rate (1 - Specificity)",
                     y = "True Positive Rate (Sensitivity)") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     gg_print(p, "ROC Curve")
     plots$roc <- p
   }
@@ -1959,15 +1959,15 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
       ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
                            color = "grey60") +
       ggplot2::geom_point(ggplot2::aes(size = .data$bin_n),
-                          color = "steelblue", alpha = 0.8) +
-      ggplot2::geom_line(color = "steelblue", alpha = 0.5) +
+                          color = .jst_plot_ink$line, alpha = 0.8) +
+      ggplot2::geom_line(color = .jst_plot_ink$line, alpha = 0.5) +
       ggplot2::scale_size_continuous(range = c(2, 6), guide = "none") +
       ggplot2::coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
       ggplot2::labs(title = "Calibration Plot",
                     x = "Mean Predicted Probability",
                     y = "Observed Proportion",
                     subtitle = "Points on the diagonal = well-calibrated") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     gg_print(p, "Calibration Plot")
     plots$calibration <- p
   }
@@ -1983,16 +1983,16 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     idx <- top_n(df_cooks$cooks, n_label)
     p <- ggplot2::ggplot(df_cooks, ggplot2::aes(x = .data$idx,
                                                  y = .data$cooks)) +
-      ggplot2::geom_col(alpha = 0.5, fill = "steelblue") +
+      ggplot2::geom_col(alpha = 0.5, fill = .jst_plot_ink$line) +
       ggplot2::geom_hline(yintercept = 4 / nrow(df_cooks), linetype = "dashed",
-                          color = "red") +
+                          color = .jst_plot_ink$mark) +
       ggplot2::geom_text(data = df_cooks[idx, ],
                          ggplot2::aes(label = .data$obs),
-                         vjust = -0.5, size = 3, color = "red") +
+                         vjust = -0.5, size = 3, color = .jst_plot_ink$mark) +
       ggplot2::labs(title = "Cook's Distance",
                     x = "Observation Index",
                     y = "Cook's Distance") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     gg_print(p, "Cook's Distance")
     plots$cooks <- p
   }
@@ -2011,14 +2011,14 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                                                y = .data$pearson_res)) +
       ggplot2::geom_point(alpha = 0.5) +
       ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
-                          color = "red") +
+                          color = .jst_plot_ink$mark) +
       ggplot2::geom_text(data = df_lev[idx, ],
                          ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
+                         hjust = -0.2, size = 3, color = .jst_plot_ink$mark) +
       ggplot2::labs(title = "Residuals vs Leverage",
                     x = "Leverage",
                     y = "Pearson Residuals") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     gg_print(p, "Residuals vs Leverage")
     plots$leverage <- p
   }
@@ -3129,9 +3129,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   \item The \code{categorical} argument forces variables without value
 #'     labels (or plain numeric variables) to be treated as categorical
 #'     (e.g. a numeric Program variable coded 1--4 from a CSV file).
-#'   \item The dependent variable is always modelled as numeric. Naming it in
+#'   \item The outcome is always modelled as numeric. Naming it in
 #'     \code{numeric} or \code{count} does not change that; it only asserts the
-#'     DV's role so the count / categorical-like note is silenced
+#'     outcome's role so the count / categorical-like note is silenced
 #'     (\code{numeric}) or stated definitively (\code{count}).
 #' }
 #'
@@ -3226,9 +3226,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' @param count Optional. Variables to treat as counts for this call (the
 #'   per-call counterpart of \code{jcount()}), named bare or in quotes,
 #'   several with \code{c()}. On the
-#'   dependent variable it speaks the count-regression caveat definitively
+#'   outcome it speaks the count-regression caveat definitively
 #'   rather than as a hedge, and applies even when the variable sits outside
-#'   the structural 0-6 band. On an independent variable it behaves like
+#'   the structural 0-6 band. On a predictor it behaves like
 #'   \code{numeric} (a count predictor enters the model as numeric). A
 #'   variable cannot be listed in both \code{count} and \code{categorical}.
 #' @param ci Logical or NULL. If TRUE, appends a 95% confidence interval for
@@ -4488,7 +4488,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' model test, model summary statistics, and a coefficients table with
 #' Gelman-standardized coefficients and odds ratios (Exp(b)).
 #'
-#' The dependent variable must be coded 0/1. If it is not, the function
+#' The outcome must be coded 0/1. If it is not, the function
 #' stops with a clear error message and suggests the appropriate
 #' \code{jrecode()} command.
 #'
@@ -4517,8 +4517,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' several columns (\code{poly(x, 2)}, spline bases) or a categorical
 #' result (\code{cut(x, 3)}) are not supported inline: create the derived
 #' variable as a column of the data first, then name that column in the
-#' formula. (The dependent variable must be a plain 0/1 dichotomy, so a
-#' transform applies to predictors, not the response.)
+#' formula. (The outcome must be a plain 0/1 dichotomy, so a
+#' transform applies to predictors, not the outcome.)
 #' A categorical variable may be compared but not transformed.
 #' \code{I(x == 2)}, \code{I(x \%in\% c(1, 3))} and, for a text variable,
 #' \code{I(x == "web")} each enter the model as a TRUE/FALSE predictor, as
@@ -4547,11 +4547,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' formula does this. A power that is not a number, \code{x^k}, stops with
 #' an error, as in \code{lm()}; write \code{I(x^k)}.
 #'
-#' @param formula A model formula, e.g. \code{DV ~ IV1 + IV2}. The DV
-#'   must be a binary variable coded 0/1, and a variable of the data: a
+#' @param formula A model formula, e.g. \code{Outcome ~ Predictor1 +
+#'   Predictor2}. The outcome must be a binary variable coded 0/1, and a variable of the data: a
 #'   computed term on the left, such as \code{I(Score > 50)}, is refused,
 #'   so create the 0/1 variable first. Transformed predictor terms such
-#'   as \code{log(IV1)} are computed automatically and used throughout the
+#'   as \code{log(Predictor1)} are computed automatically and used throughout the
 #'   output.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param subset An optional unquoted logical expression (e.g.
@@ -4591,7 +4591,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' @param categorical Optional. Variables to treat as categorical even if
 #'   they lack value labels, named bare or in quotes, several with
 #'   \code{c()}: \code{categorical = Region}.
-#' @param count Optional. Independent variables to treat as counts for this
+#' @param count Optional. Predictors to treat as counts for this
 #'   call (the per-call counterpart of \code{jcount()}), named bare or in
 #'   quotes, several with \code{c()}. A count predictor is numeric-like, so it enters the
 #'   model exactly as \code{numeric} would; the argument is provided for
@@ -5828,9 +5828,11 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # text). Names which category the model treats as the event (internal 1) and
   # which is the reference (0), so the modeled direction is never silent the way
   # base glm()/lm() leave it (glm picks the event by alphabetical level order).
-  # The SPSS analogue is the "Dependent Variable Encoding" table. dv_event_disp
-  # / dv_ref_disp were resolved with the DV above.
-  cat("Dependent Variable Encoding\n")
+  # The SPSS analogue is the "Dependent Variable Encoding" table; jstats says
+  # "Outcome" (Jeff, Session 414: "use the language of predictor(s) and
+  # outcome"; renamed Session 415). dv_event_disp / dv_ref_disp were resolved
+  # with the DV above.
+  cat("Outcome Encoding\n")
   cat("  Modeled (1):   ", dv_event_disp, "\n", sep = "")
   cat("  Reference (0): ", dv_ref_disp,   "\n", sep = "")
   # The closing blank line every other analysis function ends on (Session

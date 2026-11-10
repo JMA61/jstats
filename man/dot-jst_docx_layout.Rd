@@ -7,7 +7,8 @@
 .jst_docx_layout(tables, style, landscape = NULL)
 }
 \arguments{
-\item{tables}{A list of jst_table.}
+\item{tables}{A list of jst_table, and of jst_figure (a figure's page
+and size, \code{.jst_figure_layout()}).}
 
 \item{style}{The document's style.}
 

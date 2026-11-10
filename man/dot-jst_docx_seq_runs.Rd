@@ -4,7 +4,13 @@
 \alias{.jst_docx_seq_runs}
 \title{Internal helper: the caption's runs -- "Table 1" on Word's SEQ field}
 \usage{
-.jst_docx_seq_runs(number, bold = TRUE, size = NULL, color = NULL)
+.jst_docx_seq_runs(
+  number,
+  bold = TRUE,
+  size = NULL,
+  color = NULL,
+  word = "Table"
+)
 }
 \arguments{
 \item{number}{The cached number.}
@@ -15,6 +21,9 @@
 
 \item{color}{A six-digit hex colour, or NULL (Session 409: a caption bar
 that follows the header takes the header's text colour).}
+
+\item{word}{"Table", or "Figure" for a figure, numbered on a sequence of
+its own (ruling R63, Session 411).}
 }
 \description{
 Internal helper: the caption's runs -- "Table 1" on Word's SEQ field

@@ -15,7 +15,8 @@ variable included.}
 \item{n_original}{Integer; the data frame's rows before the pipeline.}
 }
 \value{
-\code{invisible(NULL)}; prints the line.
+The cases drawn, invisibly (a figure's N since Session 415, the
+S412 audit's F7); prints the line.
 }
 \description{
 A plot draws the cases that have a value on every variable it plots --

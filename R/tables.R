@@ -296,6 +296,29 @@
     none.label     = "None of these",  # the row of those who chose none
     choice.note    = "yes"             # the sentence that the percentages
                                        # sum to more than 100 (ruling R61)
+  ),
+  plot = list(                         # every chart jplot() draws, and a
+                                       # figure in a Word file (Capability
+                                       # Slate U's charts, build 2; rulings
+                                       # R63-R65 and R70)
+    font            = "Arial",         # a chart's text: sans serif, as APA's
+    size            = 10,              # figures are (ruling R64)
+    palette         = "greys",         # greys: 595959 for one series, 404040
+                                       # and A6A6A6 for two, more in steps;
+                                       # or colors, in order
+    gridlines       = "none",          # none | horizontal | vertical | both
+    grid.color      = "D9D9D9",
+    axis.lines      = "both",          # both | x | y | none
+    legend.position = "right",         # right | top | bottom | none, with
+                                       # its title
+    values          = "yes",           # each bar's value beyond its end, on a
+                                       # chart of one series (ruling R70)
+    values.grouped  = "no",            # the same on a chart of several series
+    width           = 6,               # a figure in a Word file, in inches
+    height          = 4,
+    resolution      = 300,             # the picture's dots per inch (R65)
+    data.file       = "no",            # yes: each chart's numbers to Excel
+    vector.file     = "none"           # none | pdf | eps, beside the Word file
   )
 )
 
@@ -701,6 +724,43 @@
     choice.note    = list(kind = "choice", choices = c("yes", "no"),
                           about = c("yes: the note says respondents could choose more than one, so the",
                                     "percentages sum to more than 100 | no"))
+  ),
+  plot = list(
+    font            = list(kind = "text", about = "the typeface of a chart's text"),
+    size            = list(kind = "number", min = 6, max = 72,
+                           about = "the size of a chart's text, in points"),
+    palette         = list(kind = "palette",
+                           about = c("the colors of a chart's bars, lines and points, in order: greys",
+                                     "(595959 for one series, 404040 and A6A6A6 for two, more in steps from",
+                                     "404040) or the colors to use")),
+    gridlines       = list(kind = "choice", choices = c("none", "horizontal", "vertical", "both"),
+                           about = c("light lines across a chart at the axes' labels: none | horizontal |",
+                                     "vertical | both")),
+    grid.color      = list(kind = "color", about = "the color of the gridlines"),
+    axis.lines      = list(kind = "choice", choices = c("both", "x", "y", "none"),
+                           about = c("the axis lines drawn: both | x (the bottom axis) | y (the left",
+                                     "axis) | none")),
+    legend.position = list(kind = "choice", choices = c("right", "top", "bottom", "none"),
+                           about = c("where a chart's legend goes, with its title: right | top | bottom",
+                                     "(top and bottom start at the left) | none")),
+    values          = list(kind = "choice", choices = c("yes", "no"),
+                           about = c("yes: each bar's value just beyond its end, on a chart of one series,",
+                                     "such as a bar chart of one variable | no")),
+    values.grouped  = list(kind = "choice", choices = c("no", "yes"),
+                           about = c("the same on a chart of several series, such as grouped bars: no |",
+                                     "yes")),
+    width           = list(kind = "number", min = 1, max = 20,
+                           about = "a figure's width in a Word file, in inches"),
+    height          = list(kind = "number", min = 1, max = 20,
+                           about = "a figure's height in a Word file, in inches"),
+    resolution      = list(kind = "integer", min = 72, max = 1200,
+                           about = "the resolution of a figure's picture, in dots per inch"),
+    data.file       = list(kind = "choice", choices = c("no", "yes"),
+                           about = c("yes: the numbers each chart shows are written to an Excel file",
+                                     "beside the Word file, a sheet per figure | no")),
+    vector.file     = list(kind = "choice", choices = c("none", "pdf", "eps"),
+                           about = c("a vector file of each figure beside the Word file, as a publisher may",
+                                     "ask for one: none | pdf | eps"))
   )
 )
 
@@ -714,7 +774,8 @@
                            anova        = "an ANOVA table",
                            crosstab     = "a crosstab",
                            reliability  = "a reliability table",
-                           multiresponse = "a multiple-response table")
+                           multiresponse = "a multiple-response table",
+                           plot         = "a chart")
 
 # The table type of each result class (Session 405: every class has one;
 # jmulti()'s since Session 414).
@@ -772,7 +833,11 @@
   logistic    = list(variable.headings = "bold"),
   ttest       = list(df.position = "column"),
   anova       = list(df.position = "column"),
-  crosstab    = list(variable.headings = "bold")
+  crosstab    = list(variable.headings = "bold"),
+  # A chart's look (ruling R64, Session 411): light horizontal gridlines,
+  # the x axis line only, the legend at the top, starting at the left.
+  plot        = list(gridlines = "horizontal", axis.lines = "x",
+                     legend.position = "top")
 )
 
 #' Internal helper: the built-in styles
@@ -1477,6 +1542,34 @@
         bad("one to three p-values between 0 and 1, for example .05, .01, .001.")
       }
       sort(x, decreasing = TRUE)
+    },
+    # A chart's colors (ruling R64, Session 411): greys, the built-ins'
+    # value, or the colors to use in order, each a color name or six hex
+    # digits, written as hex.
+    palette = {
+      x <- if (from_file) {
+        gsub("^[\"']|[\"']$", "", trimws(strsplit(val$raw, ",", fixed = TRUE)[[1L]]))
+      } else {
+        if (!is.character(val) || !length(val) || anyNA(val)) {
+          bad(paste0("\"greys\", or one or more colors, each a color name such as ",
+                     "\"navy\" or six hex digits such as \"1F3864\"."))
+        }
+        trimws(val)
+      }
+      if (length(x) == 1L && tolower(x) %in% c("greys", "grays")) return("greys")
+      out <- vapply(x, function(s) {
+        if (grepl("^#?[0-9A-Fa-f]{6}$", s)) return(toupper(sub("^#", "", s)))
+        if (tolower(s) %in% grDevices::colors()) {
+          rgb <- grDevices::col2rgb(tolower(s))
+          return(sprintf("%02X%02X%02X", rgb[1L], rgb[2L], rgb[3L]))
+        }
+        NA_character_
+      }, character(1), USE.NAMES = FALSE)
+      if (!length(out) || anyNA(out)) {
+        bad(paste0("\"greys\", or one or more colors, each a color name such as ",
+                   "\"navy\" or six hex digits such as \"1F3864\"."))
+      }
+      out
     }
   )
 }
@@ -4063,8 +4156,12 @@
     out <- c(out, if (nzchar(trimws(sl))) paste0(sl, " ", src) else src)
   }
   if (plain) {
-    out <- gsub("\\^([a-z]+)\\^", "^\\1", out)
+    # A mark is set aside while the markup is taken out: written ^a first,
+    # two marks in one paragraph read as one superscript span, "^a
+    # Mean-centered. ^", and both carets went (Session 415; the S414 walk).
+    out <- gsub("\\^([a-z]+)\\^", "\001\\1", out)
     out <- .jst_table_strip_markup(out)
+    out <- gsub("\001", "^", out, fixed = TRUE)
     out <- gsub("\u2212", "-", out, fixed = TRUE)
   }
   out
@@ -4144,10 +4241,12 @@
 #' @param color A six-digit hex colour, or NULL.
 #' @param size Points, or NULL for the document default.
 #' @param tab Logical; TRUE writes a tab character before the text.
+#' @param keep Logical; TRUE writes a label that breaks only where ruling
+#'   R55's measure breaks it (\code{.jst_docx_keep_text()}).
 #' @keywords internal
 .jst_docx_run <- function(text, bold = FALSE, italic = FALSE,
                           superscript = FALSE, color = NULL, size = NULL,
-                          tab = FALSE) {
+                          tab = FALSE, keep = FALSE) {
   rpr <- c(if (bold) "<w:b/>", if (italic) "<w:i/>",
            if (!is.null(color) && !identical(color, "000000"))
              paste0("<w:color w:val=\"", color, "\"/>"),
@@ -4157,9 +4256,57 @@
   paste0("<w:r>",
          if (length(rpr)) paste0("<w:rPr>", paste(rpr, collapse = ""), "</w:rPr>"),
          if (tab) "<w:tab/>",
-         if (nzchar(text)) paste0("<w:t xml:space=\"preserve\">",
-                                  .jst_xml_esc(text), "</w:t>"),
+         if (nzchar(text)) {
+           if (keep) .jst_docx_keep_text(text)
+           else paste0("<w:t xml:space=\"preserve\">", .jst_xml_esc(text), "</w:t>")
+         },
          "</w:r>")
+}
+
+#' Internal helper: a label's text, breaking only between its words
+#'
+#' Ruling R55's measure (\code{.jst_docx_stub_floor()}) wraps a label onto
+#' two lines between its words, a parenthetical one word; Word also breaks
+#' after a hyphen and an en dash and between a parenthetical's words, and
+#' fills the first line as far as it goes, so "Wellbeing score (0-100)" in a
+#' narrowed stub broke after "(0-" (found on the S414 walk). Here a hyphen
+#' is Word's non-breaking hyphen (w:noBreakHyphen), as the true minus sign
+#' keeps a negative whole; the spaces inside parentheses are non-breaking;
+#' and an en dash is joined to what follows it (Session 415; Jeff: "Is
+#' there some way to have the entire parenthetical on the second line when
+#' wrapping is necessary?"). The text reads as before.
+#'
+#' @param text Character(1).
+#' @return The run's text elements, XML.
+#' @keywords internal
+.jst_docx_keep_text <- function(text) {
+  text <- .jst_label_keep_spaces(text)
+  text <- gsub("\u2013", "\u2013\u2060", text, fixed = TRUE)
+  parts <- strsplit(text, "-", fixed = TRUE)[[1L]]
+  if (endsWith(text, "-")) parts <- c(parts, "")
+  t <- function(x) if (nzchar(x)) paste0("<w:t xml:space=\"preserve\">",
+                                         .jst_xml_esc(x), "</w:t>") else ""
+  paste(vapply(parts, t, character(1), USE.NAMES = FALSE),
+        collapse = "<w:noBreakHyphen/>")
+}
+
+#' Internal helper: a label's parenthetical spaces made non-breaking
+#'
+#' Each space inside parentheses becomes a no-break space, so a
+#' parenthetical is one word to ruling R55's measure and to Word.
+#'
+#' @param text Character(1).
+#' @return Character(1).
+#' @keywords internal
+.jst_label_keep_spaces <- function(text) {
+  ch <- strsplit(text, "", fixed = TRUE)[[1L]]
+  depth <- 0L
+  for (i in seq_along(ch)) {
+    if (ch[i] == "(") depth <- depth + 1L
+    else if (ch[i] == ")") depth <- max(0L, depth - 1L)
+    else if (ch[i] == " " && depth > 0L) ch[i] <- "\u00a0"
+  }
+  paste(ch, collapse = "")
 }
 
 #' Internal helper: the runs of a marked-up line
@@ -4174,26 +4321,29 @@
 #'   caption's title, a fit row's label).
 #' @param color A six-digit hex colour, or NULL (Session 405: a column head
 #'   with markup takes the header's colour).
+#' @param keep Logical; TRUE for a row's label (\code{.jst_docx_keep_text()}).
 #' @keywords internal
 .jst_docx_markup_runs <- function(s, size = NULL, bold = FALSE, italic = FALSE,
-                                  color = NULL) {
+                                  color = NULL, keep = FALSE) {
   out <- character(0)
   rest <- s
   while (nzchar(rest)) {
     m <- regexpr("\\*[^*]+\\*|\\^[^^]+\\^", rest)
     if (m < 0L) {
       out <- c(out, .jst_docx_run(rest, bold = bold, italic = italic,
-                                  color = color, size = size))
+                                  color = color, size = size, keep = keep))
       break
     }
     if (m > 1L) {
       out <- c(out, .jst_docx_run(substr(rest, 1L, m - 1L), bold = bold,
-                                  italic = italic, color = color, size = size))
+                                  italic = italic, color = color, size = size,
+                                  keep = keep))
     }
     tok <- substr(rest, m, m + attr(m, "match.length") - 1L)
     inner <- substr(tok, 2L, nchar(tok) - 1L)
     out <- c(out, if (startsWith(tok, "*"))
-      .jst_docx_run(inner, bold = bold, italic = !italic, color = color, size = size)
+      .jst_docx_run(inner, bold = bold, italic = !italic, color = color, size = size,
+                    keep = keep)
       else .jst_docx_run(inner, bold = bold, italic = italic, superscript = TRUE,
                          color = color, size = size))
     rest <- substr(rest, m + attr(m, "match.length"), nchar(rest))
@@ -4241,16 +4391,20 @@
 #' @param size Points.
 #' @param color A six-digit hex colour, or NULL (Session 409: a caption bar
 #'   that follows the header takes the header's text colour).
+#' @param word "Table", or "Figure" for a figure, numbered on a sequence of
+#'   its own (ruling R63, Session 411).
 #' @keywords internal
-.jst_docx_seq_runs <- function(number, bold = TRUE, size = NULL, color = NULL) {
+.jst_docx_seq_runs <- function(number, bold = TRUE, size = NULL, color = NULL,
+                               word = "Table") {
   col <- if (!is.null(color) && !identical(color, "000000"))
     paste0("<w:color w:val=\"", color, "\"/>")
   rpr <- paste0("<w:rPr>", if (bold) "<w:b/>", col,
                 if (!is.null(size)) paste0("<w:sz w:val=\"", size * 2, "\"/>"),
                 "</w:rPr>")
-  paste0(.jst_docx_run("Table ", bold = bold, size = size, color = color),
+  paste0(.jst_docx_run(paste0(word, " "), bold = bold, size = size, color = color),
          "<w:r>", rpr, "<w:fldChar w:fldCharType=\"begin\"/></w:r>",
-         "<w:r>", rpr, "<w:instrText xml:space=\"preserve\"> SEQ Table \\* ARABIC </w:instrText></w:r>",
+         "<w:r>", rpr, "<w:instrText xml:space=\"preserve\"> SEQ ", word,
+         " \\* ARABIC </w:instrText></w:r>",
          "<w:r>", rpr, "<w:fldChar w:fldCharType=\"separate\"/></w:r>",
          .jst_docx_run(as.character(number), bold = bold, size = size, color = color),
          "<w:r>", rpr, "<w:fldChar w:fldCharType=\"end\"/></w:r>")
@@ -4310,9 +4464,13 @@
 #'   the style's caption.text (Session 409: the header's text colour, on a
 #'   caption bar that follows the header; ruling R78, Session 413: a
 #'   caption.text of the style's own otherwise, black by default).
+#' @param word "Table", or "Figure" for a figure (ruling R63). A figure
+#'   with no title -- a chart drawn by hand with none, given none -- has its
+#'   number alone.
 #' @return Character; one or two paragraphs' XML.
 #' @keywords internal
-.jst_docx_caption_pars <- function(tbl, style, number, color = NULL) {
+.jst_docx_caption_pars <- function(tbl, style, number, color = NULL,
+                                   word = "Table") {
   key  <- function(k) .jst_style_key(style, tbl$type, k)
   form <- key("caption.form"); size <- key("caption.size")
   if (is.null(color)) color <- key("caption.text")
@@ -4320,19 +4478,26 @@
   # is "*N* = 103", N upright inside apa's italic title and italic in the
   # other forms.
   title <- tbl$caption$title
+  seq_runs <- .jst_docx_seq_runs(number, TRUE, size, color, word = word)
+  if (is.null(title) || !nzchar(title)) {
+    return(.jst_docx_par(paste0(seq_runs,
+                                if (identical(form, "journal"))
+                                  .jst_docx_run(".", bold = TRUE, size = size,
+                                                color = color)),
+                         style = "Caption", keep_next = TRUE, spacing_after = 6))
+  }
   if (identical(form, "apa")) {
-    c(.jst_docx_par(.jst_docx_seq_runs(number, TRUE, size, color), style = "Caption",
-                    keep_next = TRUE),
+    c(.jst_docx_par(seq_runs, style = "Caption", keep_next = TRUE),
       .jst_docx_par(.jst_docx_markup_runs(title, size = size, italic = TRUE,
                                           color = color),
                     keep_next = TRUE, spacing_after = 6))
   } else if (identical(form, "report")) {
-    .jst_docx_par(paste0(.jst_docx_seq_runs(number, TRUE, size, color),
+    .jst_docx_par(paste0(seq_runs,
                          .jst_docx_markup_runs(paste0(": ", title), size = size,
                                                bold = TRUE, color = color)),
                   style = "Caption", keep_next = TRUE, spacing_after = 6)
   } else {
-    .jst_docx_par(paste0(.jst_docx_seq_runs(number, TRUE, size, color),
+    .jst_docx_par(paste0(seq_runs,
                          .jst_docx_run(".", bold = TRUE, size = size, color = color),
                          .jst_docx_markup_runs(paste0(" ", title), size = size,
                                                color = color)),
@@ -4692,10 +4857,12 @@
       runs <- paste0(if (isTRUE(r$markup)) {
                        .jst_docx_markup_runs(r$label, size = size,
                                              bold = identical(emph, "bold"),
-                                             italic = identical(emph, "italic"))
+                                             italic = identical(emph, "italic"),
+                                             keep = TRUE)
                      } else {
                        .jst_docx_run(r$label, bold = identical(emph, "bold"),
-                                     italic = identical(emph, "italic"), size = size)
+                                     italic = identical(emph, "italic"), size = size,
+                                     keep = TRUE)
                      },
                      if (length(r$marks)) .jst_docx_run(paste(r$marks, collapse = ","),
                                                         superscript = TRUE, size = size),
@@ -4729,8 +4896,9 @@
     eb <- identical(emph, "bold"); ei <- identical(emph, "italic")
     stub_runs <- paste0(if (isTRUE(r$markup)) {
                           .jst_docx_markup_runs(r$label, size = size, bold = eb,
-                                                italic = ei)
-                        } else .jst_docx_run(r$label, bold = eb, italic = ei, size = size),
+                                                italic = ei, keep = TRUE)
+                        } else .jst_docx_run(r$label, bold = eb, italic = ei, size = size,
+                                             keep = TRUE),
                         if (length(r$marks)) .jst_docx_run(paste(r$marks, collapse = ","),
                                                            superscript = TRUE, size = size),
                         if (!is.null(r$tail) && nzchar(r$tail))
@@ -5018,8 +5186,9 @@
   labs <- c(labs, .jst_table_strip_markup(tbl$columns$label[1L])); ind <- c(ind, 0L)
   need <- 0
   for (i in seq_along(labs)) {
-    wd <- strsplit(labs[i], " ", fixed = TRUE)[[1L]]
-    wd <- wd[nzchar(wd)]
+    # A parenthetical is one word, as the Word file writes it (Session 415).
+    wd <- strsplit(.jst_label_keep_spaces(labs[i]), " ", fixed = TRUE)[[1L]]
+    wd <- gsub("\u00a0", " ", wd[nzchar(wd)], fixed = TRUE)
     if (!length(wd)) next
     m <- length(wd)
     two <- if (m == 1L) .jst_docx_em_width(wd, font) else {
@@ -5162,21 +5331,33 @@
 .jst_docx_document <- function(tables, style, landscape = NULL) {
   body <- character(0)
   lay  <- .jst_docx_layout(tables, style, landscape)
+  nums <- .jst_doc_numbers(tables)
   doc_font <- .jst_style_key(style, "general", "font")
   doc_size <- as.numeric(.jst_style_key(style, "general", "size"))
+  media <- list()
   for (i in seq_along(tables)) {
     tbl <- tables[[i]]
     L   <- lay[[i]]
     tst <- L$style
     key <- function(k) .jst_style_key(tst, tbl$type, k)
-    one <- character(0)
-    if (!identical(key("caption.position"), "row")) {
-      one <- c(one, .jst_docx_caption_pars(tbl, tst, i))
-    }
-    one <- c(one, .jst_docx_table(tbl, tst, i, L$fit$widths, size = L$fit$size,
-                                  note_size = L$fit$note_size))
-    if (!identical(key("note.position"), "row")) {
-      one <- c(one, .jst_docx_note_pars(tbl, tst, size = L$fit$note_size))
+    if (inherits(tbl, "jst_figure")) {
+      # A figure (ruling R63): its picture a part of the file of its own,
+      # named image1.png, image2.png, ... in the document's order.
+      mi  <- length(media) + 1L
+      rid <- paste0("rIdImg", mi)
+      media[[mi]] <- list(name = paste0("image", mi, ".png"), rid = rid,
+                          raw = .jst_figure_png(tbl, L$size, L$look))
+      one <- .jst_docx_figure(tbl, L, nums[i], rid, mi)
+    } else {
+      one <- character(0)
+      if (!identical(key("caption.position"), "row")) {
+        one <- c(one, .jst_docx_caption_pars(tbl, tst, nums[i]))
+      }
+      one <- c(one, .jst_docx_table(tbl, tst, nums[i], L$fit$widths, size = L$fit$size,
+                                    note_size = L$fit$note_size))
+      if (!identical(key("note.position"), "row")) {
+        one <- c(one, .jst_docx_note_pars(tbl, tst, size = L$fit$note_size))
+      }
     }
     t_font <- key("font")
     t_size <- as.numeric(key("size"))
@@ -5196,11 +5377,21 @@
   }
   last <- lay[[length(lay)]]
   xml <- paste0("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
-                "<w:document xmlns:w=\"", .jst_docx_ns, "\"><w:body>",
+                "<w:document xmlns:w=\"", .jst_docx_ns, "\"",
+                if (length(media)) paste0(" xmlns:wp=\"", .jst_docx_ns_wp,
+                                          "\" xmlns:r=\"", .jst_docx_ns_r, "\""),
+                "><w:body>",
                 paste(body, collapse = ""), .jst_docx_sect(last$page, last$landscape),
                 "</w:body></w:document>")
-  list(xml = xml, landscape = vapply(lay, function(L) L$landscape, logical(1)))
+  list(xml = xml, landscape = vapply(lay, function(L) L$landscape, logical(1)),
+       media = media)
 }
+
+# The namespaces a document holding a picture names on its root: the
+# drawing's place in the text, and the relationships its picture is found
+# by.
+.jst_docx_ns_wp <- "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+.jst_docx_ns_r  <- "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 
 #' Internal helper: a section's properties
 #'
@@ -5234,7 +5425,8 @@
 #' proportion, as far as its page allows (Session 407), so the title keeps
 #' one line.
 #'
-#' @param tables A list of jst_table.
+#' @param tables A list of jst_table, and of jst_figure (a figure's page
+#'   and size, \code{.jst_figure_layout()}).
 #' @param style The document's style.
 #' @param landscape NULL, or "auto", "yes" or "no" for every page.
 #' @return A list, one element per table: style (the table's), landscape
@@ -5245,8 +5437,10 @@
 .jst_docx_layout <- function(tables, style, landscape = NULL) {
   paper    <- .jst_style_key(style, "general", "paper")
   portrait <- .jst_docx_page(paper, FALSE)
+  nums     <- .jst_doc_numbers(tables)
   lapply(seq_along(tables), function(i) {
     tbl   <- tables[[i]]
+    if (inherits(tbl, "jst_figure")) return(.jst_figure_layout(tbl, paper, landscape))
     tst   <- .jst_table_style(tbl, style)
     size0 <- .jst_style_key(tst, tbl$type, "size")
     land_key <- if (is.null(landscape)) .jst_style_key(tst, tbl$type, "landscape")
@@ -5265,7 +5459,7 @@
             else list(widths = nat, size = NULL, note_size = NULL)
     # A caption row keeps its title on one line: the table widens to it,
     # every column in proportion, as far as the page allows (Session 407).
-    cap <- .jst_docx_caption_width(tbl, tst, i)
+    cap <- .jst_docx_caption_width(tbl, tst, nums[i])
     if (cap > sum(fit$widths)) {
       fit$widths <- .jst_docx_widen(fit$widths, min(cap, page$text))
     }
@@ -5311,11 +5505,12 @@
 
 #' Internal helper: the parts of a document file
 #'
-#' @param tables A list of jst_table.
+#' @param tables A list of jst_table and jst_figure.
 #' @param style The style list.
 #' @param landscape NULL, or the page setting for every page (the writing
 #'   call's).
-#' @return A named list of parts: path in the package, then the text.
+#' @return A named list of parts: path in the package, then the text, or a
+#'   picture's bytes.
 #' @keywords internal
 .jst_docx_parts <- function(tables, style, landscape = NULL) {
   doc <- .jst_docx_document(tables, style, landscape)
@@ -5324,6 +5519,7 @@
     "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">",
     "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>",
     "<Default Extension=\"xml\" ContentType=\"application/xml\"/>",
+    if (length(doc$media)) "<Default Extension=\"png\" ContentType=\"image/png\"/>",
     "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>",
     "<Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>",
     "</Types>")
@@ -5336,12 +5532,18 @@
     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
     "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>",
+    paste(vapply(doc$media, function(m) {
+      paste0("<Relationship Id=\"", m$rid, "\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/", m$name, "\"/>")
+    }, character(1)), collapse = ""),
     "</Relationships>")
-  list("[Content_Types].xml" = ct,
-       "_rels/.rels" = rels,
-       "word/_rels/document.xml.rels" = doc_rels,
-       "word/document.xml" = doc$xml,
-       "word/styles.xml" = .jst_docx_styles(style))
+  out <- list("[Content_Types].xml" = ct,
+              "_rels/.rels" = rels,
+              "word/_rels/document.xml.rels" = doc_rels,
+              "word/document.xml" = doc$xml,
+              "word/styles.xml" = .jst_docx_styles(style))
+  # A figure's picture: a part of its own, its bytes as they are.
+  for (m in doc$media) out[[paste0("word/media/", m$name)]] <- m$raw
+  out
 }
 
 #' Internal helper: write the parts into a .docx file
@@ -5364,7 +5566,8 @@
     full <- file.path(root, p)
     dir.create(dirname(full), recursive = TRUE, showWarnings = FALSE)
     con <- file(full, open = "wb")
-    writeBin(charToRaw(enc2utf8(parts[[p]])), con)
+    writeBin(if (is.raw(parts[[p]])) parts[[p]] else charToRaw(enc2utf8(parts[[p]])),
+             con)
     close(con)
   }
   # The temporary name is ABSOLUTE: zip::zip() changes into root to pack the
@@ -5388,6 +5591,749 @@
     }
   }
   invisible(file)
+}
+
+
+# -----------------------------------------------------------------------------
+# 6b. Figures: a chart in the Word file
+# -----------------------------------------------------------------------------
+# A chart in the Word file (ruling R63, Session 411): kept with <- and given to
+# jtable() as a built table is, alone or in a list beside tables; numbered on a
+# Figure sequence of its own (Word's SEQ Figure field, beside the tables' SEQ
+# Table); framed in the style's caption form, N after the title (ruling R59);
+# caption, chart and note one object -- a borderless table of one column, its
+# rows the caption, the picture and the note -- so no page break parts them;
+# no note unless one is needed. The chart is a PNG picture at the [plot]
+# section's resolution (ruling R65), drawn in the style's look (ruling R64) at
+# the [plot] section's width and height, kept within the page; its data to
+# Excel and a vector file on request, as [plot] settings, never call
+# arguments. A chart drawn in ggplot2 by hand is framed in its own look
+# (ruling R71). A result plot's title, and a chart's own title, stand in the
+# caption, not the picture (rulings R69 and R71).
+
+#' Internal helper: is it a chart?
+#'
+#' A chart jplot() drew, or one drawn in ggplot2 by hand: both inherit
+#' "ggplot", under ggplot2 3 (a list) and 4 (an S7 object) alike.
+#'
+#' @param x Anything.
+#' @return Logical(1).
+#' @keywords internal
+.jst_is_chart <- function(x) inherits(x, "ggplot")
+
+#' Internal helper: is it a set of charts?
+#'
+#' What jplot() returns for a result it draws several plots of -- a plain
+#' list, every element a chart -- which jtable() takes in place, each chart
+#' a figure of its own (Session 415).
+#'
+#' @param x Anything.
+#' @return Logical(1).
+#' @keywords internal
+.jst_is_chart_set <- function(x) {
+  is.list(x) && !is.object(x) && length(x) > 0L &&
+    all(vapply(x, .jst_is_chart, logical(1)))
+}
+
+#' Internal helper: the title a chart carries in its picture
+#'
+#' A plain line of text only: a title written as a plotmath expression stays
+#' in the picture, where it can be drawn.
+#'
+#' @param p A chart.
+#' @return Character(1), or NULL.
+#' @keywords internal
+.jst_plot_own_title <- function(p) {
+  t <- tryCatch(p$labels$title, error = function(e) NULL)
+  if (is.null(t)) {
+    lb <- attr(p, "labels", exact = TRUE)
+    if (is.list(lb)) t <- lb$title
+  }
+  if (is.character(t) && length(t) == 1L && !is.na(t) && nzchar(trimws(t))) t
+}
+
+#' Internal helper: a chart made a figure
+#'
+#' The frame's facts, read once, when the figure is made (rulings R63, R69,
+#' R71): the style it is framed in -- the call's \code{style =}; else, for a
+#' chart jplot() drew, the style it was drawn in, so the Word file shows
+#' what the Plots pane showed; else the session's -- its title, N after it
+#' (the chart's analysis N; the S412 audit's F7), the general note (N where
+#' n.position puts it, the filter the chart was drawn under, the call's
+#' note) and the call's source. A chart drawn in ggplot2 by hand has no N,
+#' no filter and no data sheet; its look stays its own.
+#'
+#' The title: the call's \code{title =}; else the title in the chart's
+#' picture (a result plot's own, "Residuals vs Fitted", or one added with
+#' \code{+ labs(title = )}), which moves to the caption; else jplot()'s
+#' default from labels (ruling R69); else none.
+#'
+#' @param p The chart.
+#' @param style The call's style, resolved, or NULL.
+#' @param title,note,source As \code{jtable()}'s.
+#' @return An object of class "jst_figure".
+#' @keywords internal
+.jst_figure_build <- function(p, style = NULL, title = NULL, note = NULL,
+                              source = NULL) {
+  f  <- .jst_plot_facts(p)
+  st <- if (inherits(style, "jst_style")) style
+        else if (!is.null(f) && inherits(f$look$st, "jst_style")) f$look$st
+        else .jst_style_resolve(NULL, fn = "jtable")
+  key  <- function(k) .jst_style_key(st, "figure", k)
+  own  <- .jst_plot_own_title(p)
+  base <- if (!is.null(title)) title
+          else if (!is.null(own)) own
+          else if (!is.null(f) && is.character(f$title) && length(f$title) == 1L &&
+                   !is.na(f$title) && nzchar(f$title)) f$title
+  n <- if (!is.null(f) && length(f$n) == 1L && !is.na(f$n)) f$n
+  np <- .jst_table_n_parts(key("n.position"),
+                           if (!is.null(n))
+                             paste0("*N* = ", .jst_tbl_count(n, key("thousands"))))
+  general <- c(np$note,
+               if (!is.null(f$filter)) {
+                 .jst_table_filter_note(list(list(sample_info = f$filter)),
+                                        "the figure", st, "figure")
+               },
+               note)
+  structure(list(
+    type    = "figure",
+    kind    = if (is.null(f)) "ggplot" else f$kind,
+    plot    = p,
+    user    = is.null(f),
+    caption = list(title = if (is.null(base)) "" else paste0(base, np$title)),
+    notes   = list(general = general, specific = list(),
+                   probability = character(0), source = source),
+    style   = st,
+    n       = n,
+    data    = if (!is.null(f)) f$data,
+    gaps    = if (!is.null(f)) {
+      list(names_shown = f$names_shown, codes_shown = f$codes_shown,
+           labelled = isTRUE(f$labelled), data_name = f$data_name,
+           code_labels = f$code_labels,
+           rerun = if (is.null(f$rerun)) "chart" else f$rerun)
+    },
+    version = .jst_jstats_version()),
+    class = "jst_figure")
+}
+
+#' Internal helper: what a figure shows, in a few words
+#'
+#' For jtable()'s report and the console preview: the kind of chart, "a
+#' bar chart", "a scatterplot", "a model's residual plot"; "a chart drawn
+#' in ggplot2" for one drawn by hand.
+#'
+#' @param fig A jst_figure.
+#' @return Character(1).
+#' @keywords internal
+.jst_figure_noun <- function(fig) {
+  k <- fig$kind
+  if (isTRUE(fig$user)) return("a chart drawn in ggplot2")
+  if (startsWith(k, "effect")) return("an effect plot")
+  switch(k,
+    histogram   = "a histogram",
+    density     = "a density plot",
+    bar         = "a bar chart",
+    grouped_bar = "a grouped bar chart",
+    scatter     = "a scatterplot",
+    box         = "a box plot",
+    fit         = "a fit plot",
+    residuals   = "a residual plot",
+    qq          = "a normal Q-Q plot",
+    scale       = , scale_location = "a scale-location plot",
+    cooks       = "a Cook's distance plot",
+    leverage    = "a leverage plot",
+    coef        = , coefficients = "a coefficient plot",
+    probability = "a probability plot",
+    logit       = "a logit plot",
+    heatmap     = "a correlation heatmap",
+    roc         = "a ROC curve",
+    "a chart")
+}
+
+#' Internal helper: the look a figure's picture is drawn in
+#' @param fig A jst_figure.
+#' @return A look (\code{.jst_plot_look()}).
+#' @keywords internal
+.jst_figure_look <- function(fig) .jst_plot_look(fig$style, fn = "jtable")
+
+#' Internal helper: the picture a figure puts in the Word file
+#'
+#' A chart jplot() drew, drawn again in the figure's style (the S412
+#' audit's F6: its theme and colors that style's, everything added to it
+#' kept); a chart drawn by hand as it is (ruling R71). A plain title moves
+#' out of the picture into the caption (rulings R69 and R71); a subtitle
+#' stays.
+#'
+#' @param fig A jst_figure.
+#' @param look Its look.
+#' @param device As \code{.jst_plot_family()}.
+#' @return A ggplot.
+#' @keywords internal
+.jst_figure_picture <- function(fig, look = .jst_figure_look(fig), device = NULL) {
+  p <- fig$plot
+  if (!isTRUE(fig$user)) p <- .jst_plot_restyle(p, look, device = device)
+  if (!is.null(.jst_plot_own_title(p))) p <- p + ggplot2::labs(title = NULL)
+  p
+}
+
+#' Internal helper: draw a figure's picture on the open device
+#'
+#' ggplot2's notes on a draw -- "Removed 6 rows containing missing values",
+#' the formula a smoother used -- were given when the chart was first drawn,
+#' so they are not given again each time the figure is drawn; any other
+#' warning passes.
+#'
+#' @param p The picture.
+#' @keywords internal
+.jst_figure_draw <- function(p) {
+  withCallingHandlers(
+    suppressMessages(print(p)),
+    warning = function(w) {
+      if (grepl("^Removed [0-9]+ rows?", conditionMessage(w))) {
+        invokeRestart("muffleWarning")
+      }
+    })
+  invisible(NULL)
+}
+
+#' Internal helper: a figure's size on its page, in inches
+#'
+#' The \code{[plot]} section's width and height, scaled down together when the
+#' width is wider than the page's text or the height taller than the page
+#' leaves beside a caption and a note, so the picture's text stays the
+#' size the style gives it.
+#'
+#' @param look The figure's look.
+#' @param page The page (\code{.jst_docx_page()}).
+#' @return Numeric, named w and h.
+#' @keywords internal
+.jst_figure_size <- function(look, page) {
+  w <- look$width; h <- look$height
+  max_w <- page$text / 1440
+  max_h <- (page$h - 2L * 1440L) / 1440 - 1.5
+  s <- min(1, max_w / w, max_h / h)
+  c(w = w * s, h = h * s)
+}
+
+#' Internal helper: a figure's picture as a PNG file's bytes
+#'
+#' @param fig A jst_figure.
+#' @param size Its size (\code{.jst_figure_size()}).
+#' @param look Its look.
+#' @return A raw vector.
+#' @keywords internal
+.jst_figure_png <- function(fig, size, look = .jst_figure_look(fig)) {
+  p <- .jst_figure_picture(fig, look, device = "png")
+  tmp <- tempfile("jfigure_", fileext = ".png")
+  on.exit(unlink(tmp), add = TRUE)
+  .jst_figure_on_device(function() {
+    grDevices::png(tmp, width = size[["w"]], height = size[["h"]], units = "in",
+                   res = look$resolution, bg = "white")
+  }, p)
+  readBin(tmp, "raw", n = file.size(tmp))
+}
+
+#' Internal helper: draw a picture on a file device, then close it
+#'
+#' The device the session had open before -- RStudio's Plots pane -- is
+#' made current again afterwards, so writing a figure leaves the user's
+#' plots where they were.
+#'
+#' @param open A function that opens the file device.
+#' @param p The picture.
+#' @keywords internal
+.jst_figure_on_device <- function(open, p) {
+  prev <- grDevices::dev.cur()
+  open()
+  dev <- grDevices::dev.cur()
+  on.exit({
+    if (grDevices::dev.cur() == dev) grDevices::dev.off()
+    if (prev > 1L && prev %in% grDevices::dev.list()) grDevices::dev.set(prev)
+  }, add = TRUE)
+  .jst_figure_draw(p)
+}
+
+#' Internal helper: each item's number in a document
+#'
+#' Tables and figures are numbered on sequences of their own (ruling R63):
+#' Table 1, Figure 1, Table 2 in a document that holds them in that order.
+#'
+#' @param items A list of jst_table and jst_figure.
+#' @return Integer, one per item.
+#' @keywords internal
+.jst_doc_numbers <- function(items) {
+  fig <- vapply(items, inherits, logical(1), "jst_figure")
+  out <- integer(length(items))
+  out[fig]  <- seq_len(sum(fig))
+  out[!fig] <- seq_len(sum(!fig))
+  out
+}
+
+#' Internal helper: a figure's page and size in a document
+#'
+#' Portrait, unless the writing call's landscape = "yes" or the figure's
+#' style says yes: a picture is scaled to its page, so auto never turns
+#' one.
+#'
+#' @param fig A jst_figure.
+#' @param paper The document's paper.
+#' @param landscape NULL, or the writing call's page setting.
+#' @return A list as \code{.jst_docx_layout()} gives a table, with the
+#'   figure's look and its size in inches in place of the fit.
+#' @keywords internal
+.jst_figure_layout <- function(fig, paper, landscape = NULL) {
+  st <- fig$style
+  land_key <- if (is.null(landscape)) .jst_style_key(st, "figure", "landscape")
+              else landscape
+  land <- identical(land_key, "yes")
+  page <- .jst_docx_page(paper, land)
+  look <- .jst_figure_look(fig)
+  list(style = st, landscape = land, page = page, look = look,
+       size = .jst_figure_size(look, page), figure = TRUE)
+}
+
+#' Internal helper: a figure's block in the document, as XML
+#'
+#' The frame (ruling R63): a borderless table of one column as wide as the
+#' picture, its rows the caption (when caption.position = row), the picture
+#' and the note (when note.position = row and there is one); a caption or a
+#' note set as a paragraph goes before or after the table, as a table's
+#' does. Every row is kept with the next and none splits, so the caption,
+#' the chart and the note stay on one page. The picture's description for a
+#' screen reader is the figure's title.
+#'
+#' @param fig A jst_figure.
+#' @param L Its layout (\code{.jst_figure_layout()}).
+#' @param number The figure's number.
+#' @param rid The picture's relationship id.
+#' @param id The picture's number among the document's drawings.
+#' @return Character; the block's XML.
+#' @keywords internal
+.jst_docx_figure <- function(fig, L, number, rid, id) {
+  st  <- L$style
+  key <- function(k) .jst_style_key(st, "figure", k)
+  emu <- function(inches) format(round(inches * 914400), scientific = FALSE)
+  cx <- emu(L$size[["w"]]); cy <- emu(L$size[["h"]])
+  width <- as.integer(round(L$size[["w"]] * 1440)) + 2L * 108L
+  width <- min(width, L$page$text)
+  alt <- .jst_xml_esc(.jst_table_strip_markup(fig$caption$title))
+  if (!nzchar(alt)) alt <- paste0("Figure ", number)
+  pic <- paste0(
+    "<w:r><w:drawing>",
+    "<wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\">",
+    "<wp:extent cx=\"", cx, "\" cy=\"", cy, "\"/>",
+    "<wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>",
+    "<wp:docPr id=\"", id, "\" name=\"Figure ", number, "\" descr=\"", alt, "\"/>",
+    "<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a=\"", .jst_docx_ns_a,
+    "\" noChangeAspect=\"1\"/></wp:cNvGraphicFramePr>",
+    "<a:graphic xmlns:a=\"", .jst_docx_ns_a, "\">",
+    "<a:graphicData uri=\"", .jst_docx_ns_pic, "\">",
+    "<pic:pic xmlns:pic=\"", .jst_docx_ns_pic, "\">",
+    "<pic:nvPicPr><pic:cNvPr id=\"", id, "\" name=\"image", id, ".png\"/>",
+    "<pic:cNvPicPr/></pic:nvPicPr>",
+    "<pic:blipFill><a:blip r:embed=\"", rid, "\"/>",
+    "<a:stretch><a:fillRect/></a:stretch></pic:blipFill>",
+    "<pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"", cx, "\" cy=\"", cy,
+    "\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr>",
+    "</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>")
+  nil <- .jst_docx_borders("none", FALSE, FALSE, FALSE, FALSE, "000000")
+  cap_row  <- identical(key("caption.position"), "row")
+  note_row <- identical(key("note.position"), "row")
+  notes <- .jst_docx_note_pars(fig, st, keep_next = FALSE)
+  # A caption bar (caption.fill, Session 409) fills the caption row as it
+  # fills a table's, a bar that follows the header taking its colours.
+  cfill <- key("caption.fill"); ctext <- NULL
+  if (identical(cfill, "header")) {
+    hf <- key("header.fill")
+    cfill <- if (identical(hf, "none")) NULL else hf
+    if (!is.null(cfill)) ctext <- key("header.text")
+  } else if (identical(cfill, "none")) {
+    cfill <- NULL
+  }
+  row <- function(pars, fill = NULL) {
+    paste0("<w:tr><w:trPr><w:cantSplit/></w:trPr>",
+           .jst_docx_cell(paste(pars, collapse = ""), width, nil, fill = fill),
+           "</w:tr>")
+  }
+  rows <- c(
+    if (cap_row) row(.jst_docx_caption_pars(fig, st, number, color = ctext,
+                                            word = "Figure"), fill = cfill),
+    row(.jst_docx_par(pic, keep_next = note_row && length(notes) > 0L,
+                      spacing_after = if (note_row && length(notes)) 6)),
+    if (note_row && length(notes)) row(notes))
+  tbl <- paste0("<w:tbl><w:tblPr>",
+                "<w:tblW w:w=\"", width, "\" w:type=\"dxa\"/>",
+                "<w:tblBorders><w:top w:val=\"nil\"/><w:left w:val=\"nil\"/>",
+                "<w:bottom w:val=\"nil\"/><w:right w:val=\"nil\"/>",
+                "<w:insideH w:val=\"nil\"/><w:insideV w:val=\"nil\"/></w:tblBorders>",
+                "<w:tblLayout w:type=\"fixed\"/>",
+                "<w:tblCellMar><w:left w:w=\"108\" w:type=\"dxa\"/>",
+                "<w:right w:w=\"108\" w:type=\"dxa\"/></w:tblCellMar>",
+                "</w:tblPr><w:tblGrid><w:gridCol w:w=\"", width, "\"/></w:tblGrid>",
+                paste(rows, collapse = ""), "</w:tbl>")
+  c(if (!cap_row) .jst_docx_caption_pars(fig, st, number, color = ctext,
+                                         word = "Figure"),
+    tbl,
+    if (!note_row && length(notes)) .jst_docx_note_pars(fig, st))
+}
+
+# The DrawingML namespaces a picture's XML names: the drawing's own, and the
+# picture's.
+.jst_docx_ns_a   <- "http://schemas.openxmlformats.org/drawingml/2006/main"
+.jst_docx_ns_pic <- "http://schemas.openxmlformats.org/drawingml/2006/picture"
+
+#' Internal helper: the files written beside the Word file for its figures
+#'
+#' Ruling R65, each a setting of the \code{[plot]} section, off in both built-ins:
+#' data.file = yes writes the data each of jplot()'s charts shows to
+#' <file>_figures.xlsx beside the Word file, a sheet per figure ("Figure
+#' 1"), for a designer who redraws the charts; vector.file = pdf or eps
+#' writes each figure's picture as a vector file, <file>_Figure_1.pdf, at
+#' the size it has in the Word file -- through cairo_pdf() and cairo_ps(),
+#' which embed the fonts, where R has cairo, else pdf() and postscript().
+#' A chart drawn in ggplot2 by hand gets a vector file but no data sheet
+#' (ruling R71: the sheet's columns are known only for jstats's own
+#' charts).
+#'
+#' @param items The document's tables and figures.
+#' @param lay Their layout.
+#' @param out_path The Word file.
+#' @return A list: xlsx (the sheet file written, or NULL), sheets (the
+#'   figure numbers it holds) and vector (the files written, named by
+#'   figure number).
+#' @keywords internal
+.jst_figure_files <- function(items, lay, out_path) {
+  nums  <- .jst_doc_numbers(items)
+  stem  <- tools::file_path_sans_ext(out_path)
+  sheets <- list(); vec <- character(0)
+  for (i in seq_along(items)) {
+    fig <- items[[i]]
+    if (!inherits(fig, "jst_figure")) next
+    L <- lay[[i]]
+    look <- L$look
+    if (identical(look$data.file, "yes") && !isTRUE(fig$user) &&
+        is.data.frame(fig$data) && nrow(fig$data)) {
+      sheets[[paste0("Figure ", nums[i])]] <- fig$data
+    }
+    vf <- look$vector.file
+    if (vf %in% c("pdf", "eps")) {
+      path <- paste0(stem, "_Figure_", nums[i], ".", vf)
+      dev  <- if (identical(vf, "pdf")) "pdf" else "postscript"
+      p <- .jst_figure_picture(fig, look, device = dev)
+      cairo <- isTRUE(capabilities("cairo"))
+      w <- L$size[["w"]]; h <- L$size[["h"]]
+      .jst_figure_on_device(function() {
+        if (identical(vf, "pdf")) {
+          if (cairo) grDevices::cairo_pdf(path, width = w, height = h)
+          else grDevices::pdf(path, width = w, height = h)
+        } else {
+          if (cairo) grDevices::cairo_ps(path, width = w, height = h)
+          else grDevices::postscript(path, width = w, height = h, horizontal = FALSE,
+                                     onefile = FALSE, paper = "special")
+        }
+      }, p)
+      vec[as.character(nums[i])] <- path
+    }
+  }
+  xlsx <- NULL
+  if (length(sheets)) {
+    xlsx <- paste0(stem, "_figures.xlsx")
+    writexl::write_xlsx(sheets, xlsx)
+  }
+  list(xlsx = xlsx, sheets = names(sheets), vector = vec)
+}
+
+#' Internal helper: a figure's line in jtable()'s report
+#'
+#' What it shows and its size, then its page: "a bar chart, 6 by 4 inches,
+#' on a portrait page".
+#'
+#' @param fig A jst_figure.
+#' @param L Its layout.
+#' @return Character(1).
+#' @keywords internal
+.jst_figure_shape <- function(fig, L) {
+  inch <- function(v) format(round(v, 2), nsmall = 0, trim = TRUE)
+  paste0(.jst_figure_noun(fig), ", ", inch(L$size[["w"]]), " by ",
+         inch(L$size[["h"]]), " inches, on a ",
+         if (L$landscape) "landscape" else "portrait", " page")
+}
+
+#' Internal helper: print a figure to the console
+#'
+#' The caption and the note as the Word file sets them, in the style's
+#' caption form, and the picture as the Word file holds it drawn on the plot
+#' device (the Plots pane in RStudio): the title in the caption, not the
+#' picture.
+#'
+#' @param fig A jst_figure.
+#' @param number The figure's number.
+#' @param draw Logical; FALSE prints the words only.
+#' @keywords internal
+.jst_figure_preview <- function(fig, number = 1L, draw = TRUE) {
+  st   <- fig$style
+  form <- .jst_style_key(st, "figure", "caption.form")
+  cap  <- paste0("Figure ", number)
+  ttl  <- gsub("\u2212", "-", .jst_table_strip_markup(fig$caption$title), fixed = TRUE)
+  if (!nzchar(ttl)) {
+    cat(cap, if (identical(form, "journal")) ".", "\n", sep = "")
+  } else if (identical(form, "apa")) {
+    cat(cap, "\n", ttl, "\n", sep = "")
+  } else if (identical(form, "report")) {
+    cat(cap, ": ", ttl, "\n", sep = "")
+  } else {
+    cat(cap, ". ", ttl, "\n", sep = "")
+  }
+  .jst_msg_out(paste0("(", .jst_figure_noun(fig), ", drawn in the Plots pane)"))
+  for (ln in .jst_table_note_lines(fig, st, plain = TRUE)) .jst_msg_out(ln)
+  cat("\n")
+  if (draw) .jst_figure_draw(.jst_figure_picture(fig))
+  invisible(NULL)
+}
+
+#' Internal helper: ruling R72's note, for a table or a figure that shows a
+#' name or a code
+#'
+#' A jstats result keeps the labels it had when the analysis ran (ruling
+#' R72, Session 412), so a table or a figure made from it shows a
+#' variable's name, or a category's code, wherever the result holds no
+#' label. Given once, when the table or the figure is made (the S412
+#' audit's F9, Session 413): a consequential note when the result holds
+#' labels for other variables, so the gap is likely an oversight; an
+#' advisory note, at joutput("full"), when it holds none at all. The
+#' remedy is the user's: jrelabel(), then the analysis -- or the chart --
+#' run again; the line given carries the user's own codes and never a
+#' label of jstats's making ("..." where the label goes). jrelabel()'s
+#' labels = replaces a variable's value labels, so a code line lists the
+#' labels the result holds as well.
+#'
+#' @param what "Table 1" or "Figure 1".
+#' @param gaps A list: names_shown, codes_shown, labelled, data_name,
+#'   code_labels (by variable, the codes and labels the result holds: a
+#'   named character vector, code = label) and, for a figure, rerun
+#'   ("chart" or "analysis").
+#' @return NULL when the note is not given at the output level in force,
+#'   else the note's text.
+#' @keywords internal
+.jst_label_gap_note <- function(what, gaps) {
+  if (is.null(gaps)) return(NULL)
+  nm <- unique(gaps$names_shown)
+  cd <- gaps$codes_shown
+  cd <- cd[vapply(cd, length, integer(1)) > 0L]
+  if (!length(nm) && !length(cd)) return(NULL)
+  if (!isTRUE(gaps$labelled) &&
+      !identical(getOption(".jst_output_level", "standard"), "full")) {
+    return(NULL)
+  }
+  # One sentence for the names, one for the codes (Rule E).
+  says <- character(0)
+  if (length(nm)) {
+    says <- c(says, paste0(what, " shows ", .jst_and_list(nm), " by ",
+                           if (length(nm) == 1L) "its name, having no variable label."
+                           else "their names, having no variable labels."))
+  }
+  if (length(cd)) {
+    cp <- vapply(names(cd), function(v) {
+      paste0(if (length(cd[[v]]) == 1L) "code " else "codes ",
+             .jst_and_list(cd[[v]]), " of ", v)
+    }, character(1), USE.NAMES = FALSE)
+    one <- length(cd) == 1L && length(cd[[1L]]) == 1L
+    says <- c(says, paste0(if (length(nm)) "It" else what, " shows ",
+                           if (length(cp) == 1L) cp
+                           else paste0(paste(cp[-length(cp)], collapse = ", "),
+                                       ", and ", cp[length(cp)], ","),
+                           " without ", if (one) "a value label." else "value labels."))
+  }
+  frame <- if (is.null(gaps$data_name)) "MyData" else gaps$data_name
+  line <- if (length(nm)) {
+    paste0("jrelabel(", frame, ", ", nm[1L], ", var.label = \"...\", modify = TRUE)")
+  } else {
+    v    <- names(cd)[1L]
+    have <- gaps$code_labels[[v]]
+    rules <- c(if (length(have)) paste0(names(have), "=", unname(have)),
+               paste0(cd[[v]], "=..."))
+    paste0("jrelabel(", frame, ", ", v, ", labels = \"",
+           paste(rules, collapse = "; "), "\", modify = TRUE)")
+  }
+  again <- if (identical(gaps$rerun, "chart")) "draw the chart again"
+           else "run the analysis again"
+  paste0("Note: ", paste(says, collapse = "\n"), "\n",
+         "To show labels, add them with jrelabel(), then ", again,
+         ", for example:\n  ", line)
+}
+
+#' Internal helper: ruling R72's gaps across a table's results
+#'
+#' @param results The results the table was made from.
+#' @return A list as \code{.jst_label_gap_note()} takes.
+#' @keywords internal
+.jst_table_label_gaps <- function(results) {
+  g <- lapply(results, .jst_result_label_gaps)
+  nm <- unique(unlist(lapply(g, `[[`, "names_shown")))
+  cd <- list()
+  for (x in g) for (v in names(x$codes_shown)) {
+    cd[[v]] <- unique(c(cd[[v]], x$codes_shown[[v]]))
+  }
+  dn <- Filter(Negate(is.null), lapply(g, `[[`, "data_name"))
+  list(names_shown = nm, codes_shown = cd,
+       labelled = any(vapply(g, function(x) isTRUE(x$labelled), logical(1))),
+       data_name = if (length(dn)) dn[[1L]],
+       code_labels = stats::setNames(lapply(names(cd), function(v) {
+         .jst_result_value_labels(results, v)
+       }), names(cd)),
+       rerun = "analysis")
+}
+
+#' Internal helper: the codes and labels a result holds for a variable
+#'
+#' For the code line of ruling R72's note: a variable's labelled codes as
+#' the result holds them, so the jrelabel() line keeps them.
+#'
+#' @param results The results.
+#' @param v The variable's name.
+#' @return A named character vector (code = label), or NULL.
+#' @keywords internal
+.jst_result_value_labels <- function(results, v) {
+  for (x in results) {
+    code <- NULL; label <- NULL
+    if (inherits(x, "jst_freq") && !is.null(x$frequencies[[v]])) {
+      f <- x$frequencies[[v]]$valid
+      code <- f$Code; label <- f$Label
+    } else if (inherits(x, c("jst_lm", "jst_logistic")) && !is.null(x$dummy_groups[[v]])) {
+      g <- x$dummy_groups[[v]]
+      code <- g$codes; label <- g$value_labels
+    } else if (inherits(x, c("jst_ttest", "jst_anova")) &&
+               identical(.jst_apa_name(x, "group"), v)) {
+      code <- x$descriptives_raw$group_code; label <- x$descriptives_raw$group_label
+    } else if (inherits(x, "jst_crosstab")) {
+      for (cats in list(x$row_categories, x$col_categories)) {
+        a <- attr(cats, "variable")
+        if (!is.null(a) && identical(unname(a["name"]), v)) {
+          code <- cats$code; label <- cats$label
+        }
+      }
+    } else if (inherits(x, "jst_desc") && identical(unname(attr(x$descriptives_raw, "by")["name"]), v)) {
+      code <- x$descriptives_raw$group_code; label <- x$descriptives_raw$group_label
+    }
+    if (!is.null(code)) {
+      ok <- !is.na(code) & !is.na(label) & nzchar(as.character(label))
+      if (any(ok)) {
+        u <- !duplicated(as.character(code[ok]))
+        return(stats::setNames(as.character(label[ok][u]), as.character(code[ok][u])))
+      }
+      return(NULL)
+    }
+  }
+  NULL
+}
+
+#' Internal helper: jtable() given charts alone
+#'
+#' Each chart made a figure (ruling R63, Session 411): in the call's style
+#' when it names one -- the chart drawn again in that style's look (the
+#' S412 audit's F6) -- else in the style it was drawn in. The call's title,
+#' note and source make one figure's, so a call of several charts takes
+#' none of them; a table's own inputs -- headings, markers, a table type's
+#' settings -- a chart takes none of (Session 415). Ruling R72's note for
+#' each figure that shows a name or a code; then the report, and the file.
+#'
+#' @param charts The charts, a list.
+#' @param x_sub The call's first argument as typed.
+#' @param style The call's style, resolved, or NULL.
+#' @param title,note,source As \code{jtable()}'s.
+#' @param given Logical, named headings and markers: which the call gave.
+#' @param over_q The call's style settings, as typed.
+#' @param landscape NULL, or the call's page setting, checked.
+#' @param out_path,overwrite,open,print As \code{.jst_table_finish()}.
+#' @param cl,mc The call and the matched call.
+#' @return The figure, or the figures together (class "jst_tables"),
+#'   invisibly.
+#' @keywords internal
+.jst_figure_call <- function(charts, x_sub, style, title, note, source, given,
+                             over_q, landscape, out_path, overwrite, open,
+                             print, cl, mc) {
+  one <- if (is.symbol(x_sub) && length(charts) == 1L) deparse(x_sub) else "p1"
+  bad <- c(if (isTRUE(given[["headings"]])) "headings =",
+           if (isTRUE(given[["markers"]])) "markers =",
+           if (length(setdiff(names(over_q), "landscape")))
+             paste0(setdiff(names(over_q), "landscape"), " ="))
+  if (length(bad)) {
+    ttl <- .jst_plot_facts(charts[[1L]])$title
+    if (is.null(ttl) || is.na(ttl)) ttl <- "Wellbeing by Region"
+    .jst_stop(.jst_and_list(bad), if (length(bad) == 1L) " is" else " are",
+              " for a table; a chart takes title =, note = and source =, ",
+              "for example:\n  jtable(", one, ", title = \"", ttl, "\")",
+              fn = "jtable")
+  }
+  if (length(charts) > 1L && (!is.null(title) || !is.null(note) || !is.null(source))) {
+    gave <- c(if (!is.null(title)) "title =", if (!is.null(note)) "note =",
+              if (!is.null(source)) "source =")
+    first <- if (is.symbol(x_sub)) {
+      nm <- names(charts)
+      paste0(deparse(x_sub),
+             if (!is.null(nm) && nzchar(nm[1L]) && identical(make.names(nm[1L]), nm[1L]))
+               paste0("$", nm[1L]) else "[[1]]")
+    } else "p1"
+    # The example carries the call's own value, so the line makes the
+    # figure the user meant for the first chart.
+    val <- switch(gave[1L], "title =" = title, "note =" = note, source)
+    .jst_stop(.jst_and_list(gave), if (length(gave) == 1L) " is" else " are",
+              " for one figure, and the call gives ", length(charts),
+              " charts.\nMake each figure in a call of its own, for example:\n",
+              "  f1 <- jtable(", first, ", ", gave[1L], " ",
+              paste(deparse(val), collapse = ""), ")", fn = "jtable")
+  }
+  figs <- unname(lapply(charts, .jst_figure_build, style = style, title = title,
+                        note = note, source = source))
+  notes <- character(0)
+  for (i in seq_along(figs)) {
+    notes <- c(notes, .jst_label_gap_note(paste0("Figure ", i), figs[[i]]$gaps))
+  }
+  if (length(notes)) .jst_msg(paste(notes, collapse = "\n\n"))
+  .jst_table_finish(figs, figs[[1L]]$style, out_path, overwrite, open, print,
+                    landscape = landscape,
+                    how = c(.jst_call_with(cl, mc, "file", "Figure1.docx"),
+                            .jst_term_text(cl)))
+  invisible(if (length(figs) == 1L) figs[[1L]] else .jst_tables_new(figs))
+}
+
+#' Internal helper: the stop for saved results beside built tables or charts
+#'
+#' A saved result is made a table in a call of its own, then given with the
+#' built tables and charts (the S412 audit's F2, Session 413: a chart counts
+#' as built, so list(m, p) stops as list(m, t) does). Where the list was
+#' typed in the call, the lines that make each result's table and write
+#' everything to one file are given, as ruling R56's stop gives them.
+#'
+#' @param results The list.
+#' @param built Logical, one per element: a built table, a figure or a
+#'   chart.
+#' @param is_fig Logical, one per element: a figure or a chart.
+#' @param x_sub The call's first argument as typed.
+#' @param env The caller's environment.
+#' @keywords internal
+.jst_table_mixed_stop <- function(results, built, is_fig, x_sub, env) {
+  if (!any(is_fig)) {
+    .jst_stop("built tables and saved results cannot be given in one ",
+              "call.\nBuild each result into a table first, then give the ",
+              "tables together.", fn = "jtable")
+  }
+  el <- .jst_table_elements(x_sub, results)$text
+  lines <- character(0)
+  if (!is.null(el) && length(el) == length(results)) {
+    k <- sum(!built)
+    nm <- .jst_table_line_names(k, env)
+    txt <- el
+    txt[!built] <- nm
+    lines <- c(paste0("  ", nm, " <- jtable(", el[!built], ")"),
+               paste0("  jtable(list(", paste(txt, collapse = ", "),
+                      "), file = \"Report.docx\")"))
+  }
+  .jst_stop("saved results cannot be given beside built tables or charts in ",
+            "one call.\nBuild each result into a table first, then give the ",
+            "tables and charts together",
+            if (length(lines)) paste0(":\n", paste(lines, collapse = "\n")) else ".",
+            fn = "jtable")
 }
 
 
@@ -5425,7 +6371,9 @@
 #' corrected item-total correlation and alpha if the item is deleted; and a
 #' multiple-response table from a \code{\link{jmulti}} result -- how many
 #' chose each option of a set of yes/no items, and what percentage of
-#' everyone who answered. The
+#' everyone who answered. A chart -- one \code{\link{jplot}()} drew, or one
+#' drawn in ggplot2 -- goes into the Word file as a figure (see Charts,
+#' below). The
 #' variables of a descriptives or frequency table go under role headings
 #' when \code{headings} names them, and each specific note's variables are
 #' marked when \code{markers} names them. A filter the analysis applied
@@ -5455,6 +6403,33 @@
 #' \code{landscape = "yes"} or \code{"no"} in the call that writes a file
 #' sets every page.
 #'
+#' \strong{Charts.} A chart kept with \code{<-} -- one \code{jplot()} drew,
+#' or one drawn in ggplot2 -- is given as a built table is:
+#' \code{jtable(p1, file = "Figure1.docx")} writes it as a figure, and
+#' \code{jtable(list(t1, p1, t2), file = "Report.docx")} writes it between
+#' the tables. Figures are numbered apart from the tables (Figure 1, Figure
+#' 2, ...), each framed as the style frames a table: the number, the title
+#' with N after it, the picture, and a note only when there is one. A
+#' \code{jplot()} chart's title is its variables' labels, or a model's or a
+#' test's plot's own title; a chart drawn in ggplot2 has its own title, which
+#' moves from the picture to the caption. \code{title =}, \code{note =} and
+#' \code{source =} give one chart's. A \code{jplot()} chart is drawn in the
+#' call's \code{style =}, or else in the style it was drawn in; a chart drawn
+#' in ggplot2 keeps its own look. The picture is drawn at the size the
+#' style's \code{[plot]} section gives (6 by 4 inches in both built-in styles, at
+#' 300 dots an inch), kept within the page. The \code{[plot]} section can also
+#' write each chart's data to an Excel file beside the Word file
+#' (\code{data.file = yes}: <file>_figures.xlsx, a sheet per figure) and each
+#' figure as a vector file (\code{vector.file = pdf} or \code{eps}:
+#' <file>_Figure_1.pdf), replacing files of those names; both are off in the
+#' built-in styles.
+#'
+#' \strong{Labels.} A table or a figure shows each variable by its label and
+#' each category by its value label, as the result kept them when the
+#' analysis ran. Where the result holds none, the variable's name or the
+#' category's code shows, and a note says so: add the label with
+#' \code{\link{jrelabel}()} and run the analysis again.
+#'
 #' \strong{The analysis inside the call.} \code{jtable(jlm(Fear ~ Age,
 #' d))} runs the analysis without printing it and makes its table; errors
 #' and warnings still show.
@@ -5478,10 +6453,13 @@
 #'   \code{jcorr()} result is a table of its own, and so is a
 #'   \code{jmulti()} result. Or a table \code{jtable()}
 #'   has already built, or a list of them: they go to the file as they
-#'   are, in the order given.
+#'   are, in the order given. Or a chart, made a figure: one \code{jplot()}
+#'   drew, one drawn in ggplot2, or the set of plots \code{jplot()} drew of
+#'   one result, each a figure; a chart goes beside built tables, never
+#'   beside a saved result.
 #' @param headings A named list: each heading and the variables under it,
-#'   bare or in quotes, e.g. \code{list("Dependent variable" = Wellbeing,
-#'   "Independent variables" = c(Income, Age))}. Every variable of the
+#'   bare or in quotes, e.g. \code{list(Outcome = WellbeingScore,
+#'   Predictors = c(Income, Age))}. Every variable of the
 #'   result goes under one heading; the table follows the list's order.
 #'   For a descriptives or frequency table.
 #' @param markers A named list: each specific note's text and the
@@ -5491,7 +6469,7 @@
 #'   In a regression table a predictor's row is marked; in a t-test or
 #'   ANOVA table an outcome's; in a crosstab a variable's label row; in a
 #'   reliability table an item's.
-#' @param title The table's title; the style's title when NULL (a
+#' @param title The table's title, or a figure's; the style's title when NULL (a
 #'   regression table's names the outcome, a t-test, ANOVA or crosstab's
 #'   the grouping variable, a multiple-response table's is the text its
 #'   items' labels share). A title given here fills the same placeholders
@@ -5510,7 +6488,8 @@
 #'   name goes in the output folder (\code{joptions(output.dir = )}) or the
 #'   working directory; a path with a folder goes there. NULL writes
 #'   nothing.
-#' @param style The style's name in quotes: \code{"apa"}, \code{"report"},
+#' @param style The style a table is built in, or a chart framed and drawn
+#'   in -- its name in quotes: \code{"apa"}, \code{"report"},
 #'   or the name of a style file (\code{"myjournal"} for
 #'   myjournal.jstyle), looked for in the style folder
 #'   (\code{joptions(style.dir = )}), the working directory and your
@@ -5533,13 +6512,16 @@
 #'   call outranks the style file. \code{\link{jstyle_settings}} lists
 #'   every setting. The general settings (the font, the caption's form,
 #'   the decimals) are the style file's, except \code{landscape = "yes"} or
-#'   \code{"no"}, a page choice the call may make. Any other input stops
+#'   \code{"no"}, a page choice the call may make. A chart's settings, the
+#'   \code{[plot]} section's, are the style file's alone. Any other input stops
 #'   with "unused input".
 #'
 #' @return The table, invisibly: an object of class \code{jst_table}, which
 #'   shows a facsimile of the Word table when printed. A call given two or
 #'   more built tables returns them together (class \code{jst_tables}),
-#'   which prints each one, numbered as in the file.
+#'   which prints each one, numbered as in the file. A chart given alone
+#'   returns its figure (class \code{jst_figure}), which prints its caption
+#'   and note and draws the picture as the Word file holds it.
 #'
 #' @seealso \code{\link{jstyle}} for styles, \code{\link{jstyle_settings}}
 #'   for every setting a style holds.
@@ -5560,6 +6542,11 @@
 #' doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
 #'               overwrite = TRUE)
 #' print(doc)
+#'
+#' # A chart as a figure, beside the tables
+#' p1 <- jplot(community, Region)
+#' doc2 <- jtable(list(t1, p1), file = file.path(tempdir(), "Report.docx"),
+#'                overwrite = TRUE)
 #'
 #' # Keep a result for a later session with base R
 #' path <- file.path(tempdir(), "m1.rds")
@@ -5602,6 +6589,21 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
               if (length(gen_given) == 1L) " is one of a style's general settings, which a call "
               else " are general settings of a style, which a call ",
               "cannot change.\nSet ", if (length(gen_given) == 1L) "it" else "them",
+              " in a style file, for example a copy of apa:\n",
+              "  jstyle(\"apa\", save.as = \"mystyle\")", fn = "jtable")
+  }
+  # A chart's settings -- the [plot] section's -- are the style file's alone
+  # (ruling R65, Session 411: "this should be in the style file, so it's
+  # easier for the user").
+  plot_only  <- setdiff(names(.jst_style_spec$plot),
+                        c(gen_keys, unlist(lapply(.jst_style_spec[setdiff(types, "plot")],
+                                                  names))))
+  plot_given <- intersect(names(over_q), plot_only)
+  if (length(plot_given)) {
+    .jst_stop(.jst_and_list(paste0(plot_given, " =")),
+              if (length(plot_given) == 1L) " is one of a style's chart settings, which a call "
+              else " are chart settings of a style, which a call ",
+              "cannot change.\nSet ", if (length(plot_given) == 1L) "it" else "them",
               " in a style file, for example a copy of apa:\n",
               "  jstyle(\"apa\", save.as = \"mystyle\")", fn = "jtable")
   }
@@ -5680,11 +6682,15 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   # pass.
   x_sub <- substitute(x)
   x <- .jst_output_scope(FALSE, x)
-  results <- if (is.list(x) && !inherits(x, c(.jst_apa_classes, "jst_table"))) {
+  # A chart -- a ggplot, a list under ggplot2 3 -- is one item, never a list
+  # of them (ruling R63, Session 411).
+  results <- if (.jst_is_chart(x) || inherits(x, "jst_figure")) list(x)
+  else if (is.list(x) && !inherits(x, c(.jst_apa_classes, "jst_table"))) {
     if (inherits(x, "jst_tables")) unclass(x) else x
   } else list(x)
   # A document given inside a list -- jtable(list(doc, t4)) -- puts its
-  # tables in place (Session 406).
+  # tables in place (Session 406), and a set of charts jplot() drew of one
+  # result its charts (Session 415).
   results <- .jst_tables_splice(results)
   if (length(results) == 0L) {
     .jst_stop("the list given is empty.\n",
@@ -5696,23 +6702,54 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   # first. A built table keeps the style it was built under; landscape =,
   # a page choice, is the one setting the writing call may give (Session
   # 406: it sets every page).
-  built <- vapply(results, inherits, logical(1), "jst_table")
+  # A chart counts as built (the S412 audit's F2, Session 413): it goes to
+  # the file as a figure, beside built tables, and a saved result beside it
+  # is refused as one beside a built table is.
+  is_chart <- vapply(results, .jst_is_chart, logical(1))
+  is_fig   <- is_chart | vapply(results, inherits, logical(1), "jst_figure")
+  built    <- is_fig | vapply(results, inherits, logical(1), "jst_table")
   if (any(built)) {
     if (!all(built)) {
-      .jst_stop("built tables and saved results cannot be given in one ",
-                "call.\nBuild each result into a table first, then give the ",
-                "tables together.")
-    }
-    if (!is.null(substitute(headings)) || !is.null(substitute(markers)) ||
-        !is.null(title) || !is.null(note) || !is.null(source) ||
-        !is.null(style) || length(setdiff(names(over_q), "landscape"))) {
-      .jst_stop("headings =, markers =, title =, note =, source =, style =, ",
-                "and a style's settings belong to the call that builds a ",
-                "table from a result; a built table keeps its own.")
+      .jst_table_mixed_stop(results, built, is_fig, x_sub, env)
     }
     land <- if (is.null(over_vals$landscape)) NULL else
       .jst_style_check_value("landscape", .jst_style_spec$general$landscape,
                              over_vals$landscape, "general", "jtable")
+    # Charts alone: each made a figure here, in the call's style when it
+    # names one (ruling R63, Session 411), with the call's title, note and
+    # source -- for one chart -- as a table's are given.
+    if (all(is_chart)) {
+      return(.jst_figure_call(results, x_sub, style = if (!is.null(style)) st,
+                              title = title, note = note, source = source,
+                              given = c(headings = !is.null(substitute(headings)),
+                                        markers  = !is.null(substitute(markers))),
+                              over_q = over_q, landscape = land,
+                              out_path = out_path, overwrite = overwrite,
+                              open = open, print = print, cl = cl, mc = mc))
+    }
+    if (!is.null(substitute(headings)) || !is.null(substitute(markers)) ||
+        !is.null(title) || !is.null(note) || !is.null(source) ||
+        !is.null(style) || length(setdiff(names(over_q), "landscape"))) {
+      if (any(is_fig)) {
+        .jst_stop("headings =, markers =, title =, note =, source =, style =, ",
+                  "and a style's settings belong to the call that builds a ",
+                  "table from a result, or a figure from a chart; a built ",
+                  "table or figure keeps its own.")
+      }
+      .jst_stop("headings =, markers =, title =, note =, source =, style =, ",
+                "and a style's settings belong to the call that builds a ",
+                "table from a result; a built table keeps its own.")
+    }
+    # A chart among built tables is made a figure as it is: in the style it
+    # was drawn in.
+    nums <- .jst_doc_numbers(results)
+    gap_notes <- character(0)
+    for (i in which(is_chart)) {
+      results[[i]] <- .jst_figure_build(results[[i]])
+      gap_notes <- c(gap_notes, .jst_label_gap_note(paste0("Figure ", nums[i]),
+                                                    results[[i]]$gaps))
+    }
+    if (length(gap_notes)) .jst_msg(paste(gap_notes, collapse = "\n\n"))
     doc_st <- .jst_table_style(results[[1L]], st)
     .jst_table_finish(results, doc_st, out_path, overwrite, open, print,
                       landscape = land, hint = TRUE)
@@ -5776,8 +6813,14 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   tbl$vars    <- vars
   tbl$source  <- .jst_table_elements(x_sub, results)$source
   # What the builder has to say beside the table (the models' Ns differ):
-  # printed before the report, at every output level.
+  # printed before the report, at every output level. Then ruling R72's
+  # note when the table shows a name or a code where the result holds no
+  # label, a blank line before it after another note (Rule F).
   for (m in tbl$messages) .jst_msg(m)
+  gap_note <- .jst_label_gap_note("Table 1", .jst_table_label_gaps(results))
+  if (!is.null(gap_note)) {
+    .jst_msg(if (length(tbl$messages)) paste0("\n", gap_note) else gap_note)
+  }
   .jst_table_finish(list(tbl), st, out_path, overwrite, open, print,
                     how = c(.jst_call_with(cl, mc, "file", "Table1.docx"),
                             .jst_term_text(cl)))
@@ -5794,9 +6837,21 @@ print.jst_table <- function(x, ...) {
 #' @rdname jtable
 #' @exportS3Method
 print.jst_tables <- function(x, ...) {
+  nums <- .jst_doc_numbers(x)
   for (i in seq_along(x)) {
-    .jst_table_preview(x[[i]], .jst_table_style(x[[i]], NULL), number = i)
+    if (inherits(x[[i]], "jst_figure")) {
+      .jst_figure_preview(x[[i]], number = nums[i])
+    } else {
+      .jst_table_preview(x[[i]], .jst_table_style(x[[i]], NULL), number = nums[i])
+    }
   }
+  invisible(x)
+}
+
+#' @rdname jtable
+#' @exportS3Method
+print.jst_figure <- function(x, ...) {
+  .jst_figure_preview(x, number = 1L)
   invisible(x)
 }
 
@@ -5816,18 +6871,24 @@ print.jst_tables <- function(x, ...) {
 
 #' Internal helper: put a document's tables in its place in a list
 #'
+#' And a set of charts -- what jplot() returns for a result it draws
+#' several plots of -- its charts, each a figure of its own (Session 415).
+#'
 #' @param results The list jtable() was given.
-#' @return The list, each jst_tables element replaced by its tables, names
-#'   kept for the other elements.
+#' @return The list, each jst_tables element replaced by its tables and
+#'   figures, and each set of charts by its charts, names kept for the
+#'   other elements.
 #' @keywords internal
 .jst_tables_splice <- function(results) {
-  docs <- vapply(results, inherits, logical(1), "jst_tables")
+  docs <- vapply(results, function(r) inherits(r, "jst_tables") || .jst_is_chart_set(r),
+                 logical(1))
   if (!any(docs)) return(results)
   rn  <- names(results); if (is.null(rn)) rn <- rep("", length(results))
   out <- list(); nms <- character(0)
   for (i in seq_along(results)) {
     if (docs[i]) {
-      el  <- unclass(results[[i]])
+      el  <- if (inherits(results[[i]], "jst_tables")) unclass(results[[i]])
+             else results[[i]]
       out <- c(out, unname(el)); nms <- c(nms, rep("", length(el)))
     } else {
       out <- c(out, list(results[[i]])); nms <- c(nms, rn[i])
@@ -6193,11 +7254,21 @@ print.jst_tables <- function(x, ...) {
   existed <- !is.null(out_path) && file.exists(out_path)
   write <- !is.null(out_path) &&
     .jst_table_overwrite_gate(out_path, overwrite, ask = interactive())
-  if (write) .jst_docx_pack(.jst_docx_parts(tables, style, landscape), out_path)
+  extra <- NULL
+  if (write) {
+    .jst_docx_pack(.jst_docx_parts(tables, style, landscape), out_path)
+    # A figure's data and vector files, beside the Word file, when its
+    # style's [plot] section asks for them (ruling R65).
+    if (any(vapply(tables, inherits, logical(1), "jst_figure"))) {
+      extra <- .jst_figure_files(tables, .jst_docx_layout(tables, style, landscape),
+                                 out_path)
+    }
+  }
   if (.jst_print_on(print)) {
     .jst_table_report(tables, .jst_docx_layout(tables, style, landscape),
                       path = if (write) out_path, replaced = existed && write,
-                      asked = !is.null(out_path), hint = hint, how = how)
+                      asked = !is.null(out_path), hint = hint, how = how,
+                      extra = extra)
   }
   if (write) .jst_table_open(out_path, open)
   invisible(write)
@@ -6223,21 +7294,62 @@ print.jst_tables <- function(x, ...) {
 #' @param asked Logical; the call gave file = (the overwrite gate speaks
 #'   for a declined write).
 #' @param hint,how As \code{.jst_table_finish()}.
+#' @param extra The files written beside the Word file for its figures
+#'   (\code{.jst_figure_files()}), or NULL.
 #' @keywords internal
 .jst_table_report <- function(tables, lay, path = NULL, replaced = FALSE,
-                              asked = FALSE, hint = FALSE, how = NULL) {
+                              asked = FALSE, hint = FALSE, how = NULL,
+                              extra = NULL) {
+  nums   <- .jst_doc_numbers(tables)
+  is_fig <- vapply(tables, inherits, logical(1), "jst_figure")
   for (i in seq_along(tables)) {
     tbl <- tables[[i]]
-    .jst_msg_out(paste0("Table ", i, ". ",
+    if (is_fig[i]) {
+      # A figure (ruling R63): its number and title, then what it shows,
+      # its size and its page.
+      ttl <- .jst_table_strip_markup(tbl$caption$title)
+      .jst_msg_out(paste0("Figure ", nums[i], ".", if (nzchar(ttl)) paste0(" ", ttl)))
+      .jst_msg_out(paste0("  ", .jst_figure_shape(tbl, lay[[i]]), "."))
+      next
+    }
+    .jst_msg_out(paste0("Table ", nums[i], ". ",
                         .jst_table_strip_markup(tbl$caption$title)))
     .jst_msg_out(paste0("  ", .jst_table_shape(tbl), ", ",
                         .jst_table_page_text(tbl, lay[[i]]), "."))
   }
+  nt <- sum(!is_fig); nf <- sum(is_fig)
   if (!is.null(path)) {
-    .jst_msg_out(paste0(if (length(tables) == 1L) "Table" else
-                          paste(length(tables), "tables"),
-                        " written to ", .jst_norm_path(path)))
+    what <- if (nf == 0L) {
+      if (nt == 1L) "Table" else paste(nt, "tables")
+    } else if (nt == 0L) {
+      if (nf == 1L) "Figure" else paste(nf, "figures")
+    } else {
+      paste(nt, .jst_plural(nt, "table"), "and", nf, .jst_plural(nf, "figure"))
+    }
+    .jst_msg_out(paste0(what, " written to ", .jst_norm_path(path)))
     if (replaced) .jst_msg_out("It replaced the file that was there.")
+    if (!is.null(extra$xlsx)) {
+      fn <- sub("^Figure ", "", extra$sheets)
+      .jst_msg_out(paste0("The data of ", if (length(fn) == 1L) "Figure " else "Figures ",
+                          .jst_and_list(fn), " written to ", .jst_norm_path(extra$xlsx)))
+    }
+    for (k in names(extra$vector)) {
+      .jst_msg_out(paste0("Figure ", k, " also written to ",
+                          .jst_norm_path(extra$vector[[k]])))
+    }
+  } else if (!asked && nf > 0L) {
+    made <- paste(c(if (nt) .jst_plural(nt, "table"), .jst_plural(nf, "figure")),
+                  collapse = " and ")
+    .jst_msg_out(paste0("The ", made, if (nt + nf == 1L) " was" else " were",
+                        " made in R; no Word file was asked for."))
+    if (length(how) == 2L) {
+      .jst_advisory_note(
+        "Note: to write the figure to a Word file, add file = to the call:\n",
+        "  ", how[1L], "\n",
+        "To see a figure here, print it by the name it was kept under with ",
+        "<-, for example:\n",
+        "  print(f1)")
+    }
   } else if (!asked) {
     # The presentation review's entry 8 (Session 414): "No file was
     # written." read as a failure on each building line of ruling R56's own
@@ -6308,6 +7420,8 @@ print.jst_tables <- function(x, ...) {
 #' @param tables A list of jst_table.
 #' @keywords internal
 .jst_table_combine_hint <- function(tables) {
+  # A table's number among the tables, figures numbered apart (ruling R63).
+  nums <- .jst_doc_numbers(tables)
   keys <- vapply(tables, function(t) if (is.null(t$share)) NA_character_ else t$share,
                  character(1))
   for (k in unique(keys[!is.na(keys)])) {
@@ -6333,7 +7447,7 @@ print.jst_tables <- function(x, ...) {
                                               paste0("\"", nms, "\" = ", src), src),
                                        collapse = ", "), "))")
     }
-    .jst_advisory_note("Note: Tables ", .jst_and_list(as.character(at)), " ",
+    .jst_advisory_note("Note: Tables ", .jst_and_list(as.character(nums[at])), " ",
                        what, " and could be one table",
                        if (is.null(line)) "." else ":", line)
   }
@@ -6614,8 +7728,15 @@ print.jst_tables <- function(x, ...) {
 #' one section per table type, \code{[descriptives]}, \code{[frequencies]},
 #' \code{[regression]}, \code{[logistic]}, \code{[correlation]},
 #' \code{[ttest]}, \code{[anova]}, \code{[crosstab]}, \code{[reliability]}
-#' and \code{[multiresponse]}. A setting the file leaves out comes from the style
-#' its \code{based.on} line names. \code{\link{jstyle_settings}} lists every
+#' and \code{[multiresponse]}, then \code{[plot]}, a chart's: the font and
+#' size its words are drawn in, its palette (greys, or colors in order, such
+#' as a brand's), gridlines, axis lines, where the legend goes, the values on
+#' its bars, its width and height in inches, its resolution, and whether a
+#' Word file of figures is written with each chart's data in an Excel file
+#' and each figure as a vector file. A setting the file leaves out comes from
+#' the style its \code{based.on} line names; a font or size the
+#' \code{[plot]} section leaves out comes from the file's general settings
+#' first, so a file that sets its tables' font sets its charts' too. \code{\link{jstyle_settings}} lists every
 #' setting and what it takes. jstats looks for a style named in a call in
 #' the style folder (\code{joptions(style.dir = )}), the working directory
 #' and your jstats folder, in that order.
@@ -7074,6 +8195,8 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
                      ", in order, separated by commas",
                      if (isTRUE(sp$none)) "; or none"),
     stars   = "one to three p-values between 0 and 1, largest first",
+    palette = paste0("greys, or one or more colors in order, separated by commas, each a ",
+                     "color name such as navy or six hex digits such as 1F3864"),
     "")
 }
 
@@ -7270,6 +8393,7 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
                  collapse = ", "))
   }
   if (identical(sp$kind, "columns")) return(paste(v, collapse = ", "))
+  if (identical(sp$kind, "palette")) return(paste(v, collapse = ", "))
   if (is.numeric(v)) return(format(v, scientific = FALSE))
   v <- as.character(v)
   if (!nzchar(v) || grepl("^\\s|\\s$|^[\"']|#", v)) {
@@ -7306,7 +8430,8 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
              anova        = "An ANOVA table, from jaov() results.",
              crosstab     = "A crosstab, from jcrosstab() results.",
              reliability  = "A reliability table, from jalpha() results.",
-             multiresponse = "A multiple-response table, from a jmulti() result.")
+             multiresponse = "A multiple-response table, from a jmulti() result.",
+             plot         = "A chart, from jplot(): its look, and its picture in a Word file.")
   # The header tells whoever edits the file -- a person, or an AI
   # assistant given the file's text -- what may change (Session 406). The
   # editing rule is worded as the short file's and the orientation's are

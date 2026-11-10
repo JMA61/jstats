@@ -66,9 +66,9 @@ The first sorted unique value becomes the reference category. Use
 \item{count}{Optional. Variables to treat as counts for this call (the
 per-call counterpart of \code{jcount()}), named bare or in quotes,
 several with \code{c()}. On the
-dependent variable it speaks the count-regression caveat definitively
+outcome it speaks the count-regression caveat definitively
 rather than as a hedge, and applies even when the variable sits outside
-the structural 0-6 band. On an independent variable it behaves like
+the structural 0-6 band. On a predictor it behaves like
 \code{numeric} (a count predictor enters the model as numeric). A
 variable cannot be listed in both \code{count} and \code{categorical}.}
 
@@ -304,9 +304,9 @@ with labels like "18 years", "19 years").
 \item The \code{categorical} argument forces variables without value
 labels (or plain numeric variables) to be treated as categorical
 (e.g. a numeric Program variable coded 1--4 from a CSV file).
-\item The dependent variable is always modelled as numeric. Naming it in
+\item The outcome is always modelled as numeric. Naming it in
 \code{numeric} or \code{count} does not change that; it only asserts the
-DV's role so the count / categorical-like note is silenced
+outcome's role so the count / categorical-like note is silenced
 (\code{numeric}) or stated definitively (\code{count}).
 }
 

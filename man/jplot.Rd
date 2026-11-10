@@ -11,6 +11,8 @@
 \alias{jplot.jst_crosstab}
 \alias{jplot.jst_desc}
 \alias{jplot.jst_freq}
+\alias{jplot.jst_alpha}
+\alias{jplot.jst_multi}
 \title{Visualize jst_* result objects or plot variables directly from a data frame}
 \usage{
 jplot(x, which = "core", ...)
@@ -29,7 +31,8 @@ jplot(x, which = "core", ...)
   numeric = NULL,
   categorical = NULL,
   count = NULL,
-  facet = NULL
+  facet = NULL,
+  style = NULL
 )
 
 \method{jplot}{jst_lm}(
@@ -39,22 +42,27 @@ jplot(x, which = "core", ...)
   at = "zero",
   equation = TRUE,
   r2 = TRUE,
-  ...
+  ...,
+  style = NULL
 )
 
-\method{jplot}{jst_logistic}(x, which = "core", focal = NULL, at = "zero", ...)
+\method{jplot}{jst_logistic}(x, which = "core", focal = NULL, at = "zero", ..., style = NULL)
 
-\method{jplot}{jst_ttest}(x, which = "core", ...)
+\method{jplot}{jst_ttest}(x, which = "core", ..., style = NULL)
 
-\method{jplot}{jst_anova}(x, which = "core", ...)
+\method{jplot}{jst_anova}(x, which = "core", ..., style = NULL)
 
-\method{jplot}{jst_corr}(x, which = "core", ...)
+\method{jplot}{jst_corr}(x, which = "core", ..., style = NULL)
 
-\method{jplot}{jst_crosstab}(x, which = "core", ...)
+\method{jplot}{jst_crosstab}(x, which = "core", ..., style = NULL)
 
 \method{jplot}{jst_desc}(x, which = "core", ...)
 
 \method{jplot}{jst_freq}(x, which = "core", ...)
+
+\method{jplot}{jst_alpha}(x, which = "core", ...)
+
+\method{jplot}{jst_multi}(x, which = "core", ...)
 }
 \arguments{
 \item{x}{A result object from one of the package's analysis functions
@@ -99,17 +107,14 @@ filter: \code{subset = NOT(Age < 40)}, for example, is refused with
 the corrected \code{subset = !(Age < 40)} shown (see
 \code{\link{jsubset}} for a translation table).}
 
-\item{labels}{Character or NULL. Variable label display mode (data-first
-and formula forms): one of \code{"both"}, \code{"names"}, \code{"labels"},
-\code{"legend"}, or \code{"legend.bottom"}. \code{"names"} uses variable
-names as axis/legend titles; \code{"labels"} uses each variable's label
-as its axis/legend title instead (falling back to the name when
-unlabelled) and prints no console legend; \code{"legend"} and
-\code{"legend.bottom"} keep names on the axes and print a console label
-legend. \code{"both"} is accepted but currently renders as \code{"names"}
-on plots (the \code{"name: label"} form for plot titles is deferred to a
-later phase). NULL (default) defers to \code{joutput()}'s
-\code{variable.id} setting. Not a logical.}
+\item{labels}{Character or NULL. How the chart names its variables
+(data-first and formula forms). NULL (the default) and \code{"labels"}
+title each axis and legend with the variable's label, the name where it
+has none; \code{joutput()}'s \code{variable.id} does not reach a chart,
+as it reaches no table. \code{"names"} uses the variables' names;
+\code{"legend"} and \code{"legend.bottom"} keep names on the axes and
+print a console label legend; \code{"both"} is accepted and renders as
+\code{"names"}. Not a logical.}
 
 \item{numeric}{Optional. Plotted variables to treat as continuous for
 this call (the per-call counterpart of \code{jnumeric()}), named bare
@@ -136,9 +141,15 @@ it is provided for symmetry with the other analysis functions.}
 (variable-list form: a histogram, density plot, bar chart or grouped
 bar chart), bare or in quotes. See Details.}
 
-\item{focal}{Unquoted name of the independent variable to place on the
+\item{style}{The publication style the chart is drawn in, a name in
+quotes: \code{"apa"}, \code{"report"}, or the name of a style file (see
+\code{\link{jstyle}}). NULL (the default) uses \code{joptions(style = )},
+apa when it is not set. The style's \code{[plot]} section gives the chart's
+look, and \code{\link{jtable}()} frames the chart in the same style.}
+
+\item{focal}{Unquoted name of the predictor to place on the
 x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and
-\code{probability} plots. Defaults to the first independent variable
+\code{probability} plots. Defaults to the first predictor
 in the model that is not dummy-coded, since a fitted line needs a
 numeric axis. A dummy-coded categorical variable is named as the
 formula names it (\code{focal = Region}), and is drawn with its
@@ -146,7 +157,7 @@ categories along the axis: the predicted outcome (or probability) at
 each with its 95\% confidence interval, the cases behind them.}
 
 \item{at}{Character string or named list specifying where non-focal
-independent variables are held when drawing the fitted line in
+predictors are held when drawing the fitted line in
 \code{jst_lm} / \code{jst_logistic} methods. One of \code{zero}
 (default), \code{mean}, \code{mixed} (categorical at 0, interval
 at mean), or a named list \code{list(Var1 = value, ...)}. A term
@@ -156,10 +167,12 @@ held: it is computed from the focal variable at each point of the
 line, so the line of a model with a squared term is a curve.}
 }
 \value{
-Invisibly, a single \code{ggplot} object if one plot is produced,
-or a named list of \code{ggplot} objects if multiple are produced
-(result-object form). Invisibly returns the \code{ggplot} object for
-the data-first form.
+Invisibly, the chart: a \code{ggplot} object of class
+\code{jst_plot}, which keeps what a figure needs -- its kind, its N,
+its default title from labels and the data it shows -- for
+\code{\link{jtable}()}; it remains a ggplot, so \code{+} adds to it.
+For a result drawn in several plots (result-object form), a named list
+of them, which \code{jtable()} takes as one figure each.
 }
 \description{
 Unified plotting function. Can be called in three ways:
@@ -169,15 +182,17 @@ Unified plotting function. Can be called in three ways:
 package's analysis functions. Produces appropriate plots for each class of
 result (see valid plot names below).
 
-\strong{Formula form} (for plots that distinguish DV from IV): Pass a
+\strong{Formula form} (for plots that distinguish an outcome from a
+predictor): Pass a
 formula as the first argument, followed optionally by a data frame, given
 either positionally or as \code{data = }:
 \code{jplot(WellbeingScore ~ Income, data = community)} is the same plot
 as \code{jplot(WellbeingScore ~ Income, community)}. Used
 for scatterplots and boxplots, consistent with the formula syntax of
-\code{jlm()}, \code{jaov()}, and \code{jt()}. The DV on the left of
-\code{~} goes on the y-axis; the IV on the right goes on the x-axis. Only
-single-IV formulas are supported here; for multi-IV models, fit with
+\code{jlm()}, \code{jaov()}, and \code{jt()}. The outcome on the left of
+\code{~} goes on the y-axis; the predictor on the right goes on the
+x-axis. Only one predictor is supported here; for a model of several, fit
+with
 \code{jlm()} and pass the result to \code{jplot()}. Each side names a
 variable as it stands: a computed term such as \code{log(Income)} or
 \code{I(Age > 40)} is refused, so create it as a variable of the data
@@ -209,6 +224,22 @@ variable as numbers unless it is registered or asserted (see
 Supports pipeline integration (\code{jsubset}, \code{jcomplete}, per-call
 \code{subset}), grouping via \code{by = }, and regression lines with
 equation/R-squared/band annotations.
+
+\strong{The look.} A chart is drawn in a publication style's look -- the
+style's \code{[plot]} section: its font and size, its colors, its gridlines and
+axis lines, where its legend goes. Both built-in styles draw in greys,
+Arial 10 on white, bars from zero; \code{"apa"} with both axis lines, no
+gridlines and the legend at the right, \code{"report"} with light
+horizontal gridlines, the x axis line alone and the legend at the top. A
+chart's axes and legends are titled by the variables' labels, the name
+where a variable has none; a bar chart of one series shows each bar's
+count. The style is \code{joptions(style = )}'s, apa when none is set,
+or the call's \code{style =}.
+
+\strong{A chart in a Word file.} Keep a chart with \code{<-} and give it
+to \code{\link{jtable}()}: it goes into the Word file as a figure,
+numbered, its title -- the variables' labels -- in the caption with N
+after it, in the style it was drawn in (see \code{\link{jtable}}).
 
 Valid plot names by class (for the result-object form):
 \itemize{
@@ -273,7 +304,7 @@ band illustrating the homoskedasticity assumption), \code{none} (no band).
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{jplot(default)}: the default method: a scatter or box plot from a formula (\code{DV ~ IV}), or a histogram or bar chart from a data frame and one or more variables.
+\item \code{jplot(default)}: the default method: a scatter or box plot from a formula (\code{Outcome ~ Predictor}), or a histogram or bar chart from a data frame and one or more variables.
 
 \item \code{jplot(jst_lm)}: diagnostic, coefficient (forest), and fitted-effect plots for a \code{jlm()} linear-regression result.
 
@@ -290,6 +321,13 @@ band illustrating the homoskedasticity assumption), \code{none} (no band).
 \item \code{jplot(jst_desc)}: (planned) direct plotting of a \code{jdesc()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
 
 \item \code{jplot(jst_freq)}: (planned) direct plotting of a \code{jfreq()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
+
+\item \code{jplot(jst_alpha)}: a \code{jalpha()} result is not drawn; this method says
+so and points you to the data-first form for its items, for example
+\code{jplot(data, Item1)}.
+
+\item \code{jplot(jst_multi)}: a \code{jmulti()} result is not drawn; this method says
+so and points you to the data-first form for its items.
 
 }}
 \examples{
@@ -316,6 +354,13 @@ jplot(community, Age)                      # histogram
 jplot(data = community, Age)               # the same, data frame as data =
 jplot(community, Region)                   # bar chart
 jplot(community, Region, Volunteer)        # grouped bar chart
+
+# A chart kept, then written to a Word file as a figure
+p1 <- jplot(community, Region)
+jtable(p1, file = file.path(tempdir(), "Figure1.docx"), overwrite = TRUE)
+
+# The report style's look
+jplot(community, Region, style = "report")
 
 # Using juse() default (omit the data frame in either form)
 juse(community)

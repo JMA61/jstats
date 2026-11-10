@@ -10,7 +10,8 @@
   by_name = NULL,
   axis_labels = NULL,
   by_label = NULL,
-  facet_name = NULL
+  facet_name = NULL,
+  look = .jst_plot_look_now()
 )
 }
 \description{
@@ -18,6 +19,6 @@ The alternative to the histogram (Capability Slate C3, Session 378):
 the variable's kernel density estimate, one curve, or one per group of
 \code{by =} laid over each other, and one panel per group of
 \code{facet =}. Never the automatic choice: \code{type = "density"}
-asks for it.
+asks for it. In the look's colors since Session 415.
 }
 \keyword{internal}

@@ -23,8 +23,8 @@ jt(
 )
 }
 \arguments{
-\item{formula}{A formula of the form \code{DV ~ Group}. A transformed
-term such as \code{log(DV)} is computed automatically: the test and
+\item{formula}{A formula of the form \code{Outcome ~ Group}. A transformed
+term such as \code{log(Outcome)} is computed automatically: the test and
 the descriptive output both use the transformed values.}
 
 \item{data}{A data frame containing variables referenced in \code{formula}.}
@@ -73,7 +73,7 @@ the corrected \code{subset = !(Age < 40)} shown (see
 \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
 \code{"legend.bottom"}. \code{"names"} shows variable names only;
 \code{"both"} shows \code{"name: label"};
-\code{"labels"} shows the DV and grouping-variable labels in the table
+\code{"labels"} shows the outcome and grouping-variable labels in the table
 captions (group levels follow the value.id mode) -- best for short labels;
 \code{"legend"}/\code{"legend.bottom"} keep names and print a label
 legend after the output. NULL (default) defers to \code{joutput()}'s

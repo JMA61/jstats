@@ -76,8 +76,15 @@ value; a \code{#} starts a note; the general settings come first, then
 one section per table type, \code{[descriptives]}, \code{[frequencies]},
 \code{[regression]}, \code{[logistic]}, \code{[correlation]},
 \code{[ttest]}, \code{[anova]}, \code{[crosstab]}, \code{[reliability]}
-and \code{[multiresponse]}. A setting the file leaves out comes from the style
-its \code{based.on} line names. \code{\link{jstyle_settings}} lists every
+and \code{[multiresponse]}, then \code{[plot]}, a chart's: the font and
+size its words are drawn in, its palette (greys, or colors in order, such
+as a brand's), gridlines, axis lines, where the legend goes, the values on
+its bars, its width and height in inches, its resolution, and whether a
+Word file of figures is written with each chart's data in an Excel file
+and each figure as a vector file. A setting the file leaves out comes from
+the style its \code{based.on} line names; a font or size the
+\code{[plot]} section leaves out comes from the file's general settings
+first, so a file that sets its tables' font sets its charts' too. \code{\link{jstyle_settings}} lists every
 setting and what it takes. jstats looks for a style named in a call in
 the style folder (\code{joptions(style.dir = )}), the working directory
 and your jstats folder, in that order.

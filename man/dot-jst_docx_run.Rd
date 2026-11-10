@@ -11,7 +11,8 @@
   superscript = FALSE,
   color = NULL,
   size = NULL,
-  tab = FALSE
+  tab = FALSE,
+  keep = FALSE
 )
 }
 \arguments{
@@ -24,6 +25,9 @@
 \item{size}{Points, or NULL for the document default.}
 
 \item{tab}{Logical; TRUE writes a tab character before the text.}
+
+\item{keep}{Logical; TRUE writes a label that breaks only where ruling
+R55's measure breaks it (\code{.jst_docx_keep_text()}).}
 }
 \description{
 Internal helper: one run of text

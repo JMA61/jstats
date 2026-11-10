@@ -7,7 +7,7 @@
 .jst_docx_parts(tables, style, landscape = NULL)
 }
 \arguments{
-\item{tables}{A list of jst_table.}
+\item{tables}{A list of jst_table and jst_figure.}
 
 \item{style}{The style list.}
 
@@ -15,7 +15,8 @@
 call's).}
 }
 \value{
-A named list of parts: path in the package, then the text.
+A named list of parts: path in the package, then the text, or a
+picture's bytes.
 }
 \description{
 Internal helper: the parts of a document file

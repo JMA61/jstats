@@ -9,7 +9,8 @@
   size = NULL,
   bold = FALSE,
   italic = FALSE,
-  color = NULL
+  color = NULL,
+  keep = FALSE
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ caption's title, a fit row's label).}
 
 \item{color}{A six-digit hex colour, or NULL (Session 405: a column head
 with markup takes the header's colour).}
+
+\item{keep}{Logical; TRUE for a row's label (\code{.jst_docx_keep_text()}).}
 }
 \description{
 Reads the light markup: \emph{text} italic, ^text^ superscript. Under an

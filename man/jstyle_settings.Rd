@@ -240,3 +240,21 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{choice.note}}{yes: the note says respondents could choose more than one, so the percentages sum to more than 100 | no. Takes one of yes | no. In apa: \code{yes}.}
 }
 }
+\section{[plot]: a chart}{
+\describe{
+\item{\code{font}}{the typeface of a chart's text. Takes any text. In apa: \code{Arial}.}
+\item{\code{size}}{the size of a chart's text, in points. Takes a number from 6 to 72. In apa: \code{10}.}
+\item{\code{palette}}{the colors of a chart's bars, lines and points, in order: greys (595959 for one series, 404040 and A6A6A6 for two, more in steps from 404040) or the colors to use. Takes greys, or one or more colors in order, separated by commas, each a color name such as navy or six hex digits such as 1F3864. In apa: \code{greys}.}
+\item{\code{gridlines}}{light lines across a chart at the axes' labels: none | horizontal | vertical | both. Takes one of none | horizontal | vertical | both. In apa: \code{none}; in report: \code{horizontal}.}
+\item{\code{grid.color}}{the color of the gridlines. Takes a color name such as lightblue, or six hex digits such as ADD8E6. In apa: \code{D9D9D9}.}
+\item{\code{axis.lines}}{the axis lines drawn: both | x (the bottom axis) | y (the left axis) | none. Takes one of both | x | y | none. In apa: \code{both}; in report: \code{x}.}
+\item{\code{legend.position}}{where a chart's legend goes, with its title: right | top | bottom (top and bottom start at the left) | none. Takes one of right | top | bottom | none. In apa: \code{right}; in report: \code{top}.}
+\item{\code{values}}{yes: each bar's value just beyond its end, on a chart of one series, such as a bar chart of one variable | no. Takes one of yes | no. In apa: \code{yes}.}
+\item{\code{values.grouped}}{the same on a chart of several series, such as grouped bars: no | yes. Takes one of no | yes. In apa: \code{no}.}
+\item{\code{width}}{a figure's width in a Word file, in inches. Takes a number from 1 to 20. In apa: \code{6}.}
+\item{\code{height}}{a figure's height in a Word file, in inches. Takes a number from 1 to 20. In apa: \code{4}.}
+\item{\code{resolution}}{the resolution of a figure's picture, in dots per inch. Takes a whole number from 72 to 1200. In apa: \code{300}.}
+\item{\code{data.file}}{yes: the numbers each chart shows are written to an Excel file beside the Word file, a sheet per figure | no. Takes one of no | yes. In apa: \code{no}.}
+\item{\code{vector.file}}{a vector file of each figure beside the Word file, as a publisher may ask for one: none | pdf | eps. Takes one of none | pdf | eps. In apa: \code{none}.}
+}
+}

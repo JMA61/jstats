@@ -9,5 +9,7 @@
 \description{
 Handles the four band options: ci (ggplot default), pi (prediction
 interval, computed manually), see (constant +/- t*SEE rectangle), none.
+The line and its band take the series' color through the chart's color
+scales (Session 415).
 }
 \keyword{internal}

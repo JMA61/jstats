@@ -4,6 +4,7 @@
 \alias{jtable}
 \alias{print.jst_table}
 \alias{print.jst_tables}
+\alias{print.jst_figure}
 \title{Make a publication table from a saved result}
 \usage{
 jtable(
@@ -24,6 +25,8 @@ jtable(
 \method{print}{jst_table}(x, ...)
 
 \method{print}{jst_tables}(x, ...)
+
+\method{print}{jst_figure}(x, ...)
 }
 \arguments{
 \item{x}{A saved result -- what an analysis function returns, kept with
@@ -39,11 +42,14 @@ grouping variable stacks a row or a block per outcome; a list of
 \code{jcorr()} result is a table of its own, and so is a
 \code{jmulti()} result. Or a table \code{jtable()}
 has already built, or a list of them: they go to the file as they
-are, in the order given.}
+are, in the order given. Or a chart, made a figure: one \code{jplot()}
+drew, one drawn in ggplot2, or the set of plots \code{jplot()} drew of
+one result, each a figure; a chart goes beside built tables, never
+beside a saved result.}
 
 \item{headings}{A named list: each heading and the variables under it,
-bare or in quotes, e.g. \code{list("Dependent variable" = Wellbeing,
-"Independent variables" = c(Income, Age))}. Every variable of the
+bare or in quotes, e.g. \code{list(Outcome = WellbeingScore,
+Predictors = c(Income, Age))}. Every variable of the
 result goes under one heading; the table follows the list's order.
 For a descriptives or frequency table.}
 
@@ -55,7 +61,7 @@ In a regression table a predictor's row is marked; in a t-test or
 ANOVA table an outcome's; in a crosstab a variable's label row; in a
 reliability table an item's.}
 
-\item{title}{The table's title; the style's title when NULL (a
+\item{title}{The table's title, or a figure's; the style's title when NULL (a
 regression table's names the outcome, a t-test, ANOVA or crosstab's
 the grouping variable, a multiple-response table's is the text its
 items' labels share). A title given here fills the same placeholders
@@ -78,7 +84,8 @@ name goes in the output folder (\code{joptions(output.dir = )}) or the
 working directory; a path with a folder goes there. NULL writes
 nothing.}
 
-\item{style}{The style's name in quotes: \code{"apa"}, \code{"report"},
+\item{style}{The style a table is built in, or a chart framed and drawn
+in -- its name in quotes: \code{"apa"}, \code{"report"},
 or the name of a style file (\code{"myjournal"} for
 myjournal.jstyle), looked for in the style folder
 (\code{joptions(style.dir = )}), the working directory and your
@@ -105,14 +112,17 @@ table, \code{missing.rows = "none"} for a frequency table or
 call outranks the style file. \code{\link{jstyle_settings}} lists
 every setting. The general settings (the font, the caption's form,
 the decimals) are the style file's, except \code{landscape = "yes"} or
-\code{"no"}, a page choice the call may make. Any other input stops
+\code{"no"}, a page choice the call may make. A chart's settings, the
+\code{[plot]} section's, are the style file's alone. Any other input stops
 with "unused input".}
 }
 \value{
 The table, invisibly: an object of class \code{jst_table}, which
 shows a facsimile of the Word table when printed. A call given two or
 more built tables returns them together (class \code{jst_tables}),
-which prints each one, numbered as in the file.
+which prints each one, numbered as in the file. A chart given alone
+returns its figure (class \code{jst_figure}), which prints its caption
+and note and draws the picture as the Word file holds it.
 }
 \description{
 \code{jtable()} turns a saved analysis result into a publication table
@@ -144,7 +154,9 @@ each group, and the chi-square test; and a reliability table from
 corrected item-total correlation and alpha if the item is deleted; and a
 multiple-response table from a \code{\link{jmulti}} result -- how many
 chose each option of a set of yes/no items, and what percentage of
-everyone who answered. The
+everyone who answered. A chart -- one \code{\link{jplot}()} drew, or one
+drawn in ggplot2 -- goes into the Word file as a figure (see Charts,
+below). The
 variables of a descriptives or frequency table go under role headings
 when \code{headings} names them, and each specific note's variables are
 marked when \code{markers} names them. A filter the analysis applied
@@ -173,6 +185,33 @@ on landscape pages of its own, and the tables around it stay portrait.
 \code{landscape = "yes"} or \code{"no"} in the call that writes a file
 sets every page.
 
+\strong{Charts.} A chart kept with \code{<-} -- one \code{jplot()} drew,
+or one drawn in ggplot2 -- is given as a built table is:
+\code{jtable(p1, file = "Figure1.docx")} writes it as a figure, and
+\code{jtable(list(t1, p1, t2), file = "Report.docx")} writes it between
+the tables. Figures are numbered apart from the tables (Figure 1, Figure
+2, ...), each framed as the style frames a table: the number, the title
+with N after it, the picture, and a note only when there is one. A
+\code{jplot()} chart's title is its variables' labels, or a model's or a
+test's plot's own title; a chart drawn in ggplot2 has its own title, which
+moves from the picture to the caption. \code{title =}, \code{note =} and
+\code{source =} give one chart's. A \code{jplot()} chart is drawn in the
+call's \code{style =}, or else in the style it was drawn in; a chart drawn
+in ggplot2 keeps its own look. The picture is drawn at the size the
+style's \code{[plot]} section gives (6 by 4 inches in both built-in styles, at
+300 dots an inch), kept within the page. The \code{[plot]} section can also
+write each chart's data to an Excel file beside the Word file
+(\code{data.file = yes}: \if{html}{\out{<file>}}_figures.xlsx, a sheet per figure) and each
+figure as a vector file (\code{vector.file = pdf} or \code{eps}:
+\if{html}{\out{<file>}}_Figure_1.pdf), replacing files of those names; both are off in the
+built-in styles.
+
+\strong{Labels.} A table or a figure shows each variable by its label and
+each category by its value label, as the result kept them when the
+analysis ran. Where the result holds none, the variable's name or the
+category's code shows, and a note says so: add the label with
+\code{\link{jrelabel}()} and run the analysis again.
+
 \strong{The analysis inside the call.} \code{jtable(jlm(Fear ~ Age,
 d))} runs the analysis without printing it and makes its table; errors
 and warnings still show.
@@ -199,6 +238,11 @@ t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
 doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
               overwrite = TRUE)
 print(doc)
+
+# A chart as a figure, beside the tables
+p1 <- jplot(community, Region)
+doc2 <- jtable(list(t1, p1), file = file.path(tempdir(), "Report.docx"),
+               overwrite = TRUE)
 
 # Keep a result for a later session with base R
 path <- file.path(tempdir(), "m1.rds")

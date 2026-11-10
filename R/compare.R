@@ -431,8 +431,8 @@
 #' value by value is refused, where \code{lm()} would repeat the shorter
 #' one; a set used with \code{\%in\%} may have any length.
 #'
-#' @param formula A formula of the form \code{DV ~ Group}. A transformed
-#'   term such as \code{log(DV)} is computed automatically: the test and
+#' @param formula A formula of the form \code{Outcome ~ Group}. A transformed
+#'   term such as \code{log(Outcome)} is computed automatically: the test and
 #'   the descriptive output both use the transformed values.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param paired Logical. If TRUE, runs a paired samples t-test. Cases are
@@ -473,7 +473,7 @@
 #'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
 #'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
 #'   \code{"both"} shows \code{"name: label"};
-#'   \code{"labels"} shows the DV and grouping-variable labels in the table
+#'   \code{"labels"} shows the outcome and grouping-variable labels in the table
 #'   captions (group levels follow the value.id mode) -- best for short labels;
 #'   \code{"legend"}/\code{"legend.bottom"} keep names and print a label
 #'   legend after the output. NULL (default) defers to \code{joutput()}'s
@@ -1102,8 +1102,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' value by value is refused, where \code{lm()} would repeat the shorter
 #' one; a set used with \code{\%in\%} may have any length.
 #'
-#' @param formula A formula of the form \code{DV ~ Group}. A transformed
-#'   term such as \code{log(DV)} is computed automatically: the tests and
+#' @param formula A formula of the form \code{Outcome ~ Group}. A transformed
+#'   term such as \code{log(Outcome)} is computed automatically: the tests and
 #'   the descriptive output all use the transformed values.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param welch Logical. If FALSE (default), runs traditional ANOVA.
@@ -1156,7 +1156,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
 #'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
 #'   \code{"both"} shows \code{"name: label"};
-#'   \code{"labels"} shows the DV and grouping-variable labels wherever the
+#'   \code{"labels"} shows the outcome and grouping-variable labels wherever the
 #'   variable name appears (table captions and the ANOVA Source row; group
 #'   levels follow the value.id mode) -- best for short labels;
 #'   \code{"legend"}/\code{"legend.bottom"} keep names and print a label

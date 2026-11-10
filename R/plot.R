@@ -15,15 +15,17 @@
 #' package's analysis functions. Produces appropriate plots for each class of
 #' result (see valid plot names below).
 #'
-#' \strong{Formula form} (for plots that distinguish DV from IV): Pass a
+#' \strong{Formula form} (for plots that distinguish an outcome from a
+#' predictor): Pass a
 #' formula as the first argument, followed optionally by a data frame, given
 #' either positionally or as \code{data = }:
 #' \code{jplot(WellbeingScore ~ Income, data = community)} is the same plot
 #' as \code{jplot(WellbeingScore ~ Income, community)}. Used
 #' for scatterplots and boxplots, consistent with the formula syntax of
-#' \code{jlm()}, \code{jaov()}, and \code{jt()}. The DV on the left of
-#' \code{~} goes on the y-axis; the IV on the right goes on the x-axis. Only
-#' single-IV formulas are supported here; for multi-IV models, fit with
+#' \code{jlm()}, \code{jaov()}, and \code{jt()}. The outcome on the left of
+#' \code{~} goes on the y-axis; the predictor on the right goes on the
+#' x-axis. Only one predictor is supported here; for a model of several, fit
+#' with
 #' \code{jlm()} and pass the result to \code{jplot()}. Each side names a
 #' variable as it stands: a computed term such as \code{log(Income)} or
 #' \code{I(Age > 40)} is refused, so create it as a variable of the data
@@ -55,6 +57,22 @@
 #' Supports pipeline integration (\code{jsubset}, \code{jcomplete}, per-call
 #' \code{subset}), grouping via \code{by = }, and regression lines with
 #' equation/R-squared/band annotations.
+#'
+#' \strong{The look.} A chart is drawn in a publication style's look -- the
+#' style's \code{[plot]} section: its font and size, its colors, its gridlines and
+#' axis lines, where its legend goes. Both built-in styles draw in greys,
+#' Arial 10 on white, bars from zero; \code{"apa"} with both axis lines, no
+#' gridlines and the legend at the right, \code{"report"} with light
+#' horizontal gridlines, the x axis line alone and the legend at the top. A
+#' chart's axes and legends are titled by the variables' labels, the name
+#' where a variable has none; a bar chart of one series shows each bar's
+#' count. The style is \code{joptions(style = )}'s, apa when none is set,
+#' or the call's \code{style =}.
+#'
+#' \strong{A chart in a Word file.} Keep a chart with \code{<-} and give it
+#' to \code{\link{jtable}()}: it goes into the Word file as a figure,
+#' numbered, its title -- the variables' labels -- in the caption with N
+#' after it, in the style it was drawn in (see \code{\link{jtable}}).
 #'
 #' Valid plot names by class (for the result-object form):
 #' \itemize{
@@ -125,16 +143,16 @@
 #' @param ... Additional arguments: for the result-object form these are
 #'   passed to class-specific methods; for the data-first form these are
 #'   unquoted variable names (1 or 2).
-#' @param focal Unquoted name of the independent variable to place on the
+#' @param focal Unquoted name of the predictor to place on the
 #'   x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and
-#'   \code{probability} plots. Defaults to the first independent variable
+#'   \code{probability} plots. Defaults to the first predictor
 #'   in the model that is not dummy-coded, since a fitted line needs a
 #'   numeric axis. A dummy-coded categorical variable is named as the
 #'   formula names it (\code{focal = Region}), and is drawn with its
 #'   categories along the axis: the predicted outcome (or probability) at
 #'   each with its 95% confidence interval, the cases behind them.
 #' @param at Character string or named list specifying where non-focal
-#'   independent variables are held when drawing the fitted line in
+#'   predictors are held when drawing the fitted line in
 #'   \code{jst_lm} / \code{jst_logistic} methods. One of \code{zero}
 #'   (default), \code{mean}, \code{mixed} (categorical at 0, interval
 #'   at mean), or a named list \code{list(Var1 = value, ...)}. A term
@@ -169,17 +187,19 @@
 #'   filter: \code{subset = NOT(Age < 40)}, for example, is refused with
 #'   the corrected \code{subset = !(Age < 40)} shown (see
 #'   \code{\link{jsubset}} for a translation table).
-#' @param labels Character or NULL. Variable label display mode (data-first
-#'   and formula forms): one of \code{"both"}, \code{"names"}, \code{"labels"},
-#'   \code{"legend"}, or \code{"legend.bottom"}. \code{"names"} uses variable
-#'   names as axis/legend titles; \code{"labels"} uses each variable's label
-#'   as its axis/legend title instead (falling back to the name when
-#'   unlabelled) and prints no console legend; \code{"legend"} and
-#'   \code{"legend.bottom"} keep names on the axes and print a console label
-#'   legend. \code{"both"} is accepted but currently renders as \code{"names"}
-#'   on plots (the \code{"name: label"} form for plot titles is deferred to a
-#'   later phase). NULL (default) defers to \code{joutput()}'s
-#'   \code{variable.id} setting. Not a logical.
+#' @param labels Character or NULL. How the chart names its variables
+#'   (data-first and formula forms). NULL (the default) and \code{"labels"}
+#'   title each axis and legend with the variable's label, the name where it
+#'   has none; \code{joutput()}'s \code{variable.id} does not reach a chart,
+#'   as it reaches no table. \code{"names"} uses the variables' names;
+#'   \code{"legend"} and \code{"legend.bottom"} keep names on the axes and
+#'   print a console label legend; \code{"both"} is accepted and renders as
+#'   \code{"names"}. Not a logical.
+#' @param style The publication style the chart is drawn in, a name in
+#'   quotes: \code{"apa"}, \code{"report"}, or the name of a style file (see
+#'   \code{\link{jstyle}}). NULL (the default) uses \code{joptions(style = )},
+#'   apa when it is not set. The style's \code{[plot]} section gives the chart's
+#'   look, and \code{\link{jtable}()} frames the chart in the same style.
 #' @param numeric Optional. Plotted variables to treat as continuous for
 #'   this call (the per-call counterpart of \code{jnumeric()}), named bare
 #'   or in quotes, several with \code{c()}: \code{numeric = Education}. In \code{jplot()} a variable's class chooses the
@@ -199,10 +219,12 @@
 #'   count is numeric-like for plotting, so it draws the same as \code{numeric};
 #'   it is provided for symmetry with the other analysis functions.
 #'
-#' @return Invisibly, a single \code{ggplot} object if one plot is produced,
-#'   or a named list of \code{ggplot} objects if multiple are produced
-#'   (result-object form). Invisibly returns the \code{ggplot} object for
-#'   the data-first form.
+#' @return Invisibly, the chart: a \code{ggplot} object of class
+#'   \code{jst_plot}, which keeps what a figure needs -- its kind, its N,
+#'   its default title from labels and the data it shows -- for
+#'   \code{\link{jtable}()}; it remains a ggplot, so \code{+} adds to it.
+#'   For a result drawn in several plots (result-object form), a named list
+#'   of them, which \code{jtable()} takes as one figure each.
 #'
 #' @examples
 #' # Result-object form
@@ -228,6 +250,13 @@
 #' jplot(data = community, Age)               # the same, data frame as data =
 #' jplot(community, Region)                   # bar chart
 #' jplot(community, Region, Volunteer)        # grouped bar chart
+#'
+#' # A chart kept, then written to a Word file as a figure
+#' p1 <- jplot(community, Region)
+#' jtable(p1, file = file.path(tempdir(), "Figure1.docx"), overwrite = TRUE)
+#'
+#' # The report style's look
+#' jplot(community, Region, style = "report")
 #'
 #' # Using juse() default (omit the data frame in either form)
 #' juse(community)
@@ -334,8 +363,16 @@ jplot <- function(x, which = "core", ...) {
                         band = .jst_word_spec(c("ci", "pi", "see", "none"),
                                               "a band type"),
                         at   = .jst_word_spec(c("zero", "mean", "mixed"),
-                                              "a choice"))),
+                                              "a choice"),
+                        style = .jst_word_spec(c(names(.jst_style_builtin()),
+                                                 names(.jst_style_files())),
+                                               "a style name"))),
                  "jplot")
+  # style = (ruling R64, Session 411): the publication style the chart is
+  # drawn in, a name in quotes; any other bare word gets ruling R18's
+  # pointer, as jtable()'s style = does.
+  .jst_free_text_arg(mc$style, parent.frame(), sys.call(), mc, "style",
+                     "a style name", "jplot")
   rewrite  <- !x_ok || (has_data && is.atomic(x) && !is.null(x))
   if (!rewrite) {
     if (has_data && is.data.frame(x)) {
@@ -462,19 +499,25 @@ jplot <- function(x, which = "core", ...) {
   }
 }
 
-#' @describeIn jplot the default method: a scatter or box plot from a formula (\code{DV ~ IV}), or a histogram or bar chart from a data frame and one or more variables.
+#' @describeIn jplot the default method: a scatter or box plot from a formula (\code{Outcome ~ Predictor}), or a histogram or bar chart from a data frame and one or more variables.
 #' @export
 #' @importFrom rlang .data
 jplot.default <- function(x, ..., by = NULL, type = NULL,
                           line = FALSE, equation = TRUE, r2 = TRUE,
                           band = "ci", subset = NULL, labels = NULL,
                           numeric = NULL, categorical = NULL, count = NULL,
-                          facet = NULL) {
+                          facet = NULL, style = NULL) {
   # Validate TRUE/FALSE flags up front. (`line` is excluded: it is a hybrid
   # flag-or-string -- FALSE/TRUE or "lm"/"loess"/"connect" -- with its own
   # validation and house-voice error further down.)
   .jst_check_flag(equation, "equation")
   .jst_check_flag(r2, "r2")
+  # The style the chart is drawn in (ruling R64, Session 411): the call's,
+  # else the session's publication style. Resolved before anything prints,
+  # so a style file that cannot be read stops the call before its title.
+  .look <- .jst_plot_look(style)
+  .old_look <- .jst_plot_look_set(.look)
+  on.exit(.jst_plot_look_restore(.old_look), add = TRUE)
 
   # Capture the call for later argument-inspection (used by the ignored-arg
   # note that fires when, e.g., the user passes line = "lm" to a histogram).
@@ -833,11 +876,16 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # analogue of "names in rows" is the axis/legend title: under "labels" each
   # axis shows the variable's label, otherwise its name. "legend"/
   # "legend.bottom" additionally print a console label legend (below).
-  vlmode <- .jst_resolve_variable_id(labels)
+  # Labels by default since Session 415 (the S412 audit's F4, ruled Session
+  # 413): a chart's axis and legend titles come from labels, in the Plots
+  # pane as in Word, the name where a variable has none; joutput()'s
+  # variable.id no longer reaches a chart, as it reaches no table. labels =
+  # stays a per-call choice. A long label is put on two lines, never cut.
+  vlmode <- if (is.null(labels)) "labels" else .jst_resolve_variable_id(labels)
   axis_labels <- stats::setNames(
     vapply(variable_names,
            function(v) if (identical(vlmode, "labels")) {
-             .jst_short_label(data[[v]], v)
+             .jst_plot_label(data[[v]], v)
            } else {
              v
            },
@@ -845,7 +893,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     variable_names
   )
   by_label <- if (has_by) {
-    if (identical(vlmode, "labels")) .jst_short_label(data[[by_name]], by_name) else by_name
+    if (identical(vlmode, "labels")) .jst_plot_label(data[[by_name]], by_name) else by_name
   } else NULL
 
   # -- Red title --------------------------------------------------------------
@@ -857,8 +905,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (.jst_default_used) .jst_default_note(.jst_data_name)
   .jst_print_msgs(pipeline$msgs)
   # The cases the plot draws, and how many it leaves out (Session 349).
-  .jst_plot_n_line(data, c(variable_names, by_name, facet_name),
-                   pipeline$pipeline_counts$n_original)
+  n_plot <- .jst_plot_n_line(data, c(variable_names, by_name, facet_name),
+                             pipeline$pipeline_counts$n_original)
   # A variable drawn on a numeric scale holding Inf or -Inf (Session 394):
   # ggplot2 left the case out, under its "Removed 1 rows" warning, though
   # the N line above counted it.
@@ -879,6 +927,19 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # (vapply over variable_names), so var_types[i] would carry the variable's
   # name and identical(named, "categorical") is always FALSE -- which silently
   # skipped the as_factor branch and bared the value labels off labelled bars.
+  # What the figure frame needs from the variables before they are made
+  # factors: the default title, from labels (ruling R69), and what the chart
+  # names by name or by code where no label stood (ruling R72).
+  cat_vars <- c(variable_names[var_types == "categorical"],
+                if (has_by) by_name, facet_name)
+  frame <- .jst_plot_frame_facts(
+    data, resolved_type,
+    shown = c(variable_names, by_name, facet_name),
+    categorical = cat_vars,
+    title = .jst_plot_default_title(resolved_type, data, variable_names,
+                                    by_name, facet_name),
+    pipeline_counts = pipeline$pipeline_counts, data_name = .jst_data_name)
+
   data <- .jst_plot_convert_labelled(data, variable_names, var_types,
                                      by_name, has_by)
   # The facet variable as the by variable: a factor, its value labels as the
@@ -894,22 +955,180 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   p <- switch(
     resolved_type,
     histogram   = .jst_build_histogram(data, variable_names[1], by_name,
-                                       axis_labels, by_label, facet_name),
+                                       axis_labels, by_label, facet_name,
+                                       look = .look),
     density     = .jst_build_density(data, variable_names[1], by_name,
-                                     axis_labels, by_label, facet_name),
+                                     axis_labels, by_label, facet_name,
+                                     look = .look),
     bar         = .jst_build_bar(data, variable_names[1], by_name,
-                                 axis_labels, by_label, facet_name),
+                                 axis_labels, by_label, facet_name,
+                                 look = .look),
     scatter     = .jst_build_scatter(data, variable_names, by_name,
                                      line, equation, r2, band,
-                                     axis_labels, by_label),
+                                     axis_labels, by_label, look = .look),
     box         = .jst_build_box(data, variable_names, var_types, by_name,
-                                 axis_labels, by_label),
+                                 axis_labels, by_label, look = .look),
     grouped_bar = .jst_build_grouped_bar(data, variable_names,
-                                         axis_labels, facet_name)
+                                         axis_labels, facet_name,
+                                         look = .look)
   )
+  p <- .jst_plot_finish_built(p, resolved_type, n_plot, frame, .look)
 
   print(p)
   invisible(p)
+}
+
+#' Internal helper: a data-first chart's frame facts
+#'
+#' The default title, and the variables it shows by name or by code where
+#' no label stood (ruling R72), read from the variables before they are made
+#' factors.
+#'
+#' @param data The frame after the pipeline.
+#' @param type The resolved chart type.
+#' @param shown Character; every variable the chart shows.
+#' @param categorical Character; those it shows by category.
+#' @param title Character(1), the default title.
+#' @return A list: title, names_shown, codes_shown, labelled.
+#' @keywords internal
+.jst_plot_frame_facts <- function(data, type, shown, categorical, title,
+                                  pipeline_counts = NULL, data_name = NULL) {
+  shown <- unique(shown[!is.na(shown)])
+  has   <- vapply(shown, function(v) .jst_plot_has_label(data[[v]]), logical(1))
+  codes <- list()
+  any_vl <- FALSE
+  for (v in unique(categorical)) {
+    if (length(labelled::val_labels(data[[v]]))) any_vl <- TRUE
+    present <- unique(unclass(data[[v]])[!is.na(data[[v]])])
+    miss <- .jst_plot_unlabelled_codes(data[[v]], present)
+    if (length(miss)) codes[[v]] <- miss
+  }
+  # The labels the shown codes' variables do carry, for the jrelabel() line
+  # of ruling R72's note, which lists them with the codes it adds.
+  code_labels <- lapply(names(codes), function(v) {
+    vl <- labelled::val_labels(data[[v]])
+    if (!length(vl)) return(NULL)
+    stats::setNames(names(vl), as.character(unclass(vl)))
+  })
+  names(code_labels) <- names(codes)
+  list(title = title, names_shown = shown[!has], codes_shown = codes,
+       labelled = any(has) || any_vl, code_labels = code_labels,
+       filter = .jst_plot_filter_facts(pipeline_counts),
+       data_name = if (is.character(data_name) && length(data_name) == 1L &&
+                       !is.na(data_name)) data_name)
+}
+
+#' Internal helper: the filters a chart was drawn under, for its figure's note
+#'
+#' A figure's general note names a filter as a table's does (ruling R63: "a
+#' filter sentence"): the stored jsubset() filter and the call's subset =,
+#' kept as the results keep them, with a slice of no rows of the data frame
+#' holding the variables the conditions name, so the note can put them into
+#' words with their labels without the chart carrying the data frame.
+#'
+#' @param si The pipeline's counts, or a result's sample_info.
+#' @return NULL when no filter ran, else a list as sample_info holds it.
+#' @keywords internal
+.jst_plot_filter_facts <- function(si) {
+  if (!is.list(si)) return(NULL)
+  conds <- c(if (isTRUE(si$filter_active) && is.character(si$filter_expr))
+               paste(trimws(si$filter_expr), collapse = " "),
+             if (is.character(si$subset_expr) && length(si$subset_expr))
+               paste(trimws(si$subset_expr), collapse = " "))
+  conds <- conds[nzchar(conds)]
+  if (!length(conds)) return(NULL)
+  vars <- unique(unlist(lapply(conds, function(cd) {
+    ex <- tryCatch(str2lang(cd), error = function(e) NULL)
+    if (is.null(ex)) character(0) else all.vars(ex)
+  })))
+  d <- si$pre_pipeline_data
+  slice <- NULL
+  if (is.data.frame(d)) {
+    keep <- intersect(vars, names(d))
+    # A row subset drops a plain column's label (the pipeline restores them
+    # the same way), so each column's label is put back on its slice.
+    cols <- lapply(keep, function(v) {
+      x <- d[[v]]
+      y <- x[0L]
+      lab <- attr(x, "label", exact = TRUE)
+      if (!is.null(lab)) attr(y, "label") <- lab
+      y
+    })
+    slice <- structure(stats::setNames(cols, keep), class = "data.frame",
+                       row.names = integer(0))
+  }
+  list(filter_active = isTRUE(si$filter_active), filter_expr = si$filter_expr,
+       subset_expr = si$subset_expr, pre_pipeline_data = slice)
+}
+
+#' Internal helper: a chart's default title (ruling R69)
+#'
+#' From labels, the name where a variable has none, never naming the
+#' chart's kind (APA: "a brief but descriptive title"): the variable alone
+#' for a bar chart, a histogram or a density plot; the variable "by" the
+#' group for a chart by groups, a grouped bar chart and a box plot; the
+#' outcome "by" the predictor for a scatterplot. A panel variable adds
+#' itself as a group does. The title stands in the figure's caption in a
+#' Word file; title = in jtable() replaces it.
+#'
+#' @param type The resolved chart type.
+#' @param data The frame.
+#' @param variable_names Character; the variables as the builder takes
+#'   them (a scatterplot's and a formula box plot's predictor first).
+#' @param by_name,facet_name Character(1) or NULL.
+#' @param formula Logical(1); the formula form, whose outcome is second.
+#' @return Character(1).
+#' @keywords internal
+.jst_plot_default_title <- function(type, data, variable_names, by_name = NULL,
+                                    facet_name = NULL, formula = FALSE) {
+  lab <- function(v) {
+    l <- labelled::var_label(data[[v]])
+    if (is.null(l) || !length(l) || is.na(l[1]) || !nzchar(l[1])) v else as.character(l[1])
+  }
+  groups <- c(by_name, facet_name)
+  body <- if (type %in% c("scatter", "box") && length(variable_names) == 2L) {
+    # The outcome by the predictor: the outcome is the numeric variable.
+    if (identical(type, "box") && !formula) {
+      num <- variable_names[vapply(variable_names, function(v) {
+        !is.factor(data[[v]]) && !is.character(data[[v]])
+      }, logical(1))]
+      y <- if (length(num)) num[1L] else variable_names[2L]
+      x <- setdiff(variable_names, y)[1L]
+    } else {
+      x <- variable_names[1L]; y <- variable_names[2L]
+    }
+    paste(lab(y), "by", lab(x))
+  } else if (identical(type, "grouped_bar")) {
+    paste(lab(variable_names[1L]), "by", lab(variable_names[2L]))
+  } else {
+    lab(variable_names[1L])
+  }
+  if (length(groups)) {
+    body <- paste(body, if (grepl(" by ", body, fixed = TRUE)) "and" else "by",
+                  .jst_and_list(vapply(groups, lab, character(1))))
+  }
+  body
+}
+
+#' Internal helper: a data-first chart marked as jplot()'s
+#'
+#' @param p The builder's chart (\code{.jst_plot_built()}).
+#' @param type The resolved chart type.
+#' @param n The cases drawn.
+#' @param frame The facts \code{.jst_plot_frame_facts()} read.
+#' @param look The look it was drawn in.
+#' @return The chart.
+#' @keywords internal
+.jst_plot_finish_built <- function(p, type, n, frame, look) {
+  if (!inherits(p, "ggplot")) return(p)
+  built <- attr(p, "jst_built", exact = TRUE)
+  attr(p, "jst_built") <- NULL
+  .jst_plot_finish(p, kind = type, n = n, title = frame$title,
+                   data = built$data, names_shown = frame$names_shown,
+                   codes_shown = frame$codes_shown, scales = built$scales,
+                   labelled = frame$labelled, look = look,
+                   filter = frame$filter, data_name = frame$data_name,
+                   code_labels = frame$code_labels)
 }
 
 
@@ -1221,12 +1440,13 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   # -- Capture axis labels BEFORE factor conversion -------------------------
   # Variable label display mode (see jplot.default): "labels" puts the
-  # variable's label on each axis/legend title, otherwise its name.
-  vlmode <- .jst_resolve_variable_id(labels)
+  # variable's label on each axis/legend title, otherwise its name. Labels
+  # by default since Session 415 (the S412 audit's F4), as in jplot.default.
+  vlmode <- if (is.null(labels)) "labels" else .jst_resolve_variable_id(labels)
   axis_labels <- stats::setNames(
     vapply(variable_names,
            function(v) if (identical(vlmode, "labels")) {
-             .jst_short_label(data[[v]], v)
+             .jst_plot_label(data[[v]], v)
            } else {
              v
            },
@@ -1234,7 +1454,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     variable_names
   )
   by_label <- if (has_by) {
-    if (identical(vlmode, "labels")) .jst_short_label(data[[by_name]], by_name) else by_name
+    if (identical(vlmode, "labels")) .jst_plot_label(data[[by_name]], by_name) else by_name
   } else NULL
 
   # -- Red title -------------------------------------------------------------
@@ -1247,8 +1467,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (.jst_default_used) .jst_default_note(.jst_data_name)
   .jst_print_msgs(pipeline$msgs)
   # The cases the plot draws, and how many it leaves out (Session 349).
-  .jst_plot_n_line(data, c(x_name, y_name, if (has_by) by_name),
-                   pipeline$pipeline_counts$n_original)
+  n_plot <- .jst_plot_n_line(data, c(x_name, y_name, if (has_by) by_name),
+                             pipeline$pipeline_counts$n_original)
   # A variable drawn on a numeric scale holding Inf or -Inf (Session 394),
   # as in jplot.default().
   .jst_plot_infinite_stop(data, c(x_name, y_name, if (has_by) by_name),
@@ -1266,6 +1486,16 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # scatter/box error on a discrete axis. variable_names and var_types are both
   # ordered (x, y), so positional indexing aligns. Index with [[i]] (drops any
   # name) so identical() matches even if var_types is ever built named.
+  # The default title and the variables shown without a label (rulings R69
+  # and R72), read before the variables are made factors.
+  frame <- .jst_plot_frame_facts(
+    data, resolved_type,
+    shown = c(x_name, y_name, if (has_by) by_name),
+    categorical = c(if (x_is_cat) x_name, if (has_by) by_name),
+    title = .jst_plot_default_title(resolved_type, data, variable_names,
+                                    if (has_by) by_name, formula = TRUE),
+    pipeline_counts = pipeline$pipeline_counts, data_name = .jst_data_name)
+
   data <- .jst_plot_convert_labelled(data, variable_names, var_types,
                                      by_name, has_by)
 
@@ -1277,17 +1507,434 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   .jst_plot_ignored_note(jplot_call, resolved_type, line)
 
   # -- Dispatch to builder --------------------------------------------------
+  look <- .jst_plot_look_now()
   p <- switch(
     resolved_type,
     scatter = .jst_build_scatter(data, variable_names, by_name,
                                  line, equation, r2, band,
-                                 axis_labels, by_label),
+                                 axis_labels, by_label, look = look),
     box     = .jst_build_box(data, variable_names, var_types, by_name,
-                             axis_labels, by_label)
+                             axis_labels, by_label, look = look)
   )
+  p <- .jst_plot_finish_built(p, resolved_type, n_plot, frame, look)
 
   print(p)
   invisible(p)
+}
+
+
+# -- The chart look (Capability Slate U's charts, build 2) --------------------
+#
+# A chart is drawn in a STYLE's look (ruling R64, Session 411): the [plot]
+# section of the session's publication style -- joptions(style = ), apa when
+# none is set -- or of the call's style =. Both built-ins draw in greys, Arial
+# 10 on white, bars from zero; apa with both axis lines, no gridlines and the
+# legend on the right; report with light horizontal gridlines, the x axis line
+# alone and the legend at the top, starting at the left. The Plots pane shows
+# the look the Word file gets (ruling R47's principle). A chart jplot() draws
+# carries the frame's facts -- its kind, N, title, data and labels -- and the
+# class "jst_plot" before ggplot2's (the S412 audit's F6, Session 413), so
+# jtable() tells it from a chart drawn in ggplot2 by hand (ruling R71).
+
+# The look of the chart being drawn: set by jplot()'s methods for the length
+# of a call, read by every builder, and by jlm()'s diagnostics, which draw
+# without jplot() and take the session's style.
+.jst_plot_env <- new.env(parent = emptyenv())
+
+#' Internal helper: a style's chart look
+#'
+#' The \code{[plot]} settings of a style, resolved as jtable() resolves a style: the
+#' call's \code{style =}, else \code{joptions(style = )}, else apa. A setting
+#' the \code{[plot]} section leaves out comes from the same layer's general part
+#' before the next layer (the reference, Part 3.2), so a style file that sets
+#' font = for its tables sets its charts' font too, unless its \code{[plot]} section
+#' sets one.
+#'
+#' @param style A style's name or path, a resolved style, or NULL.
+#' @param fn The user-facing function, for a style's stops.
+#' @return A list: the style's name, each \code{[plot]} setting, and the resolved
+#'   style itself (st), which jtable() frames the chart in.
+#' @keywords internal
+.jst_plot_look <- function(style = NULL, fn = "jplot") {
+  st  <- if (inherits(style, "jst_style")) style else .jst_style_resolve(style, fn = fn)
+  key <- function(k) .jst_style_key(st, "plot", k)
+  ks  <- names(.jst_style_spec$plot)
+  out <- stats::setNames(lapply(ks, key), ks)
+  out$size   <- as.numeric(out$size)
+  out$width  <- as.numeric(out$width)
+  out$height <- as.numeric(out$height)
+  out$resolution <- as.numeric(out$resolution)
+  c(list(style = st$name), out, list(st = st))
+}
+
+#' Internal helper: set the look of the chart being drawn
+#'
+#' @param look A look (\code{.jst_plot_look()}), or NULL to clear it.
+#' @return The look that was set before, invisibly, for
+#'   \code{.jst_plot_look_restore()}.
+#' @keywords internal
+.jst_plot_look_set <- function(look) {
+  old <- if (exists("look", envir = .jst_plot_env, inherits = FALSE)) {
+    get("look", envir = .jst_plot_env)
+  }
+  assign("look", look, envir = .jst_plot_env)
+  invisible(old)
+}
+
+#' Internal helper: put back the look that was set before
+#'
+#' @param old What \code{.jst_plot_look_set()} returned.
+#' @keywords internal
+.jst_plot_look_restore <- function(old) {
+  if (is.null(old)) {
+    if (exists("look", envir = .jst_plot_env, inherits = FALSE)) {
+      rm("look", envir = .jst_plot_env)
+    }
+  } else {
+    assign("look", old, envir = .jst_plot_env)
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: the look of the chart being drawn
+#'
+#' The look jplot() set for its call; a chart drawn outside one -- jlm()'s
+#' diagnostics plots -- takes the session's publication style.
+#' @keywords internal
+.jst_plot_look_now <- function() {
+  look <- if (exists("look", envir = .jst_plot_env, inherits = FALSE)) {
+    get("look", envir = .jst_plot_env)
+  }
+  if (is.null(look)) look <- .jst_plot_look(NULL)
+  look
+}
+
+#' Internal helper: the font family R draws a style's font with
+#'
+#' Arial and its kin draw as R's "sans" family, which is Arial on Windows
+#' and Helvetica, of the same widths, on a Mac; Times New Roman and its kin
+#' as "serif"; Courier New as "mono". So the built-ins draw on every device,
+#' the PDF device R CMD check and a script use among them. Any other face is
+#' passed by name, where a device can find it: the PDF and PostScript devices
+#' know only their own fonts, so there it is drawn as "sans"; Windows'
+#' devices need the face named in R's font table, which is done here once
+#' for the session.
+#'
+#' @param font Character(1), the style's font.
+#' @param device NULL for the device a plot will be drawn on now, or the
+#'   name of the device it will be drawn on ("png", "pdf", "postscript").
+#' @return Character(1), a font family.
+#' @keywords internal
+.jst_plot_family <- function(font, device = NULL) {
+  f <- tolower(trimws(as.character(font)))
+  if (f %in% c("arial", "helvetica", "liberation sans", "arimo", "sans")) return("sans")
+  if (f %in% c("times new roman", "times", "liberation serif", "tinos", "serif")) {
+    return("serif")
+  }
+  if (f %in% c("courier new", "courier", "liberation mono", "cousine", "mono")) {
+    return("mono")
+  }
+  dev <- if (!is.null(device)) device else if (grDevices::dev.cur() > 1L) {
+    names(grDevices::dev.cur())
+  } else {
+    d <- getOption("device")
+    if (is.character(d)) d[1L] else if (identical(d, grDevices::pdf)) "pdf" else ""
+  }
+  if (tolower(dev) %in% c("pdf", "postscript")) {
+    db <- if (tolower(dev) == "pdf") grDevices::pdfFonts() else grDevices::postscriptFonts()
+    return(if (font %in% names(db)) font else "sans")
+  }
+  if (identical(.Platform$OS.type, "windows")) {
+    wf <- get("windowsFonts", envir = asNamespace("grDevices"))
+    if (!font %in% names(wf())) {
+      one <- list(get("windowsFont", envir = asNamespace("grDevices"))(font))
+      names(one) <- font
+      do.call(wf, one)
+    }
+  }
+  font
+}
+
+#' Internal helper: a chart's theme in a style's look
+#'
+#' White, its text black in the style's font and size, the axis lines and
+#' gridlines the style names, the legend where it says with its title
+#' (ruling R64). Every chart jplot() draws takes it, the diagnostics plots
+#' included.
+#'
+#' @param look A look; the chart being drawn's when NULL.
+#' @param device As \code{.jst_plot_family()}.
+#' @return A complete ggplot2 theme.
+#' @keywords internal
+.jst_plot_theme <- function(look = NULL, device = NULL) {
+  if (is.null(look)) look <- .jst_plot_look_now()
+  fam  <- .jst_plot_family(look$font, device)
+  ink  <- "#000000"
+  grid <- ggplot2::element_line(colour = paste0("#", look$grid.color), linewidth = 0.4)
+  th <- ggplot2::theme_classic(base_size = look$size, base_family = fam) +
+    ggplot2::theme(
+      text               = ggplot2::element_text(colour = ink),
+      axis.text          = ggplot2::element_text(colour = ink),
+      axis.line          = ggplot2::element_line(colour = ink, linewidth = 0.4),
+      axis.ticks         = ggplot2::element_line(colour = ink, linewidth = 0.4),
+      panel.grid.major.y = if (look$gridlines %in% c("horizontal", "both")) grid
+                           else ggplot2::element_blank(),
+      panel.grid.major.x = if (look$gridlines %in% c("vertical", "both")) grid
+                           else ggplot2::element_blank(),
+      panel.grid.minor   = ggplot2::element_blank(),
+      panel.background   = ggplot2::element_rect(fill = "white", colour = NA),
+      plot.background    = ggplot2::element_rect(fill = "white", colour = NA),
+      legend.position    = look$legend.position,
+      legend.justification = if (look$legend.position %in% c("top", "bottom")) "left"
+                             else "center",
+      legend.title       = ggplot2::element_text(colour = ink),
+      plot.title         = ggplot2::element_text(face = "bold", colour = ink),
+      plot.title.position = "plot",
+      strip.background   = ggplot2::element_blank(),
+      strip.text         = ggplot2::element_text(face = "bold", colour = ink))
+  if (look$axis.lines %in% c("x", "none")) {
+    th <- th + ggplot2::theme(axis.line.y = ggplot2::element_blank(),
+                              axis.ticks.y = ggplot2::element_blank())
+  }
+  if (look$axis.lines %in% c("y", "none")) {
+    th <- th + ggplot2::theme(axis.line.x = ggplot2::element_blank(),
+                              axis.ticks.x = ggplot2::element_blank())
+  }
+  th
+}
+
+#' Internal helper: a chart's colors for n series
+#'
+#' Under greys (both built-ins; ruling R64): 595959 for one series, 404040
+#' and A6A6A6 for two, and from 404040 in even steps for more -- to BFBFBF
+#' for three or four, to D9D9D9 for five or more, so the lightest stays
+#' visible on white. Under a list of colors, the first n in order; past the
+#' list's length, colors between them.
+#'
+#' @param look A look.
+#' @param n Integer(1), the series.
+#' @return Character, n colors as "#RRGGBB".
+#' @keywords internal
+.jst_plot_colours <- function(look, n) {
+  n <- max(1L, as.integer(n))
+  pal <- look$palette
+  if (identical(pal, "greys")) {
+    if (n == 1L) return("#595959")
+    if (n == 2L) return(c("#404040", "#A6A6A6"))
+    top <- if (n <= 4L) 0xBF else 0xD9
+    v <- round(seq(0x40, top, length.out = n))
+    return(sprintf("#%02X%02X%02X", v, v, v))
+  }
+  cols <- paste0("#", pal)
+  if (n <= length(cols)) return(cols[seq_len(n)])
+  grDevices::colorRampPalette(cols)(n)
+}
+
+# The fixed greys of a model's or a test's plots (ruling R64: every jplot()
+# chart in greys, the diagnostics included). A palette colors the charts of
+# variables -- bars, histograms, boxes, points by group -- whose series are
+# categories; these plots draw one series and their reference lines.
+.jst_plot_ink <- list(line  = "#404040",  # a fitted line, a band, an estimate
+                      point = "#595959",  # the cases
+                      mark  = "#000000",  # a reference line, a labeled case
+                      box   = "#D9D9D9")  # a box's fill
+
+#' Internal helper: a fill or color scale in a look's colors
+#'
+#' Every color a chart of variables draws comes from one of these scales --
+#' a single series as a constant mapped to its one color, guide off -- so
+#' jtable() can draw the chart again in another style's colors by adding
+#' the scale again (\code{.jst_plot_restyle()}).
+#'
+#' @param aes "fill" or "colour".
+#' @param levels Character; the series, in order.
+#' @param look A look.
+#' @param guide TRUE for a legend.
+#' @return A ggplot2 scale.
+#' @keywords internal
+.jst_plot_scale <- function(aes, levels, look, guide = TRUE) {
+  cols <- stats::setNames(.jst_plot_colours(look, length(levels)), levels)
+  fun <- if (identical(aes, "fill")) ggplot2::scale_fill_manual
+         else ggplot2::scale_colour_manual
+  fun(values = cols, breaks = levels, limits = levels,
+      guide = if (isTRUE(guide)) "legend" else "none")
+}
+
+#' Internal helper: a variable's label for an axis or a legend
+#'
+#' The variable's label, the name where it has none (the S412 audit's F4,
+#' ruled Session 413: a chart's axis and legend titles come from labels, in
+#' the Plots pane as in Word, as a table's rows do), whole: a long label is
+#' put on two or more lines at about 45 columns, never cut.
+#'
+#' @param x The variable.
+#' @param name Character(1), its name.
+#' @return Character(1).
+#' @keywords internal
+.jst_plot_label <- function(x, name) {
+  lbl <- labelled::var_label(x)
+  if (is.null(lbl) || length(lbl) == 0 || is.na(lbl[1]) || !nzchar(lbl[1])) {
+    return(name)
+  }
+  .jst_plot_wrap(as.character(lbl[1]))
+}
+
+#' Internal helper: a chart's text on lines of about 45 columns
+#'
+#' A plain fill, word by word, each line kept under the width in display
+#' columns (a Chinese, Japanese or Korean character two), a word longer
+#' than the width on a line of its own. A chart's text is not a message,
+#' so it does not go through the message wrapper, whose rules are for
+#' prose (sentences kept whole, a short last line pulled back); and
+#' strwrap() belongs to that wrapper alone, which receive_package()'s
+#' structural gate checks.
+#' @param s Character(1).
+#' @param width Integer(1), the columns.
+#' @keywords internal
+.jst_plot_wrap <- function(s, width = 45L) {
+  if (.jst_dw(s) <= width) return(s)
+  words <- strsplit(s, " ", fixed = TRUE)[[1L]]
+  words <- words[nzchar(words)]
+  lines <- character(0)
+  cur   <- ""
+  for (w in words) {
+    cand <- if (nzchar(cur)) paste(cur, w) else w
+    if (!nzchar(cur) || .jst_dw(cand) < width) {
+      cur <- cand
+    } else {
+      lines <- c(lines, cur)
+      cur   <- w
+    }
+  }
+  paste(c(lines, cur), collapse = "\n")
+}
+
+#' Internal helper: does a variable carry a label?
+#' @param x The variable.
+#' @keywords internal
+.jst_plot_has_label <- function(x) {
+  lbl <- labelled::var_label(x)
+  !(is.null(lbl) || length(lbl) == 0 || is.na(lbl[1]) || !nzchar(lbl[1]))
+}
+
+#' Internal helper: the codes a categorical variable shows without a label
+#'
+#' A variable with value labels on some of its codes and not others shows
+#' those others by their codes (ruling R72, the S412 audit's F9): returned
+#' for the note jtable() gives. A variable with no value labels at all is
+#' not counted here: its values may be what they mean (a count), and a
+#' grouping variable's codes are counted where it groups.
+#'
+#' @param x The variable, before it was made a factor.
+#' @param present The codes the chart shows.
+#' @return Character; the codes with no label.
+#' @keywords internal
+.jst_plot_unlabelled_codes <- function(x, present = NULL) {
+  vl <- labelled::val_labels(x)
+  if (!length(vl)) return(character(0))
+  codes <- if (is.null(present)) unique(unclass(x)[!is.na(x)]) else present
+  as.character(setdiff(codes, unclass(vl)))
+}
+
+#' Internal helper: mark a chart as jplot()'s, with the frame's facts
+#'
+#' The class "jst_plot" ahead of ggplot2's, so the chart is still a ggplot
+#' (\code{p + ggplot2::theme()} works) and jtable() knows it from a chart
+#' drawn by hand (the S412 audit's F6, Session 413), and an attribute with
+#' what a figure frame needs: the kind of chart, its N (the cases it draws;
+#' the S412 audit's F7), its default title (ruling R69), its data for the
+#' Excel sheet (ruling R65), the variables it names by name or by code where
+#' no label stood (ruling R72), the scales that carry its colors and the look
+#' it was drawn in.
+#'
+#' @param p The ggplot.
+#' @param kind Character(1).
+#' @param n The N, or NA.
+#' @param title Character(1), the default title (labels, never the chart's
+#'   kind), or NA.
+#' @param data A data frame of what the chart shows, or NULL.
+#' @param names_shown Character; variables the chart names by name, having
+#'   no label.
+#' @param codes_shown A named list: by variable, the codes shown with no
+#'   label.
+#' @param scales A list of list(aes, levels, guide): the color scales.
+#' @param labelled Logical(1); TRUE when any variable the chart shows
+#'   carries a label.
+#' @param look The look it was drawn in.
+#' @param tweak NULL, or a theme setting of the chart's own (the heatmap's
+#'   slanted axis text), added again when the chart is drawn in another look.
+#' @param filter NULL, or the filters it was drawn under
+#'   (\code{.jst_plot_filter_facts()}), for the figure's note.
+#' @param data_name The data frame's name as typed, or NULL: the frame
+#'   ruling R72's note names in its jrelabel() line.
+#' @param rerun What ruling R72's note asks for once labels are added:
+#'   "chart" (draw it again) or "analysis" (run the analysis and draw it).
+#' @param code_labels By variable of \code{codes_shown}, the codes it does
+#'   label (code = label), for the note's jrelabel() line.
+#' @return The chart.
+#' @keywords internal
+.jst_plot_finish <- function(p, kind, n = NA_integer_, title = NA_character_,
+                             data = NULL, names_shown = character(0),
+                             codes_shown = list(), scales = list(),
+                             labelled = FALSE, look = NULL, tweak = NULL,
+                             filter = NULL, data_name = NULL, rerun = "chart",
+                             code_labels = list()) {
+  if (is.null(look)) look <- .jst_plot_look_now()
+  attr(p, "jstats_figure") <- list(
+    kind = kind, n = n, title = title, data = data,
+    names_shown = unique(names_shown), codes_shown = codes_shown,
+    scales = scales, labelled = isTRUE(labelled), look = look,
+    tweak = tweak, filter = filter, data_name = data_name, rerun = rerun,
+    code_labels = code_labels, version = .jst_jstats_version())
+  if (!inherits(p, "jst_plot")) class(p) <- c("jst_plot", class(p))
+  p
+}
+
+#' Internal helper: the facts of a chart jplot() drew
+#' @param p A chart.
+#' @return The list \code{.jst_plot_finish()} set, or NULL.
+#' @keywords internal
+.jst_plot_facts <- function(p) {
+  f <- attr(p, "jstats_figure", exact = TRUE)
+  if (is.list(f)) f else NULL
+}
+
+#' Internal helper: draw a jplot() chart again in another style's look
+#'
+#' At write time (the S412 audit's F6): the chart's theme replaced by the
+#' writing style's, its color scales added again in that style's colors,
+#' and its look recorded. Everything else the chart holds -- a title or a
+#' layer added with \code{+} -- is kept. A chart drawn in that look comes
+#' back as it is, so a theme setting the user added with \code{+} -- a font
+#' that has Chinese characters, as the guides' Troubleshooting page gives
+#' it -- stays in the Word file; in another look the chart takes that look's
+#' theme in place of its own. The same look is the same font, size,
+#' colors, gridlines, axis lines and legend, with the font drawn as the
+#' same family on the device the picture is drawn on.
+#'
+#' @param p A chart jplot() drew.
+#' @param look The writing style's look.
+#' @param device As \code{.jst_plot_family()}.
+#' @return The chart.
+#' @keywords internal
+.jst_plot_restyle <- function(p, look, device = NULL) {
+  f <- .jst_plot_facts(p)
+  if (is.null(f)) return(p)
+  keys <- c("font", "size", "palette", "gridlines", "grid.color", "axis.lines",
+            "legend.position")
+  if (identical(look[keys], f$look[keys]) &&
+      identical(.jst_plot_family(look$font, device), .jst_plot_family(look$font))) {
+    return(p)
+  }
+  p <- p + .jst_plot_theme(look, device = device)
+  if (!is.null(f$tweak)) p <- p + f$tweak
+  if (!identical(look$palette, f$look$palette)) {
+    for (s in f$scales) {
+      p <- suppressMessages(p + .jst_plot_scale(s$aes, s$levels, look, s$guide))
+    }
+  }
+  attr(p, "jstats_figure")$look <- look
+  p
 }
 
 
@@ -1341,7 +1988,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @param vars Character; the variables the plot draws, its \code{by}
 #'   variable included.
 #' @param n_original Integer; the data frame's rows before the pipeline.
-#' @return \code{invisible(NULL)}; prints the line.
+#' @return The cases drawn, invisibly (a figure's N since Session 415, the
+#'   S412 audit's F7); prints the line.
 #' @keywords internal
 .jst_plot_n_line <- function(data, vars, n_original) {
   vars  <- intersect(unique(vars), names(data))
@@ -1351,7 +1999,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   cat("\nAnalysis N: ", n_plot,
       if (isTRUE(n_exc > 0L)) paste0(" (", n_exc, " Excluded)"),
       "\n\n", sep = "")
-  invisible(NULL)
+  invisible(n_plot)
 }
 
 #' Internal helper: jplot()'s stop on infinite values it cannot draw
@@ -1504,13 +2152,161 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 }
 
 
+#' Internal helper: a chart's scales, added in a look's colors
+#'
+#' @param p The ggplot.
+#' @param scales A list of list(aes, levels, guide).
+#' @param look A look.
+#' @return The ggplot.
+#' @keywords internal
+.jst_plot_add_scales <- function(p, scales, look) {
+  for (s in scales) p <- p + .jst_plot_scale(s$aes, s$levels, look, s$guide)
+  p
+}
+
+#' Internal helper: a value axis that starts at zero
+#'
+#' Bars and a histogram's bins stand on the axis line (ruling R64: "bars
+#' from zero"), with room above the tallest for its value. An axis of
+#' counts is marked in whole numbers only (Session 415): ggplot2's own
+#' breaks put 2.5 and 7.5 on a histogram's Count axis.
+#' @param count TRUE for an axis of counts.
+#' @keywords internal
+.jst_plot_zero_y <- function(count = FALSE) {
+  if (count) {
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.08)),
+                                breaks = .jst_plot_whole_breaks)
+  } else {
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.08)))
+  }
+}
+
+#' Internal helper: whole-number breaks for an axis of counts
+#' @param lims The axis limits ggplot2 passes.
+#' @keywords internal
+.jst_plot_whole_breaks <- function(lims) {
+  lims <- lims[is.finite(lims)]
+  if (length(lims) < 2L) return(numeric(0))
+  b <- pretty(lims, n = 5L)
+  b[abs(b - round(b)) < 1e-8]
+}
+
+#' Internal helper: the levels a factor shows
+#' @param f A factor, or a vector made one.
+#' @keywords internal
+.jst_plot_levels <- function(f) {
+  if (!is.factor(f)) f <- factor(f)
+  levels(droplevels(f))
+}
+
+#' Internal helper: a builder's chart, with the scales that carry its colors
+#' @param p The ggplot.
+#' @param scales The scales (\code{.jst_plot_add_scales()}).
+#' @param data The numbers it shows, for the Excel sheet, or NULL.
+#' @keywords internal
+.jst_plot_built <- function(p, scales, data = NULL) {
+  attr(p, "jst_built") <- list(scales = scales, data = data)
+  p
+}
+
+#' Internal helper: the cases a chart draws, for its Excel sheet
+#'
+#' A histogram, a density plot, a scatterplot and a box plot draw cases,
+#' so their sheet (ruling R65, the \code{[plot]} section's data.file) holds the
+#' values each case is drawn at, one row per case, each column named by
+#' its variable: a category as the chart labels it, a number as the
+#' number.
+#'
+#' @param df The builder's frame (columns x, y, by, facet).
+#' @param names Named character: the variable each column shows; a NULL
+#'   entry drops out.
+#' @return A data frame.
+#' @keywords internal
+.jst_plot_case_sheet <- function(df, names) {
+  names <- unlist(names)
+  keep <- intersect(names(names), names(df))
+  out <- lapply(keep, function(k) {
+    v <- df[[k]]
+    if (is.factor(v)) as.character(v)
+    else if (inherits(v, "haven_labelled")) as.numeric(unclass(v))
+    else if (is.numeric(v) || is.character(v) || is.logical(v)) as.vector(v)
+    else as.character(v)
+  })
+  structure(stats::setNames(out, make.unique(unname(names[keep]))),
+            class = "data.frame", row.names = seq_len(nrow(df)))
+}
+
+#' Internal helper: the values on a chart's bars
+#'
+#' Each bar's count just beyond its end (ruling R70): on a chart of one
+#' series under the style's values = yes, on a chart of several series --
+#' dodged side by side -- under values.grouped = yes. Whole numbers, in the
+#' chart's font at its axis labels' size.
+#'
+#' @param look A look.
+#' @param grouped Logical(1): several series, dodged.
+#' @param group_var The variable the bars are dodged by ("by" or "fill").
+#' @return A ggplot2 layer, or NULL when the style shows no values.
+#' @keywords internal
+.jst_plot_value_layer <- function(look, grouped = FALSE, group_var = NULL) {
+  on <- if (grouped) identical(look$values.grouped, "yes") else identical(look$values, "yes")
+  if (!on) return(NULL)
+  size <- look$size * 0.8 / ggplot2::.pt
+  fam  <- .jst_plot_family(look$font)
+  if (grouped) {
+    ggplot2::geom_text(
+      stat = "count",
+      ggplot2::aes(label = ggplot2::after_stat(!!as.symbol("count")),
+                   group = .data[[group_var]]),
+      position = ggplot2::position_dodge(width = 0.8), vjust = -0.4,
+      size = size, family = fam, colour = "#000000")
+  } else {
+    ggplot2::geom_text(
+      stat = "count",
+      ggplot2::aes(label = ggplot2::after_stat(!!as.symbol("count"))),
+      vjust = -0.4, size = size, family = fam, colour = "#000000")
+  }
+}
+
+#' Internal helper: the counts a bar chart shows, for its Excel sheet
+#'
+#' @param plot_df The builder's data: x, and by, fill or facet.
+#' @param x_name,by_name,facet_name The variables' names, for the heads.
+#' @param by_col The column of the series ("by" or "fill"), or NULL.
+#' @return A data frame: the categories, each series and panel, n, and the
+#'   percentage of the cases drawn (of each series' cases where there are
+#'   several).
+#' @keywords internal
+.jst_plot_count_sheet <- function(plot_df, x_name, by_name = NULL,
+                                  facet_name = NULL, by_col = NULL) {
+  cols <- c("x", by_col, if (!is.null(facet_name)) "facet")
+  tab  <- as.data.frame(table(plot_df[cols]), responseName = "n",
+                        stringsAsFactors = FALSE)
+  grp  <- setdiff(cols, "x")
+  tot  <- if (length(grp)) stats::ave(tab$n, tab[grp], FUN = sum) else sum(tab$n)
+  # One total for every row when there is no series: ifelse() gives a
+  # result as long as its test, so a single total gave every row the first
+  # row's percentage (found on the S415 walk).
+  tot  <- rep_len(tot, nrow(tab))
+  tab$Percent <- ifelse(tot > 0, 100 * tab$n / tot, NA_real_)
+  names(tab)[names(tab) == "x"] <- x_name
+  if (!is.null(by_col)) names(tab)[names(tab) == by_col] <- by_name
+  if (!is.null(facet_name)) names(tab)[names(tab) == "facet"] <- facet_name
+  tab
+}
+
 #' Internal helper: build histogram (1 numeric variable)
+#'
+#' One series in the look's one color; by groups laid over each other in
+#' its colors for that many; bins standing on the axis (ruling R64). A
+#' builder returns the chart with the scales that carry its colors
+#' (\code{.jst_plot_built()}).
 #'
 #' @keywords internal
 #' @importFrom rlang .data
 .jst_build_histogram <- function(data, x_name, by_name = NULL,
                                  axis_labels = NULL, by_label = NULL,
-                                 facet_name = NULL) {
+                                 facet_name = NULL, look = .jst_plot_look_now()) {
   # A haven-labelled column is discrete on the x axis, so geom_histogram()
   # errors ("requires a continuous x aesthetic"). Strip the labels to the
   # underlying numeric for plotting -- declared missing codes have already
@@ -1532,20 +2328,23 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   by_lab <- if (!is.null(by_label)) by_label else by_name
 
   if (is.null(by_name)) {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x)) +
-      ggplot2::geom_histogram(bins = 30, fill = "#3366FF", color = "white",
-                              alpha = 0.85) +
-      ggplot2::labs(x = x_lab, y = "Count") +
-      ggplot2::theme_minimal()
+    sc <- list(list(aes = "fill", levels = "1", guide = FALSE))
+    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, fill = "1")) +
+      ggplot2::geom_histogram(bins = 30, color = "white") +
+      ggplot2::labs(x = x_lab, y = "Count")
   } else {
+    sc <- list(list(aes = "fill", levels = .jst_plot_levels(plot_df$by), guide = TRUE))
     p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x,
                                                 fill = .data$by)) +
-      ggplot2::geom_histogram(bins = 30, color = "white", alpha = 0.55,
+      ggplot2::geom_histogram(bins = 30, color = "white", alpha = 0.6,
                               position = "identity") +
-      ggplot2::labs(x = x_lab, y = "Count", fill = by_lab) +
-      ggplot2::theme_minimal()
+      ggplot2::labs(x = x_lab, y = "Count", fill = by_lab)
   }
-  .jst_plot_facets(p, facet_name)
+  p <- .jst_plot_add_scales(p, sc, look) + .jst_plot_zero_y(count = TRUE) +
+    .jst_plot_theme(look)
+  .jst_plot_built(.jst_plot_facets(p, facet_name), sc,
+                  .jst_plot_case_sheet(plot_df, c(x = x_name, by = by_name,
+                                                  facet = facet_name)))
 }
 
 
@@ -1555,13 +2354,13 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' the variable's kernel density estimate, one curve, or one per group of
 #' \code{by =} laid over each other, and one panel per group of
 #' \code{facet =}. Never the automatic choice: \code{type = "density"}
-#' asks for it.
+#' asks for it. In the look's colors since Session 415.
 #'
 #' @keywords internal
 #' @importFrom rlang .data
 .jst_build_density <- function(data, x_name, by_name = NULL,
                                axis_labels = NULL, by_label = NULL,
-                               facet_name = NULL) {
+                               facet_name = NULL, look = .jst_plot_look_now()) {
   x_col <- data[[x_name]]
   if (inherits(x_col, "haven_labelled")) x_col <- as.numeric(x_col)
   plot_df <- data.frame(x = x_col)
@@ -1574,21 +2373,28 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   by_lab <- if (!is.null(by_label)) by_label else by_name
 
   if (is.null(by_name)) {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x)) +
-      ggplot2::geom_density(fill = "#3366FF", color = "#3366FF",
-                            alpha = 0.35, linewidth = 0.8) +
-      ggplot2::labs(x = x_lab, y = "Density") +
-      ggplot2::theme_minimal()
+    sc <- list(list(aes = "fill", levels = "1", guide = FALSE),
+               list(aes = "colour", levels = "1", guide = FALSE))
+    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, fill = "1",
+                                                colour = "1")) +
+      ggplot2::geom_density(alpha = 0.35, linewidth = 0.8) +
+      ggplot2::labs(x = x_lab, y = "Density")
   } else {
+    lv <- .jst_plot_levels(plot_df$by)
+    sc <- list(list(aes = "fill", levels = lv, guide = TRUE),
+               list(aes = "colour", levels = lv, guide = TRUE))
     p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x,
                                                 fill = .data$by,
                                                 color = .data$by)) +
       ggplot2::geom_density(alpha = 0.3, linewidth = 0.8) +
       ggplot2::labs(x = x_lab, y = "Density", fill = by_lab,
-                    color = by_lab) +
-      ggplot2::theme_minimal()
+                    color = by_lab)
   }
-  .jst_plot_facets(p, facet_name)
+  p <- .jst_plot_add_scales(p, sc, look) + .jst_plot_zero_y() +
+    .jst_plot_theme(look)
+  .jst_plot_built(.jst_plot_facets(p, facet_name), sc,
+                  .jst_plot_case_sheet(plot_df, c(x = x_name, by = by_name,
+                                                  facet = facet_name)))
 }
 
 
@@ -1610,11 +2416,16 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
 #' Internal helper: build bar chart (1 categorical variable)
 #'
+#' One series in the look's one color, each bar's count beyond its end
+#' (ruling R70); by groups side by side, in the look's colors for that
+#' many, their counts shown only under values.grouped = yes. The bars stand
+#' on the axis (ruling R64).
+#'
 #' @keywords internal
 #' @importFrom rlang .data
 .jst_build_bar <- function(data, x_name, by_name = NULL,
                            axis_labels = NULL, by_label = NULL,
-                           facet_name = NULL) {
+                           facet_name = NULL, look = .jst_plot_look_now()) {
   plot_df <- data.frame(x = data[[x_name]])
   if (!is.null(plot_df$x) && !is.factor(plot_df$x)) {
     plot_df$x <- factor(plot_df$x)
@@ -1628,28 +2439,38 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   by_lab <- if (!is.null(by_label)) by_label else by_name
 
   if (is.null(by_name)) {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x)) +
-      ggplot2::geom_bar(fill = "#3366FF", alpha = 0.85) +
-      ggplot2::labs(x = x_lab, y = "Count") +
-      ggplot2::theme_minimal()
+    sc <- list(list(aes = "fill", levels = "1", guide = FALSE))
+    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, fill = "1")) +
+      ggplot2::geom_bar(width = 0.7) +
+      .jst_plot_value_layer(look) +
+      ggplot2::labs(x = x_lab, y = "Count")
   } else {
+    sc <- list(list(aes = "fill", levels = .jst_plot_levels(plot_df$by), guide = TRUE))
     p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, fill = .data$by)) +
       ggplot2::geom_bar(position = ggplot2::position_dodge(width = 0.8),
                         width = 0.7) +
-      ggplot2::labs(x = x_lab, y = "Count", fill = by_lab) +
-      ggplot2::theme_minimal()
+      .jst_plot_value_layer(look, grouped = TRUE, group_var = "by") +
+      ggplot2::labs(x = x_lab, y = "Count", fill = by_lab)
   }
-  .jst_plot_facets(p, facet_name)
+  p <- .jst_plot_add_scales(p, sc, look) + .jst_plot_zero_y(count = TRUE) +
+    .jst_plot_theme(look)
+  .jst_plot_built(.jst_plot_facets(p, facet_name), sc,
+                  .jst_plot_count_sheet(plot_df, x_name, by_name, facet_name,
+                                        if (!is.null(by_name)) "by"))
 }
 
 
 #' Internal helper: build scatterplot (2 numeric variables)
 #'
+#' The cases, and the line asked for, in the look's one color; by groups,
+#' in its colors for that many (Session 415).
+#'
 #' @keywords internal
 #' @importFrom rlang .data
 .jst_build_scatter <- function(data, variable_names, by_name,
                                line, equation, r2, band,
-                               axis_labels = NULL, by_label = NULL) {
+                               axis_labels = NULL, by_label = NULL,
+                               look = .jst_plot_look_now()) {
 
   x_name <- variable_names[1]
   y_name <- variable_names[2]
@@ -1664,9 +2485,14 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   # Base scatter
   if (is.null(by_name)) {
+    sc <- list(list(aes = "colour", levels = "1", guide = FALSE),
+               list(aes = "fill", levels = "1", guide = FALSE))
     p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, y = .data$y)) +
-      ggplot2::geom_point(alpha = 0.55, color = "#222222")
+      ggplot2::geom_point(ggplot2::aes(colour = "1"), alpha = 0.55)
   } else {
+    lv <- .jst_plot_levels(plot_df$by)
+    sc <- list(list(aes = "colour", levels = lv, guide = TRUE),
+               list(aes = "fill", levels = lv, guide = TRUE))
     p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, y = .data$y,
                                                 color = .data$by)) +
       ggplot2::geom_point(alpha = 0.65)
@@ -1679,7 +2505,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     if (line == "connect") {
       # Simple line connecting points — no band, no equation
       if (is.null(by_name)) {
-        p <- p + ggplot2::geom_line(color = "#3366FF", alpha = 0.7)
+        p <- p + ggplot2::geom_line(ggplot2::aes(colour = "1"), alpha = 0.7)
       } else {
         p <- p + ggplot2::geom_line(alpha = 0.7)
       }
@@ -1688,12 +2514,12 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       # Loess smoother — no equation, band options apply
       show_se <- !identical(band, "none") && band == "ci"
       if (is.null(by_name)) {
-        p <- p + ggplot2::geom_smooth(method = "loess", se = show_se,
-                                      color = "#3366FF",
-                                      fill = "#3366FF",
+        p <- p + ggplot2::geom_smooth(ggplot2::aes(colour = "1", fill = "1"),
+                                      method = "loess", se = show_se,
                                       formula = y ~ x)
       } else {
-        p <- p + ggplot2::geom_smooth(method = "loess", se = show_se,
+        p <- p + ggplot2::geom_smooth(ggplot2::aes(fill = .data$by),
+                                      method = "loess", se = show_se,
                                       formula = y ~ x)
       }
 
@@ -1745,9 +2571,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   p <- p + ggplot2::labs(x = x_lab, y = y_lab,
                          color = by_lab, fill = by_lab,
-                         subtitle = subtitle_text) +
-           ggplot2::theme_minimal()
-  p
+                         subtitle = subtitle_text)
+  p <- .jst_plot_add_scales(p, sc, look) + .jst_plot_theme(look)
+  .jst_plot_built(p, sc, .jst_plot_case_sheet(plot_df, c(x = x_name, y = y_name,
+                                                         by = by_name)))
 }
 
 
@@ -1755,6 +2582,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #'
 #' Handles the four band options: ci (ggplot default), pi (prediction
 #' interval, computed manually), see (constant +/- t*SEE rectangle), none.
+#' The line and its band take the series' color through the chart's color
+#' scales (Session 415).
 #'
 #' @keywords internal
 #' @importFrom rlang .data
@@ -1763,17 +2592,17 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (is.null(by_name)) {
     # Single-group line
     show_ci <- identical(band, "ci")
-    p <- p + ggplot2::geom_smooth(method = "lm", se = show_ci,
-                                  color = "#3366FF",
-                                  fill = "#3366FF",
+    p <- p + ggplot2::geom_smooth(ggplot2::aes(colour = "1", fill = "1"),
+                                  method = "lm", se = show_ci,
                                   formula = y ~ x)
 
     if (band %in% c("pi", "see")) {
       band_df <- .jst_compute_band(plot_df, band)
       p <- p + ggplot2::geom_ribbon(
         data = band_df,
-        ggplot2::aes(x = .data$x, ymin = .data$lwr, ymax = .data$upr),
-        fill = "#3366FF", alpha = 0.15,
+        ggplot2::aes(x = .data$x, ymin = .data$lwr, ymax = .data$upr,
+                     fill = "1"),
+        alpha = 0.15,
         inherit.aes = FALSE
       )
     }
@@ -1781,7 +2610,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   } else {
     # Per-group lines
     show_ci <- identical(band, "ci")
-    p <- p + ggplot2::geom_smooth(method = "lm", se = show_ci,
+    p <- p + ggplot2::geom_smooth(ggplot2::aes(fill = .data$by),
+                                  method = "lm", se = show_ci,
                                   formula = y ~ x)
 
     if (band %in% c("pi", "see")) {
@@ -1846,10 +2676,15 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
 #' Internal helper: build boxplot (1 numeric + 1 categorical)
 #'
+#' One series light grey with black lines, the mean a black diamond (the
+#' fixed greys of ruling R64); by groups, the boxes in the look's colors
+#' for that many.
+#'
 #' @keywords internal
 #' @importFrom rlang .data
 .jst_build_box <- function(data, variable_names, var_types, by_name = NULL,
-                           axis_labels = NULL, by_label = NULL) {
+                           axis_labels = NULL, by_label = NULL,
+                           look = .jst_plot_look_now()) {
 
   # Numeric on y, categorical on x
   if (var_types[1] == "numeric") {
@@ -1870,31 +2705,38 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
 
   if (is.null(by_name)) {
+    sc <- list()
     p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, y = .data$y)) +
-      ggplot2::geom_boxplot(fill = "#E6EEF9", color = "#333333",
+      ggplot2::geom_boxplot(fill = .jst_plot_ink$box, color = "#000000",
                             outlier.alpha = 0.6) +
       ggplot2::stat_summary(fun = mean, geom = "point",
-                            shape = 18, size = 3, color = "#3366FF") +
+                            shape = 18, size = 3, color = .jst_plot_ink$mark) +
       ggplot2::labs(x = x_lab, y = y_lab,
-                    subtitle = "Diamond marks the group mean") +
-      ggplot2::theme_minimal()
+                    subtitle = "Diamond marks the group mean")
   } else {
+    sc <- list(list(aes = "fill", levels = .jst_plot_levels(plot_df$by), guide = TRUE))
     p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, y = .data$y,
                                                 fill = .data$by)) +
       ggplot2::geom_boxplot(outlier.alpha = 0.6) +
-      ggplot2::labs(x = x_lab, y = y_lab, fill = by_lab) +
-      ggplot2::theme_minimal()
+      ggplot2::labs(x = x_lab, y = y_lab, fill = by_lab)
   }
-  p
+  p <- .jst_plot_add_scales(p, sc, look) + .jst_plot_theme(look)
+  .jst_plot_built(p, sc, .jst_plot_case_sheet(plot_df, c(x = x_name, y = y_name,
+                                                         by = by_name)))
 }
 
 
 #' Internal helper: build grouped bar chart (2 categorical variables)
 #'
+#' The second variable's categories side by side in the look's colors for
+#' that many, their counts shown only under values.grouped = yes (ruling
+#' R70: no values on a chart of several series by default); the bars stand
+#' on the axis.
+#'
 #' @keywords internal
 #' @importFrom rlang .data
 .jst_build_grouped_bar <- function(data, variable_names, axis_labels = NULL,
-                                   facet_name = NULL) {
+                                   facet_name = NULL, look = .jst_plot_look_now()) {
   x_name    <- variable_names[1]
   fill_name <- variable_names[2]
 
@@ -1907,13 +2749,17 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (!is.null(facet_name)) plot_df$facet <- data[[facet_name]]
   plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
 
+  sc <- list(list(aes = "fill", levels = .jst_plot_levels(plot_df$fill), guide = TRUE))
   p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, fill = .data$fill)) +
     ggplot2::geom_bar(position = ggplot2::position_dodge(width = 0.8),
                       width = 0.7) +
-    ggplot2::scale_fill_brewer(palette = "Blues") +
-    ggplot2::labs(x = x_lab, y = "Count", fill = fill_lab) +
-    ggplot2::theme_minimal()
-  .jst_plot_facets(p, facet_name)
+    .jst_plot_value_layer(look, grouped = TRUE, group_var = "fill") +
+    ggplot2::labs(x = x_lab, y = "Count", fill = fill_lab)
+  p <- .jst_plot_add_scales(p, sc, look) + .jst_plot_zero_y(count = TRUE) +
+    .jst_plot_theme(look)
+  .jst_plot_built(.jst_plot_facets(p, facet_name), sc,
+                  .jst_plot_count_sheet(plot_df, x_name, fill_name, facet_name,
+                                        "fill"))
 }
 
 
@@ -2237,6 +3083,249 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   list(vars = unique(vars), groups = groups, owner = owner)
 }
 
+#' Internal helper: a model's variable, as its plots title an axis
+#'
+#' The variable's label, the name where it has none (the S412 audit's F4,
+#' ruled Session 413), read from the result, which keeps the labels the
+#' analysis ran with: the outcome's from the coefficients' "outcome", a
+#' dummy-coded variable's from its group, any other predictor's from the
+#' coefficients' labels, keyed by term. A result stores a variable's name
+#' where it had no label.
+#'
+#' @param x A \code{jst_lm} or \code{jst_logistic} result.
+#' @param var Character(1), the variable's name.
+#' @param wrap Logical(1): put a long label on two lines, for an axis.
+#' @return Character(1).
+#' @keywords internal
+.jst_plot_model_label <- function(x, var, wrap = TRUE) {
+  if (is.null(var) || length(var) != 1L || is.na(var)) return(var)
+  out <- function(l) {
+    if (is.null(l) || length(l) != 1L || is.na(l) || !nzchar(l)) return(var)
+    l <- as.character(l)
+    if (wrap) .jst_plot_wrap(l) else l
+  }
+  oc <- attr(x$coefficients_raw, "outcome")
+  if (!is.null(oc) && identical(unname(oc["name"]), var)) return(out(unname(oc["label"])))
+  g <- x$dummy_groups[[var]]
+  if (is.list(g) && !is.null(g$var_label)) return(out(g$var_label))
+  labs <- attr(x$coefficients_raw, "labels")
+  if (!is.null(labs) && var %in% names(labs)) return(out(unname(labs[[var]])))
+  var
+}
+
+#' Internal helper: a comparison's variable, as its plots title an axis
+#'
+#' @param x A \code{jst_ttest} or \code{jst_anova} result.
+#' @param which "outcome" or "group".
+#' @param name The variable's name.
+#' @param wrap Logical(1).
+#' @return Character(1): its label, the name where it has none.
+#' @keywords internal
+.jst_plot_group_label <- function(x, which, name, wrap = TRUE) {
+  a <- attr(x$descriptives_raw, which)
+  l <- if (is.null(a)) NA_character_ else unname(a["label"])
+  if (is.na(l) || !nzchar(l)) return(name)
+  if (wrap) .jst_plot_wrap(l) else l
+}
+
+#' Internal helper: the heatmap's own theme setting, its axis text slanted
+#' @keywords internal
+.jst_plot_heat_tweak <- function() {
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+}
+
+#' Internal helper: which variables a result names by name, or by code
+#'
+#' Ruling R72 (Session 412; the S412 audit's F9, taken Session 413): a
+#' jstats result keeps the labels it had when the analysis ran, and a table
+#' or a figure made from it shows a variable's NAME where the result holds
+#' no label for it, and a category's CODE where it holds no value label.
+#' Read from the result's own label fields -- a stored label that is the
+#' name counts as absent, as the results store the name in its place --
+#' never from the text a table shows. A variable shown by its categories
+#' is counted where its codes stand for categories: a grouping variable, a
+#' crosstab's variables and a dummy-coded predictor whatever their labels;
+#' a frequency table's variable only when some of its codes carry a label,
+#' since the values of a variable with none may be what they mean (a
+#' count).
+#'
+#' @param x A result.
+#' @param shown Character, or NULL for every variable the result holds:
+#'   the variables a plot shows.
+#' @return A list: names_shown (the variables with no label), codes_shown
+#'   (by variable, the codes with no value label), labelled (TRUE when the
+#'   result holds any label at all), and data_name (the data frame's name
+#'   as the result recorded it, or NULL).
+#' @keywords internal
+.jst_result_label_gaps <- function(x, shown = NULL) {
+  vars  <- character(0)        # by variable: its label, NA for none
+  codes <- list()
+  any_vl <- FALSE
+  absent <- function(l, v) {
+    is.null(l) || length(l) != 1L || is.na(l) || !nzchar(l) ||
+      identical(as.character(l), v)
+  }
+  addv <- function(v, l) {
+    if (is.null(v) || length(v) != 1L || is.na(v) || !nzchar(v)) return(invisible())
+    if (!v %in% names(vars)) vars[v] <<- if (absent(l, v)) NA_character_ else as.character(l)
+  }
+  addc <- function(v, code, label, partial = FALSE) {
+    if (is.null(v) || is.na(v) || is.null(code) || !length(code)) return(invisible())
+    if (is.null(label)) label <- rep(NA_character_, length(code))
+    has <- !is.na(label) & nzchar(as.character(label))
+    if (any(has)) any_vl <<- TRUE
+    if (partial && !any(has)) return(invisible())
+    num  <- suppressWarnings(!is.na(as.numeric(as.character(code))))
+    miss <- as.character(code[!is.na(code) & num & !has])
+    if (length(miss)) codes[[v]] <<- unique(c(codes[[v]], miss))
+  }
+  if (inherits(x, c("jst_lm", "jst_logistic"))) {
+    oc <- attr(x$coefficients_raw, "outcome")
+    if (!is.null(oc)) addv(unname(oc["name"]), unname(oc["label"]))
+    dummies <- character(0)
+    for (v in names(x$dummy_groups)) {
+      g <- x$dummy_groups[[v]]
+      addv(v, g$var_label)
+      addc(v, g$codes, g$value_labels)
+      dummies <- c(dummies, g$dummy)
+    }
+    labs <- attr(x$coefficients_raw, "labels")
+    for (tm in setdiff(names(labs), dummies)) {
+      # A variable's own term; a computed one (I(Age^2), log(Income)) and
+      # the constant are not variables.
+      if (identical(make.names(tm), tm)) addv(tm, unname(labs[[tm]]))
+    }
+  } else if (inherits(x, c("jst_ttest", "jst_anova"))) {
+    dr <- x$descriptives_raw
+    for (w in c("outcome", "group")) {
+      a <- attr(dr, w)
+      if (!is.null(a)) addv(unname(a["name"]), unname(a["label"]))
+    }
+    gv <- .jst_apa_name(x, "group")
+    if (!is.null(dr$group_code) && !is.na(gv)) addc(gv, dr$group_code, dr$group_label)
+  } else if (inherits(x, "jst_corr")) {
+    for (v in rownames(x$r)) {
+      addv(v, if (is.null(x$labels)) NULL else unname(x$labels[v]))
+    }
+  } else if (inherits(x, "jst_crosstab")) {
+    for (cats in list(x$row_categories, x$col_categories)) {
+      a <- attr(cats, "variable")
+      if (is.null(a)) next
+      addv(unname(a["name"]), unname(a["label"]))
+      if (!is.null(cats$code)) addc(unname(a["name"]), cats$code, cats$label)
+    }
+  } else if (inherits(x, "jst_freq")) {
+    for (v in names(x$frequencies)) {
+      f <- x$frequencies[[v]]
+      addv(v, f$var_label)
+      if (is.data.frame(f$valid) && !is.null(f$valid$Code)) {
+        addc(v, f$valid$Code, f$valid$Label, partial = TRUE)
+      }
+    }
+  } else if (inherits(x, "jst_desc")) {
+    dr <- x$descriptives_raw
+    labs <- attr(dr, "labels")
+    for (v in unique(dr$variable)) addv(v, if (is.null(labs)) NULL else unname(labs[v]))
+    by <- attr(dr, "by")
+    if (!is.null(by)) {
+      addv(unname(by["name"]), unname(by["label"]))
+      if (!is.null(dr$group_code)) addc(unname(by["name"]), dr$group_code, dr$group_label)
+    }
+  } else if (inherits(x, "jst_alpha")) {
+    ir <- x$items_raw
+    if (is.data.frame(ir)) for (i in seq_len(nrow(ir))) addv(ir$item[i], ir$label[i])
+  } else if (inherits(x, "jst_multi")) {
+    rr <- x$rows_raw
+    if (is.data.frame(rr)) {
+      it <- rr[!is.na(rr$item), , drop = FALSE]
+      for (i in seq_len(nrow(it))) addv(it$item[i], it$label[i])
+    }
+  }
+  if (!is.null(shown)) {
+    shown <- unique(shown[!is.na(shown) & nzchar(shown)])
+    vars  <- vars[names(vars) %in% shown]
+    codes <- codes[names(codes) %in% shown]
+  }
+  list(names_shown = names(vars)[is.na(vars)], codes_shown = codes,
+       labelled = any(!is.na(vars)) || any_vl,
+       data_name = if (is.character(x$data_name) && length(x$data_name) == 1L &&
+                       !is.na(x$data_name) && nzchar(x$data_name)) x$data_name)
+}
+
+#' Internal helper: the points a model's or a test's plot draws, for its
+#' Excel sheet
+#'
+#' The plot's own data frame, the columns jstats built it with (ruling R65:
+#' a figure's data to Excel), each a number or text.
+#'
+#' @param p A ggplot.
+#' @return A data frame, or NULL.
+#' @keywords internal
+.jst_plot_points_sheet <- function(p) {
+  d <- tryCatch(p$data, error = function(e) NULL)
+  if (!is.data.frame(d) || !nrow(d)) return(NULL)
+  ok <- vapply(d, function(v) is.atomic(v) && is.null(dim(v)), logical(1))
+  if (!any(ok)) return(NULL)
+  out <- lapply(d[ok], function(v) {
+    if (is.factor(v)) as.character(v)
+    else if (inherits(v, "haven_labelled")) as.numeric(unclass(v))
+    else as.vector(v)
+  })
+  structure(out, class = "data.frame", row.names = seq_len(nrow(d)))
+}
+
+#' Internal helper: a result's plots marked as jplot()'s
+#'
+#' Each plot gets the class and the frame's facts (\code{.jst_plot_finish()}):
+#' its kind (the plot's name: "fit", "qq", "effect_Age"), the result's N,
+#' its default title (ruling R69: a model's or a test's plot keeps its own
+#' title -- "Residuals vs Fitted" -- which stands in the caption in a Word
+#' file; a fit plot, a box plot and a scatterplot, which have none, the
+#' outcome "by" the predictor or the group), and what it shows without a
+#' label (ruling R72).
+#'
+#' @param plots A named list of ggplots.
+#' @param x The result.
+#' @param n Its N.
+#' @param titles Named character; default titles by plot name.
+#' @param shown Character; the variables the plots show.
+#' @return The list, each plot marked.
+#' @keywords internal
+.jst_plot_mark_results <- function(plots, x, n = NA, titles = character(0),
+                                   shown = character(0)) {
+  gaps <- .jst_result_label_gaps(x, shown)
+  code_labels <- stats::setNames(lapply(names(gaps$codes_shown), function(v) {
+    .jst_result_value_labels(list(x), v)
+  }), names(gaps$codes_shown))
+  look <- .jst_plot_look_now()
+  for (nm in names(plots)) {
+    p <- plots[[nm]]
+    if (!inherits(p, "ggplot")) next
+    t <- if (nm %in% names(titles)) titles[[nm]]
+         else if (!is.null(attr(p, "jst_title"))) attr(p, "jst_title")
+         else if (!is.null(p$labels$title)) p$labels$title
+         else NA_character_
+    pn <- if (!is.null(attr(p, "jst_n"))) attr(p, "jst_n") else n
+    sc <- attr(p, "jst_scales"); if (is.null(sc)) sc <- list()
+    dt <- attr(p, "jst_data")
+    if (is.null(dt)) dt <- .jst_plot_points_sheet(p)
+    tw <- attr(p, "jst_tweak")
+    for (a in c("jst_title", "jst_n", "jst_scales", "jst_data", "jst_tweak")) {
+      attr(p, a) <- NULL
+    }
+    plots[[nm]] <- .jst_plot_finish(p, kind = nm, n = pn, title = t, data = dt,
+                                    names_shown = gaps$names_shown,
+                                    codes_shown = gaps$codes_shown,
+                                    scales = sc, labelled = gaps$labelled,
+                                    look = look, tweak = tw,
+                                    filter = .jst_plot_filter_facts(x$sample_info),
+                                    data_name = gaps$data_name,
+                                    rerun = "analysis",
+                                    code_labels = code_labels)
+  }
+  plots
+}
+
 #' Internal helper: the focal variable of a fit or probability plot
 #'
 #' \code{focal} names a VARIABLE of the model (Session 360): a
@@ -2340,11 +3429,11 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     ggplot2::geom_errorbar(data = pred_df,
                            ggplot2::aes(x = .data$x, ymin = .data$lwr,
                                         ymax = .data$upr),
-                           width = 0.15, color = "#3366FF",
+                           width = 0.15, color = .jst_plot_ink$line,
                            linewidth = 0.8),
     ggplot2::geom_point(data = pred_df,
                         ggplot2::aes(x = .data$x, y = .data$fit),
-                        color = "#3366FF", size = 2.8)
+                        color = .jst_plot_ink$line, size = 2.8)
   )
 }
 
@@ -2497,7 +3586,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @export
 #' @importFrom rlang .data
 jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
-                         equation = TRUE, r2 = TRUE, ...) {
+                         equation = TRUE, r2 = TRUE, ..., style = NULL) {
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(equation, "equation")
   .jst_check_flag(r2, "r2")
@@ -2508,6 +3597,9 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
                 show = "which", type = "which"),
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
+  # The style the plots are drawn in (ruling R64), as jplot.default().
+  .old_look <- .jst_plot_look_set(.jst_plot_look(style))
+  on.exit(.jst_plot_look_restore(.old_look), add = TRUE)
 
   # No "vif" since Session 376 (Jeff: the bar chart added nothing the VIF
   # table does not give, and the commercial packages draw none).
@@ -2643,7 +3735,7 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
       ggplot2::ggplot() +
         ggplot2::geom_point(data = point_df,
                             ggplot2::aes(x = .data$x, y = .data$y),
-                            alpha = 0.55, color = "#222222",
+                            alpha = 0.55, color = .jst_plot_ink$point,
                             position = ggplot2::position_jitter(
                               width = 0.12, height = 0, seed = 1)) +
         .jst_category_layers(pred_df)
@@ -2653,21 +3745,21 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
                              ggplot2::aes(x = .data$x,
                                           ymin = .data$lwr,
                                           ymax = .data$upr),
-                             fill = "#3366FF", alpha = 0.18) +
+                             fill = .jst_plot_ink$line, alpha = 0.18) +
         ggplot2::geom_point(data = point_df,
                             ggplot2::aes(x = .data$x, y = .data$y),
-                            alpha = 0.55, color = "#222222") +
+                            alpha = 0.55, color = .jst_plot_ink$point) +
         ggplot2::geom_line(data = line_df,
                            ggplot2::aes(x = .data$x, y = .data$fit),
-                           color = "#3366FF", linewidth = 0.9)
+                           color = .jst_plot_ink$line, linewidth = 0.9)
     }
     p <- p +
       ggplot2::labs(
-        x        = focal_name,
-        y        = dv_name,
+        x        = .jst_plot_model_label(x, focal_name),
+        y        = .jst_plot_model_label(x, dv_name),
         subtitle = if (length(subtitle_parts) > 0) subtitle_parts else NULL
       ) +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     print(p)
     plots$fit <- p
   }
@@ -2685,11 +3777,11 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
                                       y = .data$observed)) +
       ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
                            color = "grey60") +
-      ggplot2::geom_point(alpha = 0.55, color = "#222222") +
+      ggplot2::geom_point(alpha = 0.55, color = .jst_plot_ink$point) +
       ggplot2::coord_equal(xlim = lim, ylim = lim) +
       ggplot2::labs(title = "Observed vs Predicted",
                     x = "Predicted", y = "Observed") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     print(p)
     plots$predicted <- p
   }
@@ -2752,8 +3844,9 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
         p <- ggplot2::ggplot() +
           .jst_category_layers(pred_df) +
           ggplot2::labs(title = paste0("Effect: ", iv),
-                        x = iv, y = dv_name) +
-          ggplot2::theme_minimal()
+                        x = .jst_plot_model_label(x, iv),
+                        y = .jst_plot_model_label(x, dv_name)) +
+          .jst_plot_theme()
         print(p)
         plots[[paste0("effect_", iv)]] <- p
         n_effects <- n_effects + 1
@@ -2779,11 +3872,12 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
                            ggplot2::aes(x = .data$x, y = .data$fit)) +
         ggplot2::geom_ribbon(ggplot2::aes(ymin = .data$lwr,
                                           ymax = .data$upr),
-                             fill = "#3366FF", alpha = 0.18) +
-        ggplot2::geom_line(color = "#3366FF", linewidth = 0.9) +
+                             fill = .jst_plot_ink$line, alpha = 0.18) +
+        ggplot2::geom_line(color = .jst_plot_ink$line, linewidth = 0.9) +
         ggplot2::labs(title = paste0("Effect: ", iv),
-                      x = iv, y = dv_name) +
-        ggplot2::theme_minimal()
+                      x = .jst_plot_model_label(x, iv),
+                      y = .jst_plot_model_label(x, dv_name)) +
+        .jst_plot_theme()
       print(p)
       plots[[paste0("effect_", iv)]] <- p
       n_effects <- n_effects + 1
@@ -2829,11 +3923,11 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
                           color = "grey60") +
       ggplot2::geom_errorbarh(ggplot2::aes(xmin = .data$lower,
                                            xmax = .data$upper),
-                              height = 0.2, color = "steelblue") +
-      ggplot2::geom_point(size = 2.5, color = "steelblue") +
+                              height = 0.2, color = .jst_plot_ink$line) +
+      ggplot2::geom_point(size = 2.5, color = .jst_plot_ink$line) +
       ggplot2::labs(title = "Coefficients (95% CI)",
                     x = "Estimate", y = NULL) +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     print(p)
     plots$coef <- p
   }
@@ -2851,7 +3945,11 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
     }
   }
 
-  .jst_return_plots(plots)
+  .jst_return_plots(.jst_plot_mark_results(
+    plots, x, n = x$n,
+    titles = c(fit = paste(.jst_plot_model_label(x, dv_name, wrap = FALSE), "by",
+                           .jst_plot_model_label(x, focal_name, wrap = FALSE))),
+    shown = c(dv_name, focal_name)))
 }
 
 
@@ -2861,7 +3959,7 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
 #' @export
 #' @importFrom rlang .data
 jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
-                               ...) {
+                               ..., style = NULL) {
 
   .jst_check_args(
     rlang::enquos(...),
@@ -2869,6 +3967,8 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
                 show = "which", type = "which"),
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
+  .old_look <- .jst_plot_look_set(.jst_plot_look(style))
+  on.exit(.jst_plot_look_restore(.old_look), add = TRUE)
 
   # No "vif" since Session 376, as in jplot.jst_lm(). "logit" since
   # Session 378: the probability plot's companion, not in the core set.
@@ -2986,7 +4086,7 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
       ggplot2::ggplot() +
         ggplot2::geom_point(data = point_df,
                             ggplot2::aes(x = .data$x, y = .data$y),
-                            alpha = 0.35, color = "#222222",
+                            alpha = 0.35, color = .jst_plot_ink$point,
                             position = ggplot2::position_jitter(
                               width = 0.12, height = 0, seed = 1)) +
         .jst_category_layers(pred_df)
@@ -2996,24 +4096,24 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
                              ggplot2::aes(x = .data$x,
                                           ymin = .data$lwr,
                                           ymax = .data$upr),
-                             fill = "#3366FF", alpha = 0.18) +
+                             fill = .jst_plot_ink$line, alpha = 0.18) +
         ggplot2::geom_point(data = point_df,
                             ggplot2::aes(x = .data$x, y = .data$y),
-                            alpha = 0.35, color = "#222222") +
+                            alpha = 0.35, color = .jst_plot_ink$point) +
         ggplot2::geom_line(data = line_df,
                            ggplot2::aes(x = .data$x, y = .data$fit),
-                           color = "#3366FF", linewidth = 0.9)
+                           color = .jst_plot_ink$line, linewidth = 0.9)
     }
     p <- p +
       ggplot2::labs(
         title    = paste0("Predicted Probability: ", dv_name,
                           " = ", predicts_label),
-        x        = focal_name,
+        x        = .jst_plot_model_label(x, focal_name),
         y        = paste0("P(", dv_name, " = ", predicts_label, ")"),
         subtitle = held_note
       ) +
       ggplot2::ylim(0, 1) +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     print(p)
     plots$probability <- p
   }
@@ -3040,31 +4140,31 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
                              ggplot2::aes(x = .data$x,
                                           ymin = .data$lwr,
                                           ymax = .data$upr),
-                             fill = "#3366FF", alpha = 0.18) +
+                             fill = .jst_plot_ink$line, alpha = 0.18) +
         ggplot2::geom_line(data = link_df,
                            ggplot2::aes(x = .data$x, y = .data$fit),
-                           color = "#3366FF", linewidth = 0.9) +
+                           color = .jst_plot_ink$line, linewidth = 0.9) +
         ggplot2::geom_rug(data = rug_df[rug_df$side == "t", , drop = FALSE],
                           ggplot2::aes(x = .data$x), sides = "t",
-                          alpha = 0.35, color = "#222222",
+                          alpha = 0.35, color = .jst_plot_ink$point,
                           length = ggplot2::unit(0.03, "npc")) +
         ggplot2::geom_rug(data = rug_df[rug_df$side == "b", , drop = FALSE],
                           ggplot2::aes(x = .data$x), sides = "b",
-                          alpha = 0.35, color = "#222222",
+                          alpha = 0.35, color = .jst_plot_ink$point,
                           length = ggplot2::unit(0.03, "npc"))
     }
     p <- p +
       ggplot2::labs(
         title    = paste0("Log-odds (Logit Scale): ", dv_name,
                           " = ", predicts_label),
-        x        = focal_name,
+        x        = .jst_plot_model_label(x, focal_name),
         y        = paste0("Log-odds of ", dv_name, " = ", predicts_label),
         subtitle = held_lg,
         caption  = if (is.null(focal_group))
           paste0("Rug: cases with ", dv_name, " = ", predicts_label,
                  " at the top, the others at the bottom")
       ) +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     print(p)
     plots$logit <- p
   }
@@ -3091,13 +4191,13 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
                           color = "grey60") +
       ggplot2::geom_errorbarh(ggplot2::aes(xmin = .data$lower,
                                            xmax = .data$upper),
-                              height = 0.2, color = "steelblue") +
-      ggplot2::geom_point(size = 2.5, color = "steelblue") +
+                              height = 0.2, color = .jst_plot_ink$line) +
+      ggplot2::geom_point(size = 2.5, color = .jst_plot_ink$line) +
       ggplot2::scale_x_log10() +
       ggplot2::labs(title = "Odds Ratios (95% CI)",
                     subtitle = "Log scale; OR = 1 means no effect",
                     x = "Exp(b)", y = NULL) +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     print(p)
     plots$coef <- p
   }
@@ -3112,7 +4212,8 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
     }
   }
 
-  .jst_return_plots(plots)
+  .jst_return_plots(.jst_plot_mark_results(plots, x, n = x$n,
+                                           shown = c(dv_name, focal_name)))
 }
 
 
@@ -3247,15 +4348,15 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
                                             y = .data$sample)) +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
-                         color = "red") +
+                         color = .jst_plot_ink$mark) +
     ggplot2::geom_text(data = df_qq[idx, ],
                        ggplot2::aes(label = .data$obs),
-                       hjust = -0.2, size = 3, color = "red") +
+                       hjust = -0.2, size = 3, color = .jst_plot_ink$mark) +
     ggplot2::labs(title = "Normal Q-Q",
                   subtitle = if (paired) "Differences between the pairs",
                   x = "Theoretical Quantiles",
                   y = "Standardized Residuals") +
-    ggplot2::theme_minimal()
+    .jst_plot_theme()
   print(p)
   invisible(p)
 }
@@ -3293,7 +4394,7 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
 #' @describeIn jplot a group-comparison box plot for a \code{jt()} result, with the group means marked; \code{which = "qq"} draws the normal Q-Q plot of its residuals.
 #' @export
 #' @importFrom rlang .data
-jplot.jst_ttest <- function(x, which = "core", ...) {
+jplot.jst_ttest <- function(x, which = "core", ..., style = NULL) {
 
   .jst_check_args(
     rlang::enquos(...),
@@ -3301,6 +4402,8 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
                 show = "which", type = "which"),
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
+  .old_look <- .jst_plot_look_set(.jst_plot_look(style))
+  on.exit(.jst_plot_look_restore(.old_look), add = TRUE)
 
   plot_set <- .jst_resolve_which(which, core = "box",
                                  all_plots = c("box", "qq"),
@@ -3325,13 +4428,14 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
 
     p <- ggplot2::ggplot(plot_df,
                          ggplot2::aes(x = .data$group, y = .data$dv)) +
-      ggplot2::geom_boxplot(fill = "#E6EEF9", color = "#333333",
+      ggplot2::geom_boxplot(fill = .jst_plot_ink$box, color = "#000000",
                             outlier.alpha = 0.6) +
       ggplot2::stat_summary(fun = mean, geom = "point",
-                            shape = 18, size = 3, color = "#3366FF") +
-      ggplot2::labs(x = group_name, y = dv_name,
+                            shape = 18, size = 3, color = .jst_plot_ink$mark) +
+      ggplot2::labs(x = .jst_plot_group_label(x, "group", group_name),
+                    y = .jst_plot_group_label(x, "outcome", dv_name),
                     subtitle = "Diamond marks the group mean") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     print(p)
     plots$box <- p
   }
@@ -3343,7 +4447,12 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
   }
 
   .jst_group_plot_list(c(box = "Box Plot", qq = "Normal Q-Q")[names(plots)])
-  .jst_return_plots(plots)
+  .jst_return_plots(.jst_plot_mark_results(
+    plots, x, n = x$n,
+    titles = c(box = paste(.jst_plot_group_label(x, "outcome", dv_name, wrap = FALSE),
+                           "by", .jst_plot_group_label(x, "group", group_name,
+                                                       wrap = FALSE))),
+    shown = c(dv_name, group_name)))
 }
 
 
@@ -3352,7 +4461,7 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
 #' @describeIn jplot a group-comparison box plot for a \code{jaov()} result, with the group means marked; \code{which = "qq"} draws the normal Q-Q plot of its residuals.
 #' @export
 #' @importFrom rlang .data
-jplot.jst_anova <- function(x, which = "core", ...) {
+jplot.jst_anova <- function(x, which = "core", ..., style = NULL) {
 
   .jst_check_args(
     rlang::enquos(...),
@@ -3360,6 +4469,8 @@ jplot.jst_anova <- function(x, which = "core", ...) {
                 show = "which", type = "which"),
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
+  .old_look <- .jst_plot_look_set(.jst_plot_look(style))
+  on.exit(.jst_plot_look_restore(.old_look), add = TRUE)
 
   plot_set <- .jst_resolve_which(which, core = "box",
                                  all_plots = c("box", "qq"),
@@ -3384,13 +4495,14 @@ jplot.jst_anova <- function(x, which = "core", ...) {
 
     p <- ggplot2::ggplot(plot_df,
                          ggplot2::aes(x = .data$group, y = .data$dv)) +
-      ggplot2::geom_boxplot(fill = "#E6EEF9", color = "#333333",
+      ggplot2::geom_boxplot(fill = .jst_plot_ink$box, color = "#000000",
                             outlier.alpha = 0.6) +
       ggplot2::stat_summary(fun = mean, geom = "point",
-                            shape = 18, size = 3, color = "#3366FF") +
-      ggplot2::labs(x = group_name, y = dv_name,
+                            shape = 18, size = 3, color = .jst_plot_ink$mark) +
+      ggplot2::labs(x = .jst_plot_group_label(x, "group", group_name),
+                    y = .jst_plot_group_label(x, "outcome", dv_name),
                     subtitle = "Diamond marks the group mean") +
-      ggplot2::theme_minimal()
+      .jst_plot_theme()
     print(p)
     plots$box <- p
   }
@@ -3401,7 +4513,12 @@ jplot.jst_anova <- function(x, which = "core", ...) {
   }
 
   .jst_group_plot_list(c(box = "Box Plot", qq = "Normal Q-Q")[names(plots)])
-  .jst_return_plots(plots)
+  .jst_return_plots(.jst_plot_mark_results(
+    plots, x, n = x$n,
+    titles = c(box = paste(.jst_plot_group_label(x, "outcome", dv_name, wrap = FALSE),
+                           "by", .jst_plot_group_label(x, "group", group_name,
+                                                       wrap = FALSE))),
+    shown = c(dv_name, group_name)))
 }
 
 
@@ -3410,7 +4527,7 @@ jplot.jst_anova <- function(x, which = "core", ...) {
 #' @describeIn jplot a heat-map of the correlation matrix for a \code{jcorr()} result, or a scatter plot for a single pair.
 #' @export
 #' @importFrom rlang .data
-jplot.jst_corr <- function(x, which = "core", ...) {
+jplot.jst_corr <- function(x, which = "core", ..., style = NULL) {
 
   .jst_check_args(
     rlang::enquos(...),
@@ -3418,6 +4535,8 @@ jplot.jst_corr <- function(x, which = "core", ...) {
                 show = "which", type = "which"),
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
+  .old_look <- .jst_plot_look_set(.jst_plot_look(style))
+  on.exit(.jst_plot_look_restore(.old_look), add = TRUE)
 
   r_matrix <- x$r
   n_vars   <- nrow(r_matrix)
@@ -3469,21 +4588,45 @@ jplot.jst_corr <- function(x, which = "core", ...) {
                                            match(heat_df$col, var_names))])
     heat_df$label <- ifelse(is.na(heat_df$r), "",
                             sprintf("%.2f", heat_df$r))
+    # In greys (ruling R64, Session 411; the lean taken Session 415): a
+    # grey scale cannot show a correlation's sign, so each tile is shaded by
+    # its strength, the absolute value of r, from white to dark grey, and
+    # the sign is in the value printed on it, white on the darker tiles.
+    heat_df$strength <- abs(heat_df$r)
+    text_col <- ifelse(!is.na(heat_df$strength) & heat_df$strength > 0.6,
+                       "#FFFFFF", "#000000")
 
+    # The variables by their labels, the names where none (the S412 audit's
+    # F4, Session 413: a chart's words come from labels), on two lines past
+    # about 20 columns.
+    hl <- vapply(var_names, function(v) {
+      l <- if (is.null(x$labels)) NA_character_ else unname(x$labels[v])
+      if (is.na(l) || !nzchar(l)) v else .jst_plot_wrap(l, 20L)
+    }, character(1))
+    look_h <- .jst_plot_look_now()
     p <- ggplot2::ggplot(heat_df,
                          ggplot2::aes(x = .data$row, y = .data$col,
-                                      fill = .data$r)) +
+                                      fill = .data$strength)) +
       ggplot2::geom_tile(color = "white", linewidth = 0.5) +
       ggplot2::geom_text(ggplot2::aes(label = .data$label),
-                         size = 3.5, color = "#222222") +
-      ggplot2::scale_fill_gradient2(low = "#CC3333", mid = "white",
-                                    high = "#3366FF", midpoint = 0,
-                                    limits = c(-1, 1), na.value = "grey90") +
+                         size = look_h$size * 0.8 / ggplot2::.pt,
+                         family = .jst_plot_family(look_h$font),
+                         color = text_col) +
+      ggplot2::scale_fill_gradient(low = "#FFFFFF", high = "#404040",
+                                   limits = c(0, 1), na.value = "#F2F2F2") +
+      ggplot2::scale_x_discrete(labels = hl) +
+      ggplot2::scale_y_discrete(labels = hl) +
       ggplot2::labs(title = "Correlation Matrix",
-                    x = NULL, y = NULL, fill = "r") +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45,
-                                                         hjust = 1))
+                    x = NULL, y = NULL, fill = "|r|") +
+      .jst_plot_theme() +
+      .jst_plot_heat_tweak()
+    attr(p, "jst_tweak") <- .jst_plot_heat_tweak()
+    # The Excel sheet: the matrix as the tiles show it.
+    attr(p, "jst_data") <- {
+      sh <- as.data.frame(unclass(r_matrix), stringsAsFactors = FALSE)
+      rownames(sh) <- NULL
+      cbind(data.frame(Variable = var_names, stringsAsFactors = FALSE), sh)
+    }
     print(p)
     plots$heatmap <- p
   }
@@ -3506,18 +4649,27 @@ jplot.jst_corr <- function(x, which = "core", ...) {
     # it with its own "Removed 4 rows containing missing values" warning.
     mf <- mf[!is.na(mf[[1L]]) & !is.na(mf[[2L]]), , drop = FALSE]
 
+    lab_of <- function(v, wrap = TRUE) {
+      l <- if (is.null(x$labels)) NA_character_ else unname(x$labels[v])
+      if (is.na(l) || !nzchar(l)) v else if (wrap) .jst_plot_wrap(l) else l
+    }
     p <- ggplot2::ggplot(mf,
                          ggplot2::aes(x = .data[[var_names[1]]],
                                       y = .data[[var_names[2]]])) +
-      ggplot2::geom_point(alpha = 0.55, color = "#222222") +
+      ggplot2::geom_point(alpha = 0.55, color = .jst_plot_ink$point) +
       ggplot2::labs(subtitle = sprintf("r = %.3f, N = %d", r_val, n_val),
-                    x = var_names[1], y = var_names[2]) +
-      ggplot2::theme_minimal()
+                    x = lab_of(var_names[1]), y = lab_of(var_names[2])) +
+      .jst_plot_theme()
+    attr(p, "jst_title") <- paste(lab_of(var_names[2], FALSE), "by",
+                                  lab_of(var_names[1], FALSE))
+    attr(p, "jst_n") <- n_val
     print(p)
     plots$scatter <- p
   }
 
-  .jst_return_plots(plots)
+  .jst_return_plots(.jst_plot_mark_results(
+    plots, x, n = if (!is.null(x$n)) min(x$n[lower.tri(x$n)], na.rm = TRUE) else NA,
+    shown = rownames(r_matrix)))
 }
 
 
@@ -3526,7 +4678,7 @@ jplot.jst_corr <- function(x, which = "core", ...) {
 #' @describeIn jplot a grouped bar chart of cell counts for a \code{jcrosstab()} result.
 #' @export
 #' @importFrom rlang .data
-jplot.jst_crosstab <- function(x, which = "core", ...) {
+jplot.jst_crosstab <- function(x, which = "core", ..., style = NULL) {
 
   .jst_check_args(
     rlang::enquos(...),
@@ -3534,6 +4686,9 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
                 show = "which", type = "which"),
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
+  look <- .jst_plot_look(style)
+  .old_look <- .jst_plot_look_set(look)
+  on.exit(.jst_plot_look_restore(.old_look), add = TRUE)
 
   plot_set <- .jst_resolve_which(which, core = "bar", all_plots = "bar",
                                  class_name = "jst_crosstab")
@@ -3560,19 +4715,53 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
     )
     bar_df$count <- as.vector(as.matrix(obs))
 
+    # The column variable's categories side by side in the look's colors,
+    # the row variable along the axis, each titled by its label (Session
+    # 415: the S412 audit's F4; ruling R64's legend with its title).
+    rv <- attr(x$row_categories, "variable")
+    cv <- attr(x$col_categories, "variable")
+    vlab <- function(a, wrap = TRUE) {
+      if (is.null(a)) return(NULL)
+      l <- unname(a["label"]); nm <- unname(a["name"])
+      if (is.na(l) || !nzchar(l)) nm else if (wrap) .jst_plot_wrap(l) else l
+    }
+    sc <- list(list(aes = "fill", levels = col_labels, guide = TRUE))
     p <- ggplot2::ggplot(bar_df,
                          ggplot2::aes(x = .data$row, y = .data$count,
                                       fill = .data$col)) +
       ggplot2::geom_col(position = ggplot2::position_dodge(width = 0.8),
                         width = 0.7) +
-      ggplot2::scale_fill_brewer(palette = "Blues") +
-      ggplot2::labs(x = NULL, y = "Count", fill = NULL) +
-      ggplot2::theme_minimal()
+      (if (identical(look$values.grouped, "yes"))
+        ggplot2::geom_text(ggplot2::aes(label = .data$count, group = .data$col),
+                           position = ggplot2::position_dodge(width = 0.8),
+                           vjust = -0.4, size = look$size * 0.8 / ggplot2::.pt,
+                           family = .jst_plot_family(look$font),
+                           colour = "#000000")) +
+      ggplot2::labs(x = vlab(rv), y = "Count", fill = vlab(cv)) +
+      .jst_plot_zero_y(count = TRUE) +
+      .jst_plot_theme()
+    p <- .jst_plot_add_scales(p, sc, look)
+    attr(p, "jst_title") <- if (!is.null(rv) && !is.null(cv)) {
+      paste(vlab(rv, FALSE), "by", vlab(cv, FALSE))
+    }
+    attr(p, "jst_scales") <- sc
+    attr(p, "jst_data") <- {
+      sh <- data.frame(as.character(bar_df$row), as.character(bar_df$col),
+                       bar_df$count, stringsAsFactors = FALSE)
+      names(sh) <- c(if (is.null(rv)) "Row" else unname(rv["name"]),
+                     if (is.null(cv)) "Column" else unname(cv["name"]), "n")
+      sh
+    }
     print(p)
     plots$bar <- p
   }
 
-  .jst_return_plots(plots)
+  .jst_return_plots(.jst_plot_mark_results(
+    plots, x, n = if (!is.null(x$n)) as.numeric(x$n) else NA,
+    shown = c(if (!is.null(attr(x$row_categories, "variable")))
+                unname(attr(x$row_categories, "variable")["name"]),
+              if (!is.null(attr(x$col_categories, "variable")))
+                unname(attr(x$col_categories, "variable")["name"]))))
 }
 
 
@@ -3581,7 +4770,8 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
 #' @describeIn jplot (planned) direct plotting of a \code{jdesc()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
 #' @export
 jplot.jst_desc <- function(x, which = "core", ...) {
-  .jst_plot_result_stop("jst_desc",
+  .jst_plot_result_stop(x, substitute(x),
+       "Call jplot() with the data frame instead, for example:\n",
        "  jplot(community, Age)       # histogram\n",
        "  jplot(community, Region)    # bar chart\n",
        "  jplot(WellbeingScore ~ Region, community, categorical = \"Region\")  # boxplot")
@@ -3590,10 +4780,26 @@ jplot.jst_desc <- function(x, which = "core", ...) {
 #' @describeIn jplot (planned) direct plotting of a \code{jfreq()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
 #' @export
 jplot.jst_freq <- function(x, which = "core", ...) {
-  .jst_plot_result_stop("jst_freq",
+  .jst_plot_result_stop(x, substitute(x),
+       "Call jplot() with the data frame instead, for example:\n",
        "  jplot(community, Region)    # bar chart\n",
        "  jplot(community, Region, Volunteer, ",
        "categorical = c(\"Region\", \"Volunteer\"))  # grouped bar chart")
+}
+
+#' @describeIn jplot a \code{jalpha()} result is not drawn; this method says
+#'   so and points you to the data-first form for its items, for example
+#'   \code{jplot(data, Item1)}.
+#' @export
+jplot.jst_alpha <- function(x, which = "core", ...) {
+  .jst_plot_result_stop(x, substitute(x), .jst_plot_items_line(x))
+}
+
+#' @describeIn jplot a \code{jmulti()} result is not drawn; this method says
+#'   so and points you to the data-first form for its items.
+#' @export
+jplot.jst_multi <- function(x, which = "core", ...) {
+  .jst_plot_result_stop(x, substitute(x), .jst_plot_items_line(x))
 }
 
 #' Internal: jplot()'s note on arguments the plot drawn does not use
@@ -3701,14 +4907,48 @@ jplot.jst_freq <- function(x, which = "core", ...) {
   invisible(NULL)
 }
 
-#' Internal: the stop for a jdesc() or jfreq() result given to jplot()
+#' Internal: the stop for a result jplot() does not draw
 #'
-#' @param cls Character(1). "jst_desc" or "jst_freq".
-#' @param ... The example lines, each indented and ending in a newline but
-#'   the last.
+#' A jdesc(), jfreq(), jalpha() or jmulti() result. Named as the house
+#' voice names a result -- "a jdesc() result", as jsave() says it, never
+#' the class (Session 415; until then "Plotting jst_desc result objects is
+#' not supported.") -- and, given by its name, by that name (Rule AD). A
+#' jalpha() or jmulti() result went on to jplot.default(), which read it
+#' as a variable name and said it was not a data frame (Session 415; found
+#' in build 1).
+#'
+#' @param x The result.
+#' @param x_sub The result as typed.
+#' @param ... The lines after the first: what jplot() takes, and an example.
 #' @return Does not return; stops.
 #' @keywords internal
-.jst_plot_result_stop <- function(cls, ...) {
-  .jst_stop("Plotting ", cls, " result objects is not supported.\n",
-            "Call jplot() with the data frame instead, for example:\n", ...)
+.jst_plot_result_stop <- function(x, x_sub, ...) {
+  fn <- .jst_table_result_fn(x)
+  # The prefix names jplot(), so the first line does not (the presentation
+  # review's entry 5, Session 414, for jtable()'s stops).
+  .jst_stop(if (is.symbol(x_sub)) paste0(as.character(x_sub), " is a ", fn,
+                                         " result, which has no chart of its own.\n")
+            else paste0("a ", fn, " result has no chart of its own.\n"),
+            ..., fn = "jplot")
+}
+
+#' Internal: the line a result jplot() does not draw offers
+#'
+#' Its items, drawn from the data frame it was made from: the frame's name
+#' as the result keeps it, else MyData, and its first item.
+#'
+#' @param x A jalpha() or jmulti() result.
+#' @return Character(1), the example's lines after the first.
+#' @keywords internal
+.jst_plot_items_line <- function(x) {
+  items <- if (inherits(x, "jst_alpha") && is.data.frame(x$items_raw)) x$items_raw$item
+           else if (inherits(x, "jst_multi")) x$items
+  items <- items[!is.na(items)]
+  dn <- if (is.character(x$data_name) && length(x$data_name) == 1L &&
+            !is.na(x$data_name) && nzchar(x$data_name)) x$data_name else "MyData"
+  v <- if (length(items)) items[[1L]] else "Variable"
+  paste0("A chart is drawn from the variables of a data frame, or from a jlm(), ",
+         "jlogistic(), jt(), jaov(), jcorr() or jcrosstab() result.\n",
+         "To draw an item, give jplot() the data frame and the item, for example:\n",
+         "  jplot(", dn, ", ", v, ")")
 }

@@ -2918,6 +2918,17 @@
   dn <- names(dots)
   if (is.null(dn)) dn <- rep("", length(dots))
   nvar <- sum(!nzchar(dn))
+  # A range (Q1:Q6) names two or more variables, and a c() each it holds
+  # (Session 415: jalpha("tcm", Environment1:Environment5) was told no
+  # second variable was named).
+  count_one <- function(e) {
+    if (is.call(e) && identical(e[[1L]], as.name(":"))) return(2L)
+    if (is.call(e) && identical(e[[1L]], as.name("c"))) {
+      return(sum(vapply(as.list(e)[-1L], count_one, integer(1))))
+    }
+    1L
+  }
+  nlist <- sum(vapply(dots[!nzchar(dn)], count_one, integer(1)))
   conv_set <- isTRUE(getOption(".jst_options_missing_convention",
                                .jst_options_defaults$missing.convention) %in%
                        c("spss", "stata", "sas"))
@@ -2940,16 +2951,14 @@
     },
     jconvert = if (!has("to") && !conv_set)
       gap("target format", "was", " and a target format"),
-    jcorr = , jalpha = , jsum = , javg = if (nvar < 2L)
-      gap(if (nvar == 1L) "second variable" else "variables",
-          if (nvar == 1L) "was" else "were",
+    jcorr = , jalpha = , jsum = , javg = if (nlist < 2L)
+      gap(if (nlist == 1L) "second variable" else "variables",
+          if (nlist == 1L) "was" else "were",
           " and two or more of its variables"),
     # jmulti() (Session 414): a range (Q1_1:Q1_6) is two or more items, and
     # none = names one more.
     jmulti = {
-      nitem <- sum(vapply(dots[!nzchar(dn)], function(e) {
-        if (is.call(e) && identical(e[[1L]], as.name(":"))) 2L else 1L
-      }, integer(1))) + has("none")
+      nitem <- nlist + has("none")
       if (nitem < 2L) {
         gap(if (nitem == 1L) "second variable" else "variables",
             if (nitem == 1L) "was" else "were",
