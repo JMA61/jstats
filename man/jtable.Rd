@@ -12,6 +12,7 @@ jtable(
   markers = NULL,
   title = NULL,
   note = NULL,
+  source = NULL,
   file = NULL,
   style = NULL,
   overwrite = FALSE,
@@ -35,7 +36,8 @@ side, headed "Model 1", "Model 2", ... or by the list's names; a list
 of \code{jt()}, \code{jaov()} or \code{jcrosstab()} results with one
 grouping variable stacks a row or a block per outcome; a list of
 \code{jalpha()} results stacks the scales, each under its name. A
-\code{jcorr()} result is a table of its own. Or a table \code{jtable()}
+\code{jcorr()} result is a table of its own, and so is a
+\code{jmulti()} result. Or a table \code{jtable()}
 has already built, or a list of them: they go to the file as they
 are, in the order given.}
 
@@ -55,12 +57,21 @@ reliability table an item's.}
 
 \item{title}{The table's title; the style's title when NULL (a
 regression table's names the outcome, a t-test, ANOVA or crosstab's
-the grouping variable). \code{*text*} sets a word in
-italics.}
+the grouping variable, a multiple-response table's is the text its
+items' labels share). A title given here fills the same placeholders
+the style's does -- \code{{outcome}}, \code{{group}},
+\code{{set}} -- so \code{title = "Ages by {group}"} names the grouping
+variable. \code{*text*} sets a word in italics.}
 
 \item{note}{The general note's text, after what the style writes
 there (N or the ns when they go there, a filter, a reference
 category); \code{*text*} sets a word in italics. NULL for none.}
+
+\item{source}{The table's source, in quotes, for example
+\code{source = "Australian Bureau of Statistics (2025)"}; the style
+places it: under apa the general note's last sentence, under report a
+line of its own under the notes, after "Source:" (the style's
+\code{source.position} and \code{source.label}). NULL for none.}
 
 \item{file}{The Word file to write, with its .docx extension: a bare
 name goes in the output folder (\code{joptions(output.dir = )}) or the
@@ -130,7 +141,10 @@ crosstab from \code{\link{jcrosstab}} results of one column variable --
 each row variable's categories with their counts and percentages in
 each group, and the chi-square test; and a reliability table from
 \code{\link{jalpha}} results -- each item's mean, standard deviation,
-corrected item-total correlation and alpha if the item is deleted. The
+corrected item-total correlation and alpha if the item is deleted; and a
+multiple-response table from a \code{\link{jmulti}} result -- how many
+chose each option of a set of yes/no items, and what percentage of
+everyone who answered. The
 variables of a descriptives or frequency table go under role headings
 when \code{headings} names them, and each specific note's variables are
 marked when \code{markers} names them. A filter the analysis applied

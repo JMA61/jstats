@@ -13,9 +13,10 @@
 
 \item{number}{The table's number.}
 
-\item{color}{A six-digit hex colour for the caption's text, or NULL
-(Session 409: the header's text colour, on a caption bar that follows
-the header).}
+\item{color}{A six-digit hex colour for the caption's text, or NULL for
+the style's caption.text (Session 409: the header's text colour, on a
+caption bar that follows the header; ruling R78, Session 413: a
+caption.text of the style's own otherwise, black by default).}
 }
 \value{
 Character; one or two paragraphs' XML.

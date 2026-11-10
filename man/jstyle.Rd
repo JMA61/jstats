@@ -64,14 +64,19 @@ style it copies named on its based.on line, and only the settings given,
 which is all a small change needs. A general setting is given by its
 name; a table type's settings go in a list named for its section:
 \code{jstyle("apa", save.as = "myapa", font = "Arial", regression =
-list(fit.rows = c("r2", "n")))}.
+list(fit.rows = c("r2", "n")))}. A short file takes everything else from
+its base, so it travels with it: a file based on a style of your own
+works on another computer, or from another folder, only where that
+style can be found too. A base given by its path is written by its path,
+which is where jstats finds it; a base given by its name is looked for
+in the folders below.
 
 A style file is plain text: a setting is a name, an equals sign and a
 value; a \code{#} starts a note; the general settings come first, then
 one section per table type, \code{[descriptives]}, \code{[frequencies]},
 \code{[regression]}, \code{[logistic]}, \code{[correlation]},
-\code{[ttest]}, \code{[anova]}, \code{[crosstab]} and
-\code{[reliability]}. A setting the file leaves out comes from the style
+\code{[ttest]}, \code{[anova]}, \code{[crosstab]}, \code{[reliability]}
+and \code{[multiresponse]}. A setting the file leaves out comes from the style
 its \code{based.on} line names. \code{\link{jstyle_settings}} lists every
 setting and what it takes. jstats looks for a style named in a call in
 the style folder (\code{joptions(style.dir = )}), the working directory

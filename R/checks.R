@@ -2830,6 +2830,8 @@
     jalpha = list(call = quote(jalpha(community, Environment1, Environment3,
                                       Environment4)),
                   n = "two or more"),
+    jmulti = list(call = quote(jmulti(community, Volunteer, Smoker, OwnsHome)),
+                  n = "two or more"),
     jsum   = list(call = quote(jsum(community, Environment1, Environment3)),
                   n = "two or more", lhs = "community$EnvTotal"),
     javg   = list(call = quote(javg(community, Environment1, Environment3)),
@@ -2942,6 +2944,18 @@
       gap(if (nvar == 1L) "second variable" else "variables",
           if (nvar == 1L) "was" else "were",
           " and two or more of its variables"),
+    # jmulti() (Session 414): a range (Q1_1:Q1_6) is two or more items, and
+    # none = names one more.
+    jmulti = {
+      nitem <- sum(vapply(dots[!nzchar(dn)], function(e) {
+        if (is.call(e) && identical(e[[1L]], as.name(":"))) 2L else 1L
+      }, integer(1))) + has("none")
+      if (nitem < 2L) {
+        gap(if (nitem == 1L) "second variable" else "variables",
+            if (nitem == 1L) "was" else "were",
+            " and two or more of its variables")
+      }
+    },
     jdesc = , jfreq = if (nvar < 1L)
       gap("variables", "were", " and one or more of its variables"),
     jplot = if (nvar < 1L && !is_fml)

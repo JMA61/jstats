@@ -39,8 +39,9 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{paper}}{the page the file opens on: a4 | letter. Takes one of a4 | letter. In apa: \code{a4}.}
 \item{\code{caption.form}}{apa: bold "Table 1", the italic title on the next line | journal: bold "Table 1." and the title on one line | report: "Table 1:" and the title. Takes one of apa | journal | report. In apa: \code{apa}; in report: \code{report}.}
 \item{\code{caption.position}}{row: the table's first row, repeated with the header on a new page | paragraph: above the table. Takes one of row | paragraph. In apa: \code{row}.}
-\item{\code{caption.size}}{the caption's text size, in points. Takes a number from 6 to 72. In apa: \code{12}; in report: \code{10}.}
+\item{\code{caption.size}}{the caption's text size, in points, or size for the text size (size - 1 a point smaller), so it moves when size does. Takes a number from 6 to 72, or size, or size and a number such as size - 1. In apa: \code{size}.}
 \item{\code{caption.fill}}{a color filling the caption row (caption.position = row), header for the header's fill and text color, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or header, or none. In apa: \code{none}.}
+\item{\code{caption.text}}{the color of the caption's text (under caption.fill = header, the header's text color). Takes a color name such as lightblue, or six hex digits such as ADD8E6. In apa: \code{000000}.}
 \item{\code{header.fill}}{a color filling the header cells, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or none. In apa: \code{none}; in report: \code{D9D9D9}.}
 \item{\code{header.text}}{the color of the header's text. Takes a color name such as lightblue, or six hex digits such as ADD8E6. In apa: \code{000000}.}
 \item{\code{header.bold}}{bold header text: yes | no. Takes one of yes | no. In apa: \code{no}; in report: \code{yes}.}
@@ -51,7 +52,11 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{note.label}}{the word the general note opens on: Note. | Notes: | Source:. Takes any text, or nothing. In apa: \code{Note.}; in report: \code{Note:}.}
 \item{\code{note.label.italic}}{the note's label in italics, as APA sets it: yes | no. Takes one of yes | no. In apa: \code{yes}; in report: \code{no}.}
 \item{\code{note.position}}{row: the table's last row | paragraph: under the table. Takes one of row | paragraph. In apa: \code{row}.}
-\item{\code{note.size}}{the notes' text size, in points. Takes a number from 6 to 72. In apa: \code{12}; in report: \code{9}.}
+\item{\code{note.size}}{the notes' text size, in points, or size for the text size (size - 1 a point smaller), so it moves when size does. Takes a number from 6 to 72, or size, or size and a number such as size - 1. In apa: \code{size}; in report: \code{size - 1}.}
+\item{\code{note.sentences}}{paragraph: the general note in one paragraph, as APA sets it | lines: each of its sentences, and each specific note, on a line of its own. Takes one of paragraph | lines. In apa: \code{paragraph}; in report: \code{lines}.}
+\item{\code{note.order}}{apa: the general note, then the specific notes, then the probability note | report: the probability note, the specific notes, then the general note. Takes one of apa | report. In apa: \code{apa}; in report: \code{report}.}
+\item{\code{source.position}}{where a call's source = goes: note (the general note's last sentence) | line (a line of its own, last, after source.label). Takes one of note | line. In apa: \code{note}; in report: \code{line}.}
+\item{\code{source.label}}{the word the source line opens on, upright: Source: | Sources:. Takes any text, or nothing. In apa: \code{Source:}.}
 \item{\code{n.position}}{where N, the number of cases, goes: note (the general note opens on it) | title ("(N = 103)" after the title; a table with several ns, such as Ns that differ or a t test's groups, gives them in the note) | none. Takes one of note | title | none. In apa: \code{title}.}
 \item{\code{decimals}}{the decimal places of a statistic, such as a mean. Takes a whole number from 0 to 6. In apa: \code{2}.}
 \item{\code{leading.zero}}{the zero before the point: no drops it on a statistic that cannot exceed 1, such as p (.23) | yes keeps it (0.23) | never drops it on every number below 1 (.197 for an SE). Takes one of yes | no | never. In apa: \code{no}; in report: \code{yes}.}
@@ -163,7 +168,8 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{mean.label}}{the head of the mean column. Takes any text, or nothing. In apa: \code{M}.}
 \item{\code{sd.label}}{the head of the sd column. Takes any text, or nothing. In apa: \code{SD}.}
 \item{\code{t.label}}{the head of the t column. Takes any text, or nothing. In apa: \code{t}.}
-\item{\code{df.label}}{the head of the df column, when the tests' df differ. Takes any text, or nothing. In apa: \code{df}.}
+\item{\code{df.label}}{the head of the df column. Takes any text, or nothing. In apa: \code{df}.}
+\item{\code{df.position}}{head: the df in the statistic's head, t(101), when every row shares them, else a df column | column: a df column. Takes one of head | column. In apa: \code{head}; in report: \code{column}.}
 \item{\code{p.label}}{the head of the p column. Takes any text, or nothing. In apa: \code{p}.}
 \item{\code{d.label}}{the head of the d column. Takes any text, or nothing. In apa: \code{d}.}
 \item{\code{diff.label}}{the head of the diff column. Takes any text, or nothing. In apa: \code{Mean difference}.}
@@ -182,7 +188,8 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{mean.label}}{the head of the mean column. Takes any text, or nothing. In apa: \code{M}.}
 \item{\code{sd.label}}{the head of the sd column. Takes any text, or nothing. In apa: \code{SD}.}
 \item{\code{f.label}}{the head of the f column. Takes any text, or nothing. In apa: \code{F}.}
-\item{\code{df.label}}{the head of the df column, when the tests' df differ. Takes any text, or nothing. In apa: \code{df}.}
+\item{\code{df.label}}{the head of the df column. Takes any text, or nothing. In apa: \code{df}.}
+\item{\code{df.position}}{head: the df in the statistic's head, F(3, 99), when every row shares them, else a df column | column: a df column. Takes one of head | column. In apa: \code{head}; in report: \code{column}.}
 \item{\code{p.label}}{the head of the p column. Takes any text, or nothing. In apa: \code{p}.}
 \item{\code{eta2.label}}{the head of the eta2 column. Takes any text, or nothing. In apa: \eqn{\eta^2}{eta^2}.}
 \item{\code{group.spanner}}{yes: the grouping variable's label over the groups' columns | no. Takes one of yes | no. In apa: \code{yes}.}
@@ -220,5 +227,16 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{alpha}}{yes: Cronbach's alpha in the note, or after each scale's name when the table holds several | no. Takes one of yes | no. In apa: \code{yes}.}
 \item{\code{item.total.note}}{yes: the note says what the item.total column is | no. Takes one of yes | no. In apa: \code{yes}.}
 \item{\code{group.headings}}{how a scale's name row is set: italic | bold | plain. Takes one of italic | bold | plain. In apa: \code{italic}.}
+}
+}
+\section{[multiresponse]: a multiple-response table}{
+\describe{
+\item{\code{title}}{the title when the call gives none; \{set\} is the text the items' labels share, else Options Chosen. Takes any text. In apa: \code{\{set\}}.}
+\item{\code{columns}}{the columns, in order: n (those who chose the option), percent (of everyone who answered). Takes one or more of n, percent, in order, separated by commas. In apa: \code{n, percent}.}
+\item{\code{stub.label}}{the first column's head. Takes any text, or nothing. In apa: \code{Option}.}
+\item{\code{n.label}}{the head of the n column. Takes any text, or nothing. In apa: \code{n}.}
+\item{\code{percent.label}}{the head of the percent column. Takes any text, or nothing. In apa: \code{\%}.}
+\item{\code{none.label}}{the label of the row of those who answered and chose none. Takes any text. In apa: \code{None of these}.}
+\item{\code{choice.note}}{yes: the note says respondents could choose more than one, so the percentages sum to more than 100 | no. Takes one of yes | no. In apa: \code{yes}.}
 }
 }

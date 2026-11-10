@@ -42,6 +42,8 @@ package's GitHub repository.
 SD, range, etc.) with optional grouping
 \item \code{\link{jfreq}} -- frequency tables for one or more
 variables
+\item \code{\link{jmulti}} -- a multiple-response question: how many
+chose each option of a set of yes/no items
 \item \code{\link{jcorr}} -- Pearson or Spearman correlations with
 significance tests
 \item \code{\link{jalpha}} -- Cronbach's alpha and item-total

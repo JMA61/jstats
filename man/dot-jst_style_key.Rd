@@ -14,6 +14,12 @@
 
 \item{key}{Character(1); the key.}
 }
+\value{
+The value. A size that follows the text size -- caption.size
+and note.size written "size" or "size - 1" (ruling R77, Session 413:
+a file that sets size moves them with it) -- is returned as the
+number it comes to; \code{.jst_style_key_raw()} gives it as written.
+}
 \description{
 The lookup of the reference (Part 3.2), layer by layer: in each, the
 type's own section, then the general part; the first value found wins.

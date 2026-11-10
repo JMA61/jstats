@@ -32,7 +32,7 @@
 # function returns is here.
 .jst_apa_classes <- c("jst_lm", "jst_logistic", "jst_freq", "jst_desc",
                       "jst_corr", "jst_ttest", "jst_anova", "jst_crosstab",
-                      "jst_alpha", "default")
+                      "jst_alpha", "jst_multi", "default")
 
 # -- Regression terms: jlm / jlogistic ----------------------------------------
 
@@ -376,6 +376,31 @@
   if (is.null(x$alpha_raw)) return(NULL)
   data.frame(alpha = x$alpha_raw, n_items = x$n_items, n_used = x$n_used,
              n_excluded = x$n_excluded,
+             stringsAsFactors = FALSE, row.names = NULL)
+}
+
+# -- A multiple-response set: jst_multi (Session 414) -------------------------
+#
+# The rows in the order the result prints them: each item's count and the
+# percentage of everyone who answered, unrounded; the survey's own "None of
+# these" box (kind none_box) and jstats's row of those who answered and
+# chose none (kind none, no item) last. The model-level frame: N (everyone
+# who answered), those who answered no item, the count that chose none, the
+# value counted as chosen and the set's title.
+
+.jst_apa_terms.jst_multi <- function(x, ...) {
+  rr <- x$rows_raw
+  if (is.null(rr)) return(NULL)
+  rownames(rr) <- NULL
+  rr
+}
+
+.jst_apa_model.jst_multi <- function(x, ...) {
+  if (is.null(x$rows_raw)) return(NULL)
+  data.frame(n = x$n, n_excluded = x$n_excluded, n_none = x$n_none,
+             n_items = length(x$items), ticked = as.character(x$ticked),
+             title = if (is.null(x$title)) NA_character_ else x$title,
+             ranked = isTRUE(x$rank),
              stringsAsFactors = FALSE, row.names = NULL)
 }
 

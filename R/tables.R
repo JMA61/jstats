@@ -78,10 +78,15 @@
                                       # title on one line; report: "Table 1:"
     caption.position = "row",         # row (a merged first row, no borders,
                                       # repeated with the header) | paragraph
-    caption.size     = 12,
+    caption.size     = "size",        # points, or size: the text size, so a
+                                      # file that sets size moves it too
+                                      # (ruling R77, Session 413)
     caption.fill     = "none",        # a colour fills the caption row; header:
                                       # the header's fill and text colour
                                       # (Session 409, ruling R58)
+    caption.text     = "000000",      # the caption's text colour; under
+                                      # caption.fill = header, the header's
+                                      # (ruling R78, Session 413)
     header.fill      = "none",        # a colour fills the header cells
     header.text      = "000000",      # the header text colour
     header.bold      = "no",
@@ -95,7 +100,18 @@
     note.label.italic = "yes",        # the note's label in italics, as APA
                                       # sets it (Session 409, ruling R58)
     note.position    = "row",         # row (a merged last row) | paragraph
-    note.size        = 12,
+    note.size        = "size",        # as caption.size (ruling R77)
+    note.sentences   = "paragraph",   # paragraph: the general note in one
+                                      # paragraph, as APA sets it; lines: a
+                                      # sentence a line (ruling R75)
+    note.order       = "apa",         # apa: the general note, the specific
+                                      # notes, the probability note; report:
+                                      # the probability note, the specific
+                                      # notes, the general note (ruling R79)
+    source.position  = "note",        # where source = goes: note (the general
+                                      # note's last sentence) | line (a line
+                                      # of its own, last; ruling R79)
+    source.label     = "Source:",     # the source line's label, upright
     n.position       = "title",       # title: "(N = 103)" after the title,
                                       # ns that vary in the note (ruling
                                       # R59, Session 409); note: the general
@@ -209,6 +225,9 @@
     sd.label       = "SD",
     t.label        = "t",
     df.label       = "df",
+    df.position    = "head",           # head: "t(101)" when every row shares
+                                       # the df, else a df column | column
+                                       # (ruling R74, Session 413)
     p.label        = "p",
     d.label        = "d",
     diff.label     = "Mean difference",
@@ -228,6 +247,7 @@
     sd.label       = "SD",
     f.label        = "F",
     df.label       = "df",
+    df.position    = "head",           # as the t test's (ruling R74)
     p.label        = "p",
     eta2.label     = "\u03b7\u00b2",
     group.spanner  = "yes",
@@ -264,6 +284,18 @@
                                        # each scale's name
     item.total.note        = "yes",    # the sentence defining item-total r
     group.headings         = "italic"  # a scale's name row
+  ),
+  multiresponse = list(                # a jmulti() result (Session 414;
+                                       # rulings R60-R62)
+    title          = "{set}",          # {set}: the text the items' labels
+                                       # share, else "Options Chosen"
+    columns        = c("n", "percent"),
+    stub.label     = "Option",
+    n.label        = "n",
+    percent.label  = "%",
+    none.label     = "None of these",  # the row of those who chose none
+    choice.note    = "yes"             # the sentence that the percentages
+                                       # sum to more than 100 (ruling R61)
   )
 )
 
@@ -341,11 +373,15 @@
     caption.position = list(kind = "choice", choices = c("row", "paragraph"),
                             about = c("row: the table's first row, repeated with the header on a new page",
                                       "paragraph: above the table")),
-    caption.size     = list(kind = "number", min = 6, max = 72,
-                            about = "the caption's text size, in points"),
+    caption.size     = list(kind = "number", min = 6, max = 72, follow = TRUE,
+                            about = c("the caption's text size, in points, or size for the text size (size - 1",
+                                      "a point smaller), so it moves when size does")),
     caption.fill     = list(kind = "color", none = TRUE, header = TRUE,
                             about = c("a color filling the caption row (caption.position = row), header for",
                                       "the header's fill and text color, or none")),
+    caption.text     = list(kind = "color",
+                            about = c("the color of the caption's text (under caption.fill = header, the",
+                                      "header's text color)")),
     header.fill      = list(kind = "color", none = TRUE,
                             about = "a color filling the header cells, or none"),
     header.text      = list(kind = "color", about = "the color of the header's text"),
@@ -366,8 +402,21 @@
                              about = "the note's label in italics, as APA sets it: yes | no"),
     note.position    = list(kind = "choice", choices = c("row", "paragraph"),
                             about = "row: the table's last row | paragraph: under the table"),
-    note.size        = list(kind = "number", min = 6, max = 72,
-                            about = "the notes' text size, in points"),
+    note.size        = list(kind = "number", min = 6, max = 72, follow = TRUE,
+                            about = c("the notes' text size, in points, or size for the text size (size - 1",
+                                      "a point smaller), so it moves when size does")),
+    note.sentences   = list(kind = "choice", choices = c("paragraph", "lines"),
+                            about = c("paragraph: the general note in one paragraph, as APA sets it | lines:",
+                                      "each of its sentences, and each specific note, on a line of its own")),
+    note.order       = list(kind = "choice", choices = c("apa", "report"),
+                            about = c("apa: the general note, then the specific notes, then the probability",
+                                      "note | report: the probability note, the specific notes, then the",
+                                      "general note")),
+    source.position  = list(kind = "choice", choices = c("note", "line"),
+                            about = c("where a call's source = goes: note (the general note's last sentence)",
+                                      "| line (a line of its own, last, after source.label)")),
+    source.label     = list(kind = "text", empty = TRUE,
+                            about = "the word the source line opens on, upright: Source: | Sources:"),
     n.position       = list(kind = "choice", choices = c("note", "title", "none"),
                             about = c("where N, the number of cases, goes: note (the general note opens",
                                       "on it) | title (\"(N = 103)\" after the title; a table with",
@@ -547,7 +596,10 @@
     sd.label       = list(kind = "text", empty = TRUE, about = "the head of the sd column"),
     t.label        = list(kind = "text", empty = TRUE, about = "the head of the t column"),
     df.label       = list(kind = "text", empty = TRUE,
-                          about = "the head of the df column, when the tests' df differ"),
+                          about = "the head of the df column"),
+    df.position    = list(kind = "choice", choices = c("head", "column"),
+                          about = c("head: the df in the statistic's head, t(101), when every row shares",
+                                    "them, else a df column | column: a df column")),
     p.label        = list(kind = "text", empty = TRUE, about = "the head of the p column"),
     d.label        = list(kind = "text", empty = TRUE, about = "the head of the d column"),
     diff.label     = list(kind = "text", empty = TRUE, about = "the head of the diff column"),
@@ -572,7 +624,10 @@
     sd.label       = list(kind = "text", empty = TRUE, about = "the head of the sd column"),
     f.label        = list(kind = "text", empty = TRUE, about = "the head of the f column"),
     df.label       = list(kind = "text", empty = TRUE,
-                          about = "the head of the df column, when the tests' df differ"),
+                          about = "the head of the df column"),
+    df.position    = list(kind = "choice", choices = c("head", "column"),
+                          about = c("head: the df in the statistic's head, F(3, 99), when every row shares",
+                                    "them, else a df column | column: a df column")),
     p.label        = list(kind = "text", empty = TRUE, about = "the head of the p column"),
     eta2.label     = list(kind = "text", empty = TRUE, about = "the head of the eta2 column"),
     group.spanner  = list(kind = "choice", choices = c("yes", "no"),
@@ -629,6 +684,23 @@
                                   about = "yes: the note says what the item.total column is | no"),
     group.headings         = list(kind = "choice", choices = c("italic", "bold", "plain"),
                                   about = "how a scale's name row is set: italic | bold | plain")
+  ),
+  multiresponse = list(
+    title          = list(kind = "text",
+                          about = c("the title when the call gives none; {set} is the text the items'",
+                                    "labels share, else Options Chosen")),
+    columns        = list(kind = "columns", cols = c("n", "percent"),
+                          about = c("the columns, in order: n (those who chose the option), percent (of",
+                                    "everyone who answered)")),
+    stub.label     = list(kind = "text", empty = TRUE, about = "the first column's head"),
+    n.label        = list(kind = "text", empty = TRUE, about = "the head of the n column"),
+    percent.label  = list(kind = "text", empty = TRUE,
+                          about = "the head of the percent column"),
+    none.label     = list(kind = "text",
+                          about = "the label of the row of those who answered and chose none"),
+    choice.note    = list(kind = "choice", choices = c("yes", "no"),
+                          about = c("yes: the note says respondents could choose more than one, so the",
+                                    "percentages sum to more than 100 | no"))
   )
 )
 
@@ -641,14 +713,16 @@
                            ttest        = "a t-test table",
                            anova        = "an ANOVA table",
                            crosstab     = "a crosstab",
-                           reliability  = "a reliability table")
+                           reliability  = "a reliability table",
+                           multiresponse = "a multiple-response table")
 
-# The table type of each result class (Session 405: every class has one).
+# The table type of each result class (Session 405: every class has one;
+# jmulti()'s since Session 414).
 .jst_table_types <- c(jst_desc = "descriptives", jst_freq = "frequencies",
                       jst_lm = "regression", jst_logistic = "logistic",
                       jst_corr = "correlation", jst_ttest = "ttest",
                       jst_anova = "anova", jst_crosstab = "crosstab",
-                      jst_alpha = "reliability")
+                      jst_alpha = "reliability", jst_multi = "multiresponse")
 
 #' Internal: the built-in report style
 #'
@@ -669,23 +743,35 @@
 #' stay off, so a brand look is only ever turned on, in a user's own short
 #' file based on this one.
 #'
+#' Session 414 (rulings R74, R75, R77 and R79, Session 413): the caption
+#' follows size, as apa's does, and the note is a point smaller than size
+#' ("size - 1"), so a file based on report that sets size keeps that
+#' relationship; the general note a sentence a line (Jeff's practice); the
+#' notes in the report manuals' order, the source on a line of its own,
+#' last; a t test's and an ANOVA's df in a column of their own, so a reader
+#' who does not know APA's form does not read the number as N.
+#'
 #' @keywords internal
 .jst_style_report <- list(
   general = list(
     font              = "Arial",
     size              = 10,
     caption.form      = "report",
-    caption.size      = 10,
     header.fill       = "D9D9D9",
     header.bold       = "yes",
     note.label        = "Note:",
     note.label.italic = "no",
-    note.size         = 9,
+    note.size         = "size - 1",
+    note.sentences    = "lines",
+    note.order        = "report",
+    source.position   = "line",
     leading.zero      = "yes"
   ),
   frequencies = list(variable.headings = "bold"),
   regression  = list(variable.headings = "bold"),
   logistic    = list(variable.headings = "bold"),
+  ttest       = list(df.position = "column"),
+  anova       = list(df.position = "column"),
   crosstab    = list(variable.headings = "bold")
 )
 
@@ -837,8 +923,50 @@
 #' @param type Character(1); the table type (the section's name), or
 #'   "general".
 #' @param key Character(1); the key.
+#' @return The value. A size that follows the text size -- caption.size
+#'   and note.size written "size" or "size - 1" (ruling R77, Session 413:
+#'   a file that sets size moves them with it) -- is returned as the
+#'   number it comes to; \code{.jst_style_key_raw()} gives it as written.
 #' @keywords internal
 .jst_style_key <- function(style, type, key) {
+  v <- .jst_style_key_raw(style, type, key)
+  if (is.character(v) && isTRUE(.jst_style_spec$general[[key]]$follow)) {
+    v <- .jst_style_size_value(v, .jst_style_key(style, type, "size"))
+  }
+  v
+}
+
+#' Internal helper: a size written as following the text size, in points
+#'
+#' "size" is the text size itself; "size - 1" a point smaller, "size + 2"
+#' two larger (ruling R77, Session 413). The result is kept within the
+#' sizes a size setting takes, 6 to 72.
+#'
+#' @param v Character(1): "size", or "size" with a plus or a minus and a
+#'   number, as \code{.jst_style_check_value()} writes it.
+#' @param size The text size, in points.
+#' @return Numeric(1).
+#' @keywords internal
+.jst_style_size_value <- function(v, size) {
+  m <- regmatches(v, regexec("^size(?: ([-+]) ([0-9]+(?:\\.[0-9]+)?))?$", v,
+                             perl = TRUE))[[1L]]
+  if (!length(m)) {
+    stop(".jst_style_size_value(): not a size form: '", v, "'", call. = FALSE)
+  }
+  off <- if (nzchar(m[2L])) as.numeric(m[3L]) * (if (m[2L] == "-") -1 else 1) else 0
+  min(72, max(6, as.numeric(size) + off))
+}
+
+#' Internal helper: one setting of a style as the style holds it
+#'
+#' As \code{.jst_style_key()}, the value as written: a size that follows
+#' the text size stays "size" or "size - 1", for the files jstyle() writes
+#' and the settings it prints (ruling R77: a complete copy writes them as
+#' following size).
+#'
+#' @inheritParams .jst_style_key
+#' @keywords internal
+.jst_style_key_raw <- function(style, type, key) {
   layers <- if (inherits(style, "jst_style")) style$layers else list(style)
   for (L in layers) {
     v <- L[[type]][[key]]
@@ -1291,11 +1419,24 @@
       s
     },
     number = , integer = {
-      x <- suppressWarnings(as.numeric(trimws(one())))
+      s <- trimws(one())
+      # A size that follows the text size (ruling R77, Session 413):
+      # "size", "size - 1", "size + 2", kept in that one form.
+      if (isTRUE(sp$follow)) {
+        sl <- tolower(s)
+        m  <- regmatches(sl, regexec("^size\\s*(?:([-+])\\s*([0-9]+(?:\\.[0-9]+)?))?$",
+                                     sl, perl = TRUE))[[1L]]
+        if (length(m)) {
+          return(if (nzchar(m[2L])) paste("size", m[2L], m[3L]) else "size")
+        }
+      }
+      x <- suppressWarnings(as.numeric(s))
       whole <- identical(sp$kind, "integer")
       if (is.na(x) || x < sp$min || x > sp$max || (whole && x != round(x))) {
         bad(paste0(if (whole) "a whole number" else "a number", " from ",
-                   sp$min, " to ", sp$max, "."))
+                   sp$min, " to ", sp$max,
+                   if (isTRUE(sp$follow)) ", or size (size - 1 for a point smaller)",
+                   "."))
       }
       x
     },
@@ -1601,8 +1742,8 @@
   .jst_stop("no table is made from ",
             if (is.na(fn)) "this kind of result" else paste0("a ", fn, " result"),
             " yet.\nTables are made from jdesc(), jfreq(), jcorr(), jt(), ",
-            "jaov(), jcrosstab(), jalpha(), jlm(), and jlogistic() results.",
-            fn = "jtable")
+            "jaov(), jcrosstab(), jalpha(), jlm(), jlogistic(), and jmulti() ",
+            "results.", fn = "jtable")
 }
 
 #' Internal helper: the analysis function that made a result
@@ -1615,7 +1756,7 @@
   map <- c(jst_lm = "jlm()", jst_logistic = "jlogistic()", jst_freq = "jfreq()",
            jst_desc = "jdesc()", jst_corr = "jcorr()", jst_ttest = "jt()",
            jst_anova = "jaov()", jst_crosstab = "jcrosstab()",
-           jst_alpha = "jalpha()")
+           jst_alpha = "jalpha()", jst_multi = "jmulti()")
   hit <- intersect(class(x), names(map))
   if (length(hit)) unname(map[hit[1L]]) else NA_character_
 }
@@ -2448,9 +2589,10 @@
     rows     = rows,
     caption  = list(number = NA_integer_,
                     title  = paste0(
-                      if (is.null(title)) gsub("{outcome}", out_label, key("title"),
-                                               fixed = TRUE)
-                      else title,
+                      # A call's title fills {outcome} as the template does
+                      # (the presentation review's entry 12, Session 414).
+                      gsub("{outcome}", out_label,
+                           if (is.null(title)) key("title") else title, fixed = TRUE),
                       np$title)),
     notes    = list(general = general, specific = roles$specific,
                     probability = probability),
@@ -2500,6 +2642,9 @@
   tf <- .jst_apa_terms(r)
   if (is.null(tf)) return(character(0))
   if (inherits(r, "jst_alpha")) return(as.character(tf$item))
+  # A multiple-response set's items, its own "None of these" row aside
+  # (Session 414).
+  if (inherits(r, "jst_multi")) return(as.character(tf$item[!is.na(tf$item)]))
   if (!inherits(r, c("jst_lm", "jst_logistic"))) return(tf$variable)
   dummies <- unlist(lapply(r$dummy_groups, function(g) g$dummy))
   c(setdiff(tf$term, c("(Intercept)", dummies)), names(r$dummy_groups))
@@ -3055,7 +3200,11 @@
   df_txt <- vapply(mods, function(m) {
     if (anova) paste0(dfmt(m$df1), ", ", dfmt(m$df2)) else dfmt(m$df)
   }, character(1))
-  df_shared <- length(unique(df_txt)) == 1L
+  # df.position (ruling R74, Session 413): head puts the df in the
+  # statistic's head when every row shares them (APA's samples), column
+  # gives them a column of their own (report's value), so a reader who does
+  # not know APA's form does not read the number as N.
+  df_shared <- length(unique(df_txt)) == 1L && identical(key("df.position"), "head")
   ci_two <- !anova && identical(key("ci.style"), "two")
   columns <- data.frame(key = "stub", label = key("stub.label"), kind = "text",
                         italic = FALSE, stringsAsFactors = FALSE)
@@ -3210,10 +3359,11 @@
     columns  = columns,
     rows     = rows,
     caption  = list(number = NA_integer_,
-                    title  = paste0(
-                      if (is.null(title)) gsub("{group}", glab, key("title"),
-                                               fixed = TRUE)
-                      else title)),
+                    # A call's title fills {group} as the template does
+                    # (the presentation review's entry 12, Session 414).
+                    title  = gsub("{group}", glab,
+                                  if (is.null(title)) key("title") else title,
+                                  fixed = TRUE)),
     notes    = list(general = general, specific = roles$specific,
                     probability = if (use_stars) .jst_tbl_stars_legend(stars, key("leading.zero"))
                                   else character(0)),
@@ -3399,9 +3549,10 @@
     rows     = rows,
     caption  = list(number = NA_integer_,
                     title  = paste0(
-                      if (is.null(title)) gsub("{group}", glab, key("title"),
-                                               fixed = TRUE)
-                      else title,
+                      # A call's title fills {group} as the template does
+                      # (the presentation review's entry 12, Session 414).
+                      gsub("{group}", glab,
+                           if (is.null(title)) key("title") else title, fixed = TRUE),
                       np$title)),
     notes    = list(general = general, specific = roles$specific,
                     probability = if (use_stars && any(c("chisq", "p") %in% tests))
@@ -3531,6 +3682,114 @@
     rows     = rows,
     caption  = list(number = NA_integer_,
                     title  = paste0(if (is.null(title)) key("title") else title,
+                                    np$title)),
+    notes    = list(general = general, specific = roles$specific,
+                    probability = character(0)),
+    style    = style)
+}
+
+
+# -----------------------------------------------------------------------------
+# 4i. The multiple-response table (a jmulti() result; Session 414)
+# -----------------------------------------------------------------------------
+#
+# Rulings R60-R62 (Session 411): one row per option of a set of yes/no
+# items -- how many chose it, and the percentage of everyone who answered
+# the question (R61's base), the options in the order jmulti() gives them
+# (ranked by count unless the call kept the file's order), the survey's own
+# "None of these" box last when none = named it, and jstats's own "None of
+# these" row -- those who answered and chose none -- after it when anyone
+# did; N after the title; the sentence that the percentages sum to more
+# than 100. Each jmulti() result is a table of its own.
+
+# A jmulti() result: one result, built as a list of one.
+.jst_table_build.jst_multi <- function(x, style, headings = NULL,
+                                       markers = NULL, title = NULL,
+                                       note = NULL, ...) {
+  .jst_table_build_multi(list(x), style, headings, markers, title, note)
+}
+
+#' Internal helper: the multiple-response table from a jmulti() result
+#'
+#' Rows from \code{.jst_apa_terms()}: each option named by the text its
+#' item's label adds to what the set's labels share ("Housing" of
+#' "Services used: Housing"), else by its label, else by its name; the
+#' row of those who chose none named by the style's none.label. The
+#' columns are the style's: n and the percentage of the set's N. The title
+#' is the style's template, \code{{set}} the text the labels share, else
+#' "Options Chosen" (ruling R69); N goes where n.position puts it; the
+#' general note carries the filter, the more-than-100 sentence
+#' (choice.note, removable by ruling R53) and the call's text. markers =
+#' marks an item's row.
+#'
+#' @param results A list of one jst_multi result.
+#' @inheritParams .jst_table_build
+#' @return A jst_table.
+#' @keywords internal
+.jst_table_build_multi <- function(results, style, headings = NULL,
+                                   markers = NULL, title = NULL, note = NULL) {
+  type <- "multiresponse"
+  key  <- function(k) .jst_style_key(style, type, k)
+  thou <- key("thousands"); minus <- key("minus")
+  pdec <- key("percent.decimals"); lz <- .jst_tbl_lz(key("leading.zero"))
+  pct  <- function(x) .jst_tbl_num(x, pdec, thou, lz, minus)
+  .jst_table_no_headings(headings, type, "its options in the order jmulti() gave them")
+  # jtable() gives each jmulti() result a table of its own (its share key
+  # is its own), so a list of two never reaches here.
+  if (length(results) != 1L) {
+    stop(".jst_table_build_multi(): one result per table", call. = FALSE)
+  }
+  r  <- results[[1L]]
+  tf <- .jst_apa_terms(r); md <- .jst_apa_model(r)
+  if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(tf) ||
+      is.null(md)) {
+    .jst_table_old_stop(r, "jmulti()")
+  }
+
+  col_keys <- key("columns")
+  col_labs <- vapply(col_keys, function(k) key(paste0(k, ".label")), character(1),
+                     USE.NAMES = FALSE)
+  columns <- data.frame(
+    key    = c("stub", col_keys),
+    label  = c(key("stub.label"), col_labs),
+    kind   = c("text", rep("number", length(col_keys))),
+    italic = c(FALSE, .jst_tbl_head_italic(type, col_keys, col_labs)),
+    stringsAsFactors = FALSE, row.names = NULL)
+
+  items <- as.character(tf$item[!is.na(tf$item)])
+  roles <- .jst_table_roles(items, rep(NA_character_, length(items)), NULL,
+                            markers, key("marks"))
+  rows <- lapply(seq_len(nrow(tf)), function(j) {
+    it  <- as.character(tf$item[j])
+    lab <- if (identical(tf$kind[j], "none")) key("none.label") else tf$option[j]
+    raw <- list(n = tf$n[j], percent = tf$percent[j])
+    cells <- list(n = .jst_tbl_count(raw$n, thou), percent = pct(raw$percent))
+    list(kind = "data", label = lab, indent = 0L,
+         marks = if (is.na(it) || is.null(roles$marks[[it]])) character(0)
+                 else roles$marks[[it]],
+         cells = cells[col_keys], raw = raw[col_keys])
+  })
+
+  # The notes: N where n.position puts it (one pool: everyone who answered,
+  # ruling R61); the filter; the more-than-100 sentence; the user's text.
+  set_title <- if (is.na(md$title) || !nzchar(md$title)) "Options Chosen" else md$title
+  np <- .jst_table_n_parts(key("n.position"),
+                           paste0("*N* = ", .jst_tbl_count(md$n, thou)))
+  general <- c(np$note, .jst_table_filter_note(results, set_title, style, type))
+  if (identical(key("choice.note"), "yes")) {
+    general <- c(general, paste0("Respondents could choose more than one, so the ",
+                                 "percentages sum to more than 100."))
+  }
+  if (!is.null(note)) general <- c(general, note)
+
+  .jst_table_new(
+    type     = type,
+    columns  = columns,
+    rows     = rows,
+    caption  = list(number = NA_integer_,
+                    title  = paste0(gsub("{set}", set_title,
+                                         if (is.null(title)) key("title") else title,
+                                         fixed = TRUE),
                                     np$title)),
     notes    = list(general = general, specific = roles$specific,
                     probability = character(0)),
@@ -3690,7 +3949,15 @@
                       character(1))), collapse = gap))
   emit(rule)
   # The rows; a spanning cell laid across its columns, on the first's
-  # point.
+  # point. A column's block of numbers -- the widest whole part beside the
+  # widest tail -- is centered in its column, the points aligned within it,
+  # as the Word file centers it under its head (ruling R76, Session 413:
+  # until Session 414 the preview set the block hard right under a wider
+  # head); the odd space goes on the left, as the table form's rule has it.
+  lead_of <- function(j) {
+    extra <- max(0L, widths[j] - hws[j] - tws[j])
+    extra - extra %/% 2L
+  }
   for (i in seq_along(tbl$rows)) {
     cells <- pad_l(stub[i], widths[1L])
     j <- 2L
@@ -3700,14 +3967,14 @@
       to <- j
       for (sp in tbl$rows[[i]]$span) if (sp[1L] == j) to <- sp[2L]
       if (to > j) {
-        cell <- paste0(strrep(" ", widths[j] - hw - tw), pad_r(p$head[i], hw),
-                       p$tail[i])
+        cell <- paste0(strrep(" ", lead_of(j)), pad_r(p$head[i], hw), p$tail[i])
         cells <- c(cells, pad_l(cell, sum(widths[j:to]) + 2L * (to - j)))
       } else if (plain[[j - 1L]][i]) {
         cells <- c(cells, ctr(body[[j - 1L]][i], widths[j]))
       } else {
-        cell <- paste0(pad_r(p$head[i], hw), pad_l(p$tail[i], tw))
-        cells <- c(cells, pad_r(cell, widths[j]))
+        cell <- paste0(strrep(" ", lead_of(j)), pad_r(p$head[i], hw),
+                       pad_l(p$tail[i], tw))
+        cells <- c(cells, pad_l(cell, widths[j]))
       }
       j <- to + 1L
     }
@@ -3736,8 +4003,17 @@
 #'
 #' One string per line: the general note (the style's label, then the
 #' sentences), the specific notes (each mark and its text), the
-#' probability note. The light markup the Word writer reads -- *italic*
-#' and ^superscript^ -- is kept, or stripped for the console.
+#' probability note, in the order note.order gives -- apa APA's, report
+#' the report manuals' (the probability note and the specific notes, then
+#' the general note; ruling R79, Session 413). Under note.sentences =
+#' lines each sentence of the general note, and each specific note, is a
+#' line of its own (ruling R75: report's value, Jeff's practice); under
+#' paragraph the general note is one paragraph and the specific notes
+#' another, as APA sets them. A call's source = is the general note's last
+#' sentence under source.position = note (APA puts a source in the general
+#' note), or under line a line of its own, last, after source.label. The
+#' light markup the Word writer reads -- *italic* and ^superscript^ -- is
+#' kept, or stripped for the console.
 #'
 #' @param tbl A jst_table.
 #' @param style The style list.
@@ -3746,9 +4022,18 @@
 #' @return Character vector, possibly empty.
 #' @keywords internal
 .jst_table_note_lines <- function(tbl, style, plain = FALSE) {
-  key  <- function(k) .jst_style_key(style, tbl$type, k)
-  out  <- character(0)
-  gen  <- tbl$notes$general
+  key   <- function(k) .jst_style_key(style, tbl$type, k)
+  lines <- identical(key("note.sentences"), "lines")
+  gen   <- tbl$notes$general
+  # The call's source (Session 414), a sentence: a full stop added where it
+  # ends on none.
+  src <- tbl$notes$source
+  if (length(src) && nzchar(trimws(src))) {
+    src <- paste0(trimws(src), if (!grepl("[.!?]$", trimws(src))) ".")
+  } else src <- NULL
+  src_line <- !is.null(src) && identical(key("source.position"), "line")
+  if (!is.null(src) && !src_line) gen <- c(gen, src)
+  general <- character(0)
   if (length(gen)) {
     # The label in italics unless note.label.italic = no (Session 409,
     # ruling R58: report's upright "Note:"); an empty label is no label --
@@ -3758,16 +4043,24 @@
     lead <- if (!nzchar(trimws(lab))) ""
             else if (identical(key("note.label.italic"), "no")) paste0(lab, " ")
             else paste0("*", lab, "* ")
-    out <- c(out, paste0(lead, paste(gen, collapse = " ")))
+    general <- if (lines) c(paste0(lead, gen[1L]), gen[-1L])
+               else paste0(lead, paste(gen, collapse = " "))
   }
+  specific <- character(0)
   if (length(tbl$notes$specific)) {
-    out <- c(out, paste(vapply(tbl$notes$specific, function(s) {
+    sp <- vapply(tbl$notes$specific, function(s) {
       paste0("^", s$mark, "^ ", s$text,
              if (!grepl("[.!?]$", s$text)) ".")
-    }, character(1)), collapse = " "))
+    }, character(1))
+    specific <- if (lines) sp else paste(sp, collapse = " ")
   }
-  if (length(tbl$notes$probability)) {
-    out <- c(out, paste(tbl$notes$probability, collapse = " "))
+  probability <- if (length(tbl$notes$probability))
+                   paste(tbl$notes$probability, collapse = " ") else character(0)
+  out <- if (identical(key("note.order"), "report")) c(probability, specific, general)
+         else c(general, specific, probability)
+  if (src_line) {
+    sl  <- key("source.label")
+    out <- c(out, if (nzchar(trimws(sl))) paste0(sl, " ", src) else src)
   }
   if (plain) {
     out <- gsub("\\^([a-z]+)\\^", "^\\1", out)
@@ -4013,14 +4306,16 @@
 #' @param tbl A jst_table.
 #' @param style The style list.
 #' @param number The table's number.
-#' @param color A six-digit hex colour for the caption's text, or NULL
-#'   (Session 409: the header's text colour, on a caption bar that follows
-#'   the header).
+#' @param color A six-digit hex colour for the caption's text, or NULL for
+#'   the style's caption.text (Session 409: the header's text colour, on a
+#'   caption bar that follows the header; ruling R78, Session 413: a
+#'   caption.text of the style's own otherwise, black by default).
 #' @return Character; one or two paragraphs' XML.
 #' @keywords internal
 .jst_docx_caption_pars <- function(tbl, style, number, color = NULL) {
   key  <- function(k) .jst_style_key(style, tbl$type, k)
   form <- key("caption.form"); size <- key("caption.size")
+  if (is.null(color)) color <- key("caption.text")
   # The title's markup: the N a style puts after it (n.position = title)
   # is "*N* = 103", N upright inside apa's italic title and italic in the
   # other forms.
@@ -5127,7 +5422,10 @@
 #' each row variable's categories with their counts and percentages in
 #' each group, and the chi-square test; and a reliability table from
 #' \code{\link{jalpha}} results -- each item's mean, standard deviation,
-#' corrected item-total correlation and alpha if the item is deleted. The
+#' corrected item-total correlation and alpha if the item is deleted; and a
+#' multiple-response table from a \code{\link{jmulti}} result -- how many
+#' chose each option of a set of yes/no items, and what percentage of
+#' everyone who answered. The
 #' variables of a descriptives or frequency table go under role headings
 #' when \code{headings} names them, and each specific note's variables are
 #' marked when \code{markers} names them. A filter the analysis applied
@@ -5177,7 +5475,8 @@
 #'   of \code{jt()}, \code{jaov()} or \code{jcrosstab()} results with one
 #'   grouping variable stacks a row or a block per outcome; a list of
 #'   \code{jalpha()} results stacks the scales, each under its name. A
-#'   \code{jcorr()} result is a table of its own. Or a table \code{jtable()}
+#'   \code{jcorr()} result is a table of its own, and so is a
+#'   \code{jmulti()} result. Or a table \code{jtable()}
 #'   has already built, or a list of them: they go to the file as they
 #'   are, in the order given.
 #' @param headings A named list: each heading and the variables under it,
@@ -5194,11 +5493,19 @@
 #'   reliability table an item's.
 #' @param title The table's title; the style's title when NULL (a
 #'   regression table's names the outcome, a t-test, ANOVA or crosstab's
-#'   the grouping variable). \code{*text*} sets a word in
-#'   italics.
+#'   the grouping variable, a multiple-response table's is the text its
+#'   items' labels share). A title given here fills the same placeholders
+#'   the style's does -- \code{{outcome}}, \code{{group}},
+#'   \code{{set}} -- so \code{title = "Ages by {group}"} names the grouping
+#'   variable. \code{*text*} sets a word in italics.
 #' @param note The general note's text, after what the style writes
 #'   there (N or the ns when they go there, a filter, a reference
 #'   category); \code{*text*} sets a word in italics. NULL for none.
+#' @param source The table's source, in quotes, for example
+#'   \code{source = "Australian Bureau of Statistics (2025)"}; the style
+#'   places it: under apa the general note's last sentence, under report a
+#'   line of its own under the notes, after "Source:" (the style's
+#'   \code{source.position} and \code{source.label}). NULL for none.
 #' @param file The Word file to write, with its .docx extension: a bare
 #'   name goes in the output folder (\code{joptions(output.dir = )}) or the
 #'   working directory; a path with a folder goes there. NULL writes
@@ -5261,7 +5568,7 @@
 #'
 #' @export
 jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
-                   note = NULL, file = NULL, style = NULL,
+                   note = NULL, source = NULL, file = NULL, style = NULL,
                    overwrite = FALSE, open = FALSE, print = NULL, ...) {
   cl  <- sys.call()
   mc  <- match.call(expand.dots = TRUE)
@@ -5326,8 +5633,10 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   .jst_check_flag(overwrite, "overwrite")
   .jst_check_flag(open, "open")
   .jst_check_flag(print, "print", null.ok = TRUE)
+  # The prefix names jtable(), so the sentence does not (the presentation
+  # review's entry 5, Session 414).
   if (isTRUE(open) && is.null(substitute(file))) {
-    .jst_stop("open = TRUE opens the file jtable() writes, so it needs file = ",
+    .jst_stop("open = TRUE opens the file the call writes, so it needs file = ",
               "as well, for example:\n  ",
               .jst_call_with(cl, mc, "file", "Table1.docx"), fn = "jtable")
   }
@@ -5358,6 +5667,13 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   if (!is.null(note) && (!is.character(note) || anyNA(note))) {
     .jst_stop("`note` must be text in quotes.")
   }
+  # The table's source (ruling R79, Session 413): one line of text, which
+  # the style places -- the general note's last sentence under apa, a line
+  # of its own under report.
+  if (!is.null(source) && (!is.character(source) || length(source) != 1L ||
+                           is.na(source) || !nzchar(trimws(source)))) {
+    .jst_stop("`source` must be a single quoted string.")
+  }
 
   # The result, forced here: a nested analysis call runs with its output
   # discarded, and only what jtable() reports prints. Errors and warnings
@@ -5371,7 +5687,8 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   # tables in place (Session 406).
   results <- .jst_tables_splice(results)
   if (length(results) == 0L) {
-    .jst_stop("the list given to jtable() is empty.")
+    .jst_stop("the list given is empty.\n",
+              "Give a saved result, or a list of results or of built tables.")
   }
   # Built tables -- one, or a list of them -- go to the file as they are,
   # in the order given, each numbered: the document call of the reference's
@@ -5387,11 +5704,11 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
                 "tables together.")
     }
     if (!is.null(substitute(headings)) || !is.null(substitute(markers)) ||
-        !is.null(title) || !is.null(note) || !is.null(style) ||
-        length(setdiff(names(over_q), "landscape"))) {
-      .jst_stop("headings =, markers =, title =, note =, style =, and a ",
-                "style's settings belong to the call that builds a table ",
-                "from a result; a built table keeps its own.")
+        !is.null(title) || !is.null(note) || !is.null(source) ||
+        !is.null(style) || length(setdiff(names(over_q), "landscape"))) {
+      .jst_stop("headings =, markers =, title =, note =, source =, style =, ",
+                "and a style's settings belong to the call that builds a ",
+                "table from a result; a built table keeps its own.")
     }
     land <- if (is.null(over_vals$landscape)) NULL else
       .jst_style_check_value("landscape", .jst_style_spec$general$landscape,
@@ -5422,7 +5739,8 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
                           given = c(headings = !is.null(substitute(headings)),
                                     markers  = !is.null(substitute(markers)),
                                     title    = !is.null(title),
-                                    note     = !is.null(note)),
+                                    note     = !is.null(note),
+                                    source   = !is.null(source)),
                           mc = mc)
   }
   # The table's type, and the call's settings for it: the call's layer
@@ -5448,6 +5766,9 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
   # it holds.
   tbl <- .jst_table_builder(type)(results, st, headings = hd, markers = mk,
                                   title = title, note = note)
+  # The call's source, placed by the style when the notes are written
+  # (ruling R79, Session 413).
+  if (!is.null(source)) tbl$notes$source <- source
   # What the report says of the table, and what the combining hint reads
   # when the table is later written beside others (Session 406).
   tbl$summary <- .jst_table_summary(results, type, hd)
@@ -5539,7 +5860,8 @@ print.jst_tables <- function(x, ...) {
     correlation  = .jst_table_build_corr,
     ttest        = , anova = .jst_table_build_groups,
     crosstab     = .jst_table_build_crosstab,
-    reliability  = .jst_table_build_alpha)
+    reliability  = .jst_table_build_alpha,
+    multiresponse = .jst_table_build_multi)
 }
 
 #' Internal helper: what a result shares with the others of its table
@@ -5575,7 +5897,9 @@ print.jst_tables <- function(x, ...) {
       paste(c(unname(attr(cc, "variable")["name"]), as.character(cc$code)),
             collapse = "\r")
     }),
-    correlation = NA_character_,
+    # Each jcorr() result is a table of its own, and each jmulti() result
+    # (Session 414: one multiple-response set to a table).
+    correlation = , multiresponse = NA_character_,
     "")
   if (is.na(key)) key <- paste0("\r#", i)
   paste(type, key, sep = "\n")
@@ -5756,6 +6080,10 @@ print.jst_tables <- function(x, ...) {
                cvars[1L], " (", paste(unique(sets), collapse = "; "),
                "), so they cannot share a table.")
       }
+    } else if (identical(t, "multiresponse")) {
+      paste0("each jmulti() result is a table of its own.\n",
+             "To put more options in one table, name them in one jmulti() ",
+             "call.")
     } else {
       paste0("each jcorr() result is a table of its own.\n",
              "To correlate more variables in one table, name them in one ",
@@ -5836,7 +6164,8 @@ print.jst_tables <- function(x, ...) {
     crosstab = paste0(cnt(length(results), "variable"), " by ",
                       unname(attr(results[[1L]]$col_categories, "variable")["name"])),
     reliability = if (length(results) == 1L) paste0("1 scale of ", cnt(length(vars), "item"))
-      else paste0(length(results), " scales, ", cnt(length(vars), "item")))
+      else paste0(length(results), " scales, ", cnt(length(vars), "item")),
+    multiresponse = paste0("1 set of ", cnt(length(vars), "option")))
 }
 
 #' Internal helper: the overwrite question, the file, and the report
@@ -5882,9 +6211,10 @@ print.jst_tables <- function(x, ...) {
 #' text stepped down, long labels wrapped, as the Word file has them); then
 #' where the file went ("Table written to <path>", "3 tables written to
 #' <path>", replacing a file that was there), or, when no file was asked
-#' for, that none was written -- at joutput("full") with the lines that
-#' write the table and show it. A call that writes built tables adds, at
-#' joutput("full"), the tables that could have been one.
+#' for, that the table was made in R -- at joutput("full") with the line
+#' that writes the table and the one that prints a kept table (the
+#' presentation review's entry 8, Session 414). A call that writes built
+#' tables adds, at joutput("full"), the tables that could have been one.
 #'
 #' @param tables A list of jst_table.
 #' @param lay Their layout (\code{.jst_docx_layout()}).
@@ -5909,13 +6239,19 @@ print.jst_tables <- function(x, ...) {
                         " written to ", .jst_norm_path(path)))
     if (replaced) .jst_msg_out("It replaced the file that was there.")
   } else if (!asked) {
-    .jst_msg_out("No file was written.")
+    # The presentation review's entry 8 (Session 414): "No file was
+    # written." read as a failure on each building line of ruling R56's own
+    # recipe (t1 <- jtable(d1); t2 <- jtable(m1); then the call that
+    # writes them), where the table was made as asked; and the note's
+    # "t1 <- ..." line prescribed an assignment R cannot see was made. The
+    # line says what was made, the note how a kept table is printed.
+    .jst_msg_out("The table was made in R; no Word file was asked for.")
     if (length(how) == 2L) {
       .jst_advisory_note(
         "Note: to write the table to a Word file, add file = to the call:\n",
         "  ", how[1L], "\n",
-        "To see the table here, keep it with <- and print it:\n",
-        "  t1 <- ", how[2L], "\n",
+        "To see a table here, print it by the name it was kept under with ",
+        "<-, for example:\n",
         "  print(t1)")
     }
   }
@@ -6027,6 +6363,12 @@ print.jst_tables <- function(x, ...) {
 #' opener and the session test are arguments so a battery can stand in for
 #' both and open nothing.
 #'
+#' A computer with no program set for .docx files makes the opener fail
+#' (on Windows, shell.exec()'s error; elsewhere, no browser set): the
+#' error and any warning are caught and a note says the file was written
+#' and no program opened it, so the call still returns its table (the
+#' (S410) item, Session 414, on its lean's default).
+#'
 #' @param path The file.
 #' @param open Logical.
 #' @param ask Logical; whether the session is interactive.
@@ -6036,8 +6378,17 @@ print.jst_tables <- function(x, ...) {
 .jst_table_open <- function(path, open, ask = interactive(),
                             browse = utils::browseURL) {
   if (!isTRUE(open) || !isTRUE(ask)) return(invisible(FALSE))
-  browse(normalizePath(path, winslash = "/", mustWork = FALSE))
-  invisible(TRUE)
+  p  <- normalizePath(path, winslash = "/", mustWork = FALSE)
+  ok <- tryCatch({ browse(p); TRUE },
+                 error = function(e) FALSE, warning = function(w) FALSE)
+  if (!ok) {
+    .jst_msg("Note: the file was written, but no program on this computer ",
+             "opened it:\n  ", .jst_norm_path(p), "\n",
+             "Open it from its folder, in Word, LibreOffice, or another ",
+             "program that reads .docx files.")
+    cat("\n")
+  }
+  invisible(ok)
 }
 
 #' Internal helper: a call's own style settings, as a layer
@@ -6251,14 +6602,19 @@ print.jst_tables <- function(x, ...) {
 #' which is all a small change needs. A general setting is given by its
 #' name; a table type's settings go in a list named for its section:
 #' \code{jstyle("apa", save.as = "myapa", font = "Arial", regression =
-#' list(fit.rows = c("r2", "n")))}.
+#' list(fit.rows = c("r2", "n")))}. A short file takes everything else from
+#' its base, so it travels with it: a file based on a style of your own
+#' works on another computer, or from another folder, only where that
+#' style can be found too. A base given by its path is written by its path,
+#' which is where jstats finds it; a base given by its name is looked for
+#' in the folders below.
 #'
 #' A style file is plain text: a setting is a name, an equals sign and a
 #' value; a \code{#} starts a note; the general settings come first, then
 #' one section per table type, \code{[descriptives]}, \code{[frequencies]},
 #' \code{[regression]}, \code{[logistic]}, \code{[correlation]},
-#' \code{[ttest]}, \code{[anova]}, \code{[crosstab]} and
-#' \code{[reliability]}. A setting the file leaves out comes from the style
+#' \code{[ttest]}, \code{[anova]}, \code{[crosstab]}, \code{[reliability]}
+#' and \code{[multiresponse]}. A setting the file leaves out comes from the style
 #' its \code{based.on} line names. \code{\link{jstyle_settings}} lists every
 #' setting and what it takes. jstats looks for a style named in a call in
 #' the style folder (\code{joptions(style.dir = )}), the working directory
@@ -6708,7 +7064,8 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
   switch(sp$kind,
     text    = if (isTRUE(sp$empty)) "any text, or nothing" else "any text",
     choice  = paste0("one of ", paste(sp$choices, collapse = " | ")),
-    number  = paste0("a number from ", sp$min, " to ", sp$max),
+    number  = paste0("a number from ", sp$min, " to ", sp$max,
+                     if (isTRUE(sp$follow)) ", or size, or size and a number such as size - 1"),
     integer = paste0("a whole number from ", sp$min, " to ", sp$max),
     color   = paste0("a color name such as lightblue, or six hex digits such as ",
                      "ADD8E6", if (isTRUE(sp$header)) "; or header, or none"
@@ -6840,10 +7197,31 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
   own <- st$layers[[1L]]$source
   if (!is.na(st$path)) {
     chain <- vapply(st$layers[-1L], function(L) L$source, character(1))
+    chain <- paste(sub("\\.jstyle$", "", chain, ignore.case = TRUE),
+                   collapse = ", then ")
     .jst_msg_out(paste0("  ", .jst_norm_path(st$path)))
-    .jst_msg_out(paste0("  based on ", paste(sub("\\.jstyle$", "", chain,
-                                                 ignore.case = TRUE),
-                                             collapse = ", then ")))
+    .jst_msg_out(paste0("  based on ", chain))
+    # What the file itself sets (the presentation review's entry 9, Session
+    # 414; Jeff, Session 406: a short file's one setting is hard to find
+    # among every setting marked "# from apa"): the general settings, then
+    # each section's, the section named before its first, as the file
+    # lists them.
+    L1  <- st$layers[[1L]]
+    set <- c(names(L1$general),
+             unlist(lapply(names(.jst_style_type_nouns), function(p) {
+               nm <- names(L1[[p]])
+               if (length(nm)) c(paste0("[", p, "] ", nm[1L]), nm[-1L])
+             })))
+    all_n <- sum(lengths(.jst_style_spec))
+    if (length(set) >= all_n) {
+      .jst_msg_out("  Set in this file: every setting.")
+    } else if (!length(set)) {
+      .jst_msg_out("  Set in this file: no setting.")
+      .jst_msg_out(paste0("  Every setting comes from ", chain, "."))
+    } else {
+      .jst_msg_out(paste0("  Set in this file: ", .jst_and_list(set), "."))
+      .jst_msg_out(paste0("  Every other setting comes from ", chain, "."))
+    }
   } else {
     .jst_msg_out("  built into jstats")
     # A built-in based on another (report, on apa; Session 409).
@@ -6859,7 +7237,7 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
     spec <- .jst_style_spec[[part]]
     keys <- names(spec)
     vals <- vapply(keys, function(k) {
-      .jst_style_value_out(.jst_style_key(st, part, k), spec[[k]])
+      .jst_style_value_out(.jst_style_key_raw(st, part, k), spec[[k]])
     }, character(1))
     from <- vapply(keys, function(k) .jst_style_key_source(st, part, k), character(1),
                    USE.NAMES = FALSE)
@@ -6927,7 +7305,8 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
              ttest        = "A t-test table, from jt() results.",
              anova        = "An ANOVA table, from jaov() results.",
              crosstab     = "A crosstab, from jcrosstab() results.",
-             reliability  = "A reliability table, from jalpha() results.")
+             reliability  = "A reliability table, from jalpha() results.",
+             multiresponse = "A multiple-response table, from a jmulti() result.")
   # The header tells whoever edits the file -- a person, or an AI
   # assistant given the file's text -- what may change (Session 406). The
   # editing rule is worded as the short file's and the orientation's are
@@ -6967,7 +7346,7 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
     for (k in names(spec)) {
       out <- c(out, paste0("# ", .jst_style_about_lines(spec[[k]]$about)),
                .jst_style_note_lines(.jst_style_takes(spec[[k]], part)),
-               paste0(k, " = ", .jst_style_value_out(.jst_style_key(st, part, k),
+               paste0(k, " = ", .jst_style_value_out(.jst_style_key_raw(st, part, k),
                                                      spec[[k]])), "")
     }
   }
@@ -7049,8 +7428,8 @@ NULL
     spec  <- .jst_style_spec[[part]]
     items <- vapply(names(spec), function(k) {
       sp <- spec[[k]]
-      a  <- .jst_style_key(.jst_style_apa, part, k)
-      r  <- .jst_style_key(rep_st, part, k)
+      a  <- .jst_style_key_raw(.jst_style_apa, part, k)
+      r  <- .jst_style_key_raw(rep_st, part, k)
       paste0("\\item{\\code{", k, "}}{", esc(about(sp$about)),
              ". Takes ", esc(.jst_style_takes(sp, part)), ". In apa: ",
              value(.jst_style_apa[[part]][[k]], sp),

@@ -2866,3 +2866,509 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   }
   invisible(NULL)
 }
+
+
+# -- jmulti -------------------------------------------------------------------
+
+#' Multiple-response set: how many chose each option
+#'
+#' Tabulates a multiple-response question -- "Which of these services have
+#' you used? Tick all that apply." -- stored, as survey software stores it,
+#' as one yes/no item per option. For each option it counts the people who
+#' chose it and gives the percentage of everyone who answered the
+#' question, so the percentages can sum to more than 100. SPSS calls this a
+#' multiple-response set (MULT RESPONSE, or a CTABLES \code{$} set).
+#'
+#' \strong{Who is counted.} N is everyone who answered: a person with an
+#' answer on at least one item. A blank among a person's answers counts as
+#' not chosen -- survey software often writes an unticked box as blank --
+#' and a person blank or declared missing on every item (not asked, or
+#' skipped the question) is left out of N. A "None of these" row counts
+#' those who answered and chose none of the options; it prints only when
+#' anyone did. When the survey had its own "None of these" box, name it
+#' with \code{none =}: it is counted with the others and its row comes
+#' last. When no item holds a "No" at all -- a file that writes every
+#' unticked box as blank -- a person who chose nothing cannot be told from
+#' one who was not asked, and a note says so.
+#'
+#' \strong{The value counted as chosen} is 1, which LimeSurvey's SPSS
+#' files, Qualtrics and REDCap all write for a ticked box; \code{ticked =}
+#' names another (\code{ticked = "Y"} for LimeSurvey's CSV files). Only
+#' the set's yes/no items belong in the call: an item holding more than
+#' two values stops it, as does a text answer such as an "Other" box -- a
+#' text item among numbers, or, under \code{ticked = "Y"}, an item holding
+#' text that no other item of the set holds.
+#'
+#' \strong{The order.} The options are ranked by how many chose them, most
+#' first; \code{rank = FALSE} keeps the order of the data frame. Either
+#' way the "None of these" rows come last.
+#'
+#' \strong{The title} of the set is the text its items' labels share --
+#' "Services used" for items labelled "Services used: Counselling" and
+#' "Services used: Housing" -- and each option is named by the rest of its
+#' label. Items whose labels share no text are named by their labels, and
+#' the set is titled "Options Chosen". Keep the result with \code{<-} to
+#' make a publication table of it with \code{\link{jtable}}.
+#'
+#' @param data A data frame.
+#' @param ... The set's yes/no items, unquoted: their names, or a range of
+#'   columns in the data frame's order (\code{Q1_SQ001:Q1_SQ006}, SPSS's
+#'   TO), or both. A \code{c()} of names, bare or quoted, is read as the
+#'   names.
+#' @param none The survey's own "None of these" item, if it had one,
+#'   unquoted or in quotes. NULL (the default) for none.
+#' @param ticked The value an item holds when its option was chosen: 1 (the
+#'   default), or another number or a text value in quotes.
+#' @param rank Logical. TRUE (the default) lists the options by how many
+#'   chose them, most first; FALSE keeps the data frame's order.
+#' @param subset An optional unquoted logical expression (e.g.
+#'   \code{Group == 1}) to subset cases for this call only. Applied after
+#'   jcomplete and jsubset. Does not affect other function calls.
+#' @param variable.id Character or NULL. How the options are named in the
+#'   console: \code{"names"} (the items' names), \code{"labels"} (the text
+#'   each item's label adds to what the set's labels share), \code{"both"}
+#'   (\code{"name: label"}), or \code{"legend"} or \code{"legend.bottom"}
+#'   (names, with the labels listed after the table). NULL (the default)
+#'   defers to \code{joutput()}'s \code{variable.id} setting.
+#' @param case.processing.detail Accepted for symmetry with the other
+#'   analysis functions; the Case Processing table here shows the filters
+#'   only, and the Analysis N line says how many answered no item.
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent.
+#'
+#' @return Invisibly, a list of class \code{jst_multi}: \code{table} (the
+#'   rows as printed), \code{rows_raw} (each row's item, label, option
+#'   text, kind, count and unrounded percentage), \code{items} (the items,
+#'   the \code{none =} item last), \code{none}, \code{ticked}, \code{rank},
+#'   \code{title} (the text the labels share, or NA), \code{n} (everyone
+#'   who answered), \code{n_excluded} (those who answered no item),
+#'   \code{n_none} (those who answered and chose none), \code{sample_info}
+#'   and \code{data_name}.
+#'
+#' @examples
+#' # "Which services have you used?" -- one item per service, 1 = chosen,
+#' # 2 = not chosen; the seventh person was not asked
+#' svc <- data.frame(
+#'   Counselling = c(1, 2, 1, 2, 2, 1, NA, 2, 1, 2),
+#'   Housing     = c(2, 1, 1, 2, 2, 1, NA, 2, 2, 2),
+#'   LegalAid    = c(2, 2, 1, 1, 2, 2, NA, 2, 2, 2),
+#'   Financial   = c(2, 2, 2, 2, 2, 1, NA, 2, 2, 2))
+#' attr(svc$Counselling, "label") <- "Services used: Counselling"
+#' attr(svc$Housing, "label")     <- "Services used: Housing"
+#' attr(svc$LegalAid, "label")    <- "Services used: Legal aid"
+#' attr(svc$Financial, "label")   <- "Services used: Financial advice"
+#' jmulti(svc, Counselling:Financial)
+#'
+#' # The options in the data frame's order, named by their labels
+#' jmulti(svc, Counselling:Financial, rank = FALSE, variable.id = "labels")
+#'
+#' # Keep the result to make a publication table of it
+#' m <- jmulti(svc, Counselling:Financial, print = FALSE)
+#' t1 <- jtable(m)
+#'
+#' @seealso \code{\link{jfreq}} for one variable's frequencies,
+#'   \code{\link{jtable}} for the table; \code{\link{jstats}} for the
+#'   package overview.
+#'
+#' @export
+jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
+                   subset = NULL, variable.id = NULL,
+                   case.processing.detail = NULL, print = NULL) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
+  cl <- sys.call(); mc <- match.call(expand.dots = TRUE)
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(cl, mc, parent.frame(),
+                 .jst_word_specs("variable.id", "case.processing.detail"),
+                 "jmulti")
+  .jst_free_text_arg(substitute(ticked), parent.frame(), cl, mc, "ticked",
+                     "a value", "jmulti")
+  .jst_check_flag(rank, "rank")
+  if (!(is.numeric(ticked) || is.character(ticked) || is.logical(ticked)) ||
+      length(ticked) != 1L || is.na(ticked)) {
+    .jst_stop("`ticked` must be one value: the number or the text a chosen ",
+              "option's item holds, for example:\n  ticked = 1")
+  }
+
+  # Resolve the first argument: explicit data frame, juse default,
+  # or bare-symbol-as-variable-name (leading comma omitted).
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jmulti",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
+  data              <- arg1$data
+  .jst_data_name    <- arg1$name
+  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jmulti")
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
+  # The items as jalpha() takes them (ruling R62): names, a range by
+  # position, or both.
+  items <- .jst_resolve_varrange(variables, data, "jmulti", .jst_data_name,
+                                 default_used = .jst_default_used)$var_names
+  none_quo  <- rlang::enquo(none)
+  none_name <- if (rlang::quo_is_null(none_quo)) NULL
+               else .jst_one_var_name(none_quo, "jmulti", "none =")
+  .jst_check_vars(data, c(items, none_name), .jst_data_name,
+                  default_used = .jst_default_used)
+  twice <- unique(items[duplicated(items)])
+  if (length(twice)) {
+    .jst_stop(.jst_and_list(twice), " ", .jst_plural(length(twice), "is", "are"),
+              " named twice.\nName each item of the set once.")
+  }
+  # The survey's own "None of these" item comes last, named among the items
+  # or not.
+  items <- c(setdiff(items, none_name), none_name)
+  if (length(items) < 2L) {
+    .jst_stop(paste0(
+      "a multiple-response set needs at least 2 items.\n",
+      if (length(items) == 0L) "None were provided.\n" else "Only 1 was provided.\n",
+      "Provide two or more items, for example:\n",
+      "  jmulti(community, Volunteer, Smoker, OwnsHome)"))
+  }
+  .jst_multi_check_types(data, items, ticked, cl, mc)
+
+  .cat_red("Multiple Response\n")
+  if (.jst_default_used) .jst_default_note(.jst_data_name)
+
+  # The pipeline (jcomplete, jsubset, subset =): declared missing values in
+  # the items read as missing.
+  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
+                                  subset_expr = substitute(subset),
+                                  envir = parent.frame(), vars = items)
+  data <- pipeline$data
+  .jst_print_msgs(pipeline$msgs)
+
+  # Each item as answered: its value, or NA where the cell is blank (an
+  # unticked box) or missing.
+  vals <- lapply(items, function(v) .jst_multi_values(data[[v]]))
+  names(vals) <- items
+  # Under a text ticked = (a box written "Y" or blank, as LimeSurvey's CSV
+  # files write it), a text item holding a value no other item of the set
+  # holds is a text answer -- the "Other" box beside the ticked ones -- not
+  # a yes/no item (R62's lean, Session 414).
+  if (is.character(ticked)) .jst_multi_odd_text(vals, ticked)
+  for (v in items) {
+    u <- unique(vals[[v]][!is.na(vals[[v]])])
+    if (length(u) > 2L) {
+      .jst_stop(v, " holds ", length(u), " different values, so it is not a ",
+                "yes/no item.\nName only the set's yes/no items, each chosen ",
+                "or not.")
+    }
+  }
+  is_tick  <- vapply(vals, function(x) !is.na(x) & x == .jst_multi_values(ticked),
+                     logical(nrow(data)))
+  is_tick  <- matrix(is_tick, nrow = nrow(data))
+  answered <- matrix(vapply(vals, function(x) !is.na(x), logical(nrow(data))),
+                     nrow = nrow(data))
+  in_base  <- rowSums(answered) > 0L      # ruling R61: everyone who answered
+  n_base   <- sum(in_base)
+  n_out    <- nrow(data) - n_base
+  counts   <- colSums(is_tick & in_base)
+  n_none   <- sum(in_base & rowSums(is_tick) == 0L)
+  pct      <- if (n_base > 0L) 100 * counts / n_base else rep(NA_real_, length(items))
+
+  # The sample: the pipeline's chain (the screening layout: its own N line
+  # follows), then the Analysis N with those who answered no item.
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = data,
+    analysis_vars   = items,
+    n_analysis      = nrow(data))
+  cps <- .jst_print_case_processing(sample_info, analysis_type = "screening",
+                                    detail = case.processing.detail)
+  # No case left after a filter: the analysis functions' one stop.
+  if (nrow(data) == 0L) .jst_stop_empty_sample(sample_info)
+  # The N line's counts are bare, as the Case Processing block's are (S238).
+  pipe_out <- if (is.null(cps$header_excluded)) 0L else cps$header_excluded
+  rider <- c(if (pipe_out > 0L) paste(pipe_out, "Excluded"),
+             if (n_out > 0L) paste(n_out, "answered no item"))
+  # In the N-line state the screening layout prints nothing, so the line
+  # takes the blank line under the title itself.
+  if (!isTRUE(cps$render_top)) cat("\n")
+  cat("Analysis N: ", n_base,
+      if (length(rider)) paste0(" (", paste(rider, collapse = ", "), ")"),
+      "\n\n", sep = "")
+  if (n_base == 0L) {
+    .jst_stop("no case answered any item of the set, so there is nothing to ",
+              "count.\nEach case is blank or declared missing on every item.")
+  }
+
+  # The title and the option names: the text the labels share, and what
+  # each label adds to it (R62's lean, Session 414).
+  labs  <- vapply(items, function(v) {
+    l <- attr(data[[v]], "label", exact = TRUE)
+    if (is.character(l) && length(l) == 1L && !is.na(l) && nzchar(trimws(l))) l
+    else NA_character_
+  }, character(1))
+  sh <- .jst_multi_shared(labs[setdiff(items, none_name)])
+  opts <- vapply(seq_along(items), function(i) {
+    if (is.na(labs[i])) items[i] else .jst_multi_option(labs[i], sh)
+  }, character(1))
+
+  # The rows: the options ranked (or in the file's order), the survey's own
+  # None box last, then jstats's row of those who chose none.
+  ord <- seq_along(items)
+  opt_i <- setdiff(ord, match(none_name, items))
+  if (isTRUE(rank)) opt_i <- opt_i[order(-counts[opt_i], opt_i)]
+  ord <- c(opt_i, match(none_name, items))
+  rows_raw <- data.frame(
+    item    = items[ord],
+    label   = unname(labs[ord]),
+    option  = opts[ord],
+    kind    = ifelse(items[ord] %in% none_name, "none_box", "item"),
+    n       = as.integer(counts[ord]),
+    percent = unname(pct[ord]),
+    stringsAsFactors = FALSE, row.names = NULL)
+  if (n_none > 0L) {
+    rows_raw <- rbind(rows_raw, data.frame(
+      item = NA_character_, label = NA_character_, option = NA_character_,
+      kind = "none", n = as.integer(n_none), percent = 100 * n_none / n_base,
+      stringsAsFactors = FALSE))
+  }
+
+  # The console table.
+  vlmode <- .jst_resolve_variable_id(variable.id)
+  disp <- vapply(seq_len(nrow(rows_raw)), function(i) {
+    if (identical(rows_raw$kind[i], "none")) return("None of these")
+    nm <- rows_raw$item[i]
+    if (vlmode %in% c("labels", "both")) {
+      .jst_combine_id(nm, rows_raw$option[i], vlmode, cap = TRUE)
+    } else nm
+  }, character(1))
+  title <- if (is.na(sh$title)) "Options Chosen" else sh$title
+  tab <- data.frame(Option = disp, Freq = rows_raw$n,
+                    Percent = round(rows_raw$percent, 2),
+                    stringsAsFactors = FALSE, row.names = NULL)
+  .jst_print_table(tab, caption = title, row.names = FALSE,
+                   col.names = c("", "Freq", "Percent"),
+                   align = c("l", "bc", "bc"), digits = c(Percent = 2L))
+  cat("\n")
+  if (vlmode %in% c("legend", "legend.bottom")) {
+    .print_var_labels(data, items)
+  }
+  if (identical(getOption(".jst_output_level", "standard"), "full")) {
+    .jst_advisory_note("Note: respondents could choose more than one option, ",
+                       "so the percentages sum to more than 100.")
+    cat("\n")
+  }
+  # No item holds a "No" (R62's lean, Session 414): an unticked box is
+  # blank in every item, so a person who chose nothing is blank on every
+  # item and is out of N, which then counts only those who chose at least
+  # one option.
+  if (is.null(none_name) &&
+      all(vapply(vals, function(x) all(is.na(x) | x == .jst_multi_values(ticked)),
+                 logical(1)))) {
+    .jst_msg("Note: no item of the set holds any value but ",
+             .jst_multi_ticked_text(ticked), ", the value counted as chosen, ",
+             "so a person who chose nothing is blank on every item and is not ",
+             "in N.\nN counts only those who chose at least one option.\n",
+             "If the survey had its own \"None of these\" box, name it with ",
+             "none = to count everyone who answered.")
+    cat("\n")
+  }
+
+  ret <- list(
+    table       = tab,
+    rows_raw    = rows_raw,
+    items       = items,
+    none        = none_name,
+    ticked      = ticked,
+    rank        = isTRUE(rank),
+    title       = sh$title,
+    n           = n_base,
+    n_excluded  = n_out,
+    n_none      = n_none,
+    sample_info = sample_info,
+    data_name   = .jst_data_name
+  )
+  class(ret) <- "jst_multi"
+  ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
+  invisible(ret)
+  })
+}
+
+#' Internal helper: a multiple-response item's values, as compared
+#'
+#' The values jmulti() compares with \code{ticked}: a number for a numeric,
+#' labelled or logical item; text for a text or factor item, a blank cell
+#' (empty, or spaces) missing -- an unticked box, which survey software
+#' often writes blank (ruling R61: a blank among a person's answers is not
+#' chosen).
+#'
+#' @param x The item, after the pipeline (declared missing values NA).
+#' @return A numeric or character vector.
+#' @keywords internal
+.jst_multi_values <- function(x) {
+  if (is.factor(x)) x <- as.character(x)
+  if (is.logical(x)) return(as.numeric(x))
+  if (is.character(unclass(x))) {
+    x <- as.character(unclass(x))
+    x[!is.na(x) & !nzchar(trimws(x))] <- NA_character_
+    return(trimws(x))
+  }
+  .jst_as_numeric(x)
+}
+
+#' Internal helper: a text item of a set that holds what no other item holds
+#'
+#' Under a text \code{ticked =}, each yes/no item of a set holds the ticked
+#' value and at most the set's one other answer ("N", "Unchecked") beside
+#' its blanks. An item holding a value that no other item of the set holds
+#' is a text answer -- LimeSurvey's "Other" box, Q1_other, inside a range of
+#' items written "Y" or blank -- and stops, named, with the first values
+#' it holds.
+#'
+#' @param vals Named list: each item's values, as
+#'   \code{.jst_multi_values()} gives them.
+#' @param ticked The value counted as chosen (text).
+#' @return Invisibly NULL; stops on the first such item.
+#' @keywords internal
+.jst_multi_odd_text <- function(vals, ticked) {
+  tk   <- .jst_multi_values(ticked)
+  held <- lapply(vals, function(x) setdiff(unique(x[!is.na(x)]), tk))
+  for (i in seq_along(vals)) {
+    if (!is.character(vals[[i]]) || !length(held[[i]])) next
+    odd <- setdiff(held[[i]], unlist(held[-i]))
+    if (length(odd)) {
+      .jst_stop(names(vals)[i], " holds text that no other item of the set ",
+                "holds (", paste0("\"", utils::head(odd, 2L), "\"", collapse = ", "),
+                if (length(odd) > 2L) ", ...", "), so it is not a yes/no ",
+                "item.\nName only the set's yes/no items, and leave out a text ",
+                "answer such as an \"Other\" box.")
+    }
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: ticked = as a message writes it
+#' @param ticked The value.
+#' @keywords internal
+.jst_multi_ticked_text <- function(ticked) {
+  if (is.character(ticked)) paste0("\"", ticked, "\"") else format(ticked)
+}
+
+#' Internal helper: a multiple-response set's items checked against ticked =
+#'
+#' A number counted as chosen needs numeric items (labelled, logical or
+#' plain); text needs text items (a factor's levels included). An item of
+#' the other kind stops, named (R62's lean, Session 414: LimeSurvey's
+#' "Other" text column, Q1_other, inside a range of ticked items). Where the
+#' text items each hold one value at most beside their blanks -- a box
+#' written "Y" or blank, as LimeSurvey's CSV files write it -- the stop
+#' gives the call with that value as ticked =.
+#'
+#' @param data The data frame.
+#' @param items The items.
+#' @param ticked The value counted as chosen.
+#' @param cl,mc The call, for the line the stop offers.
+#' @keywords internal
+.jst_multi_check_types <- function(data, items, ticked, cl, mc) {
+  for (v in items) {
+    .jst_check_analysis_var(data[[v]], v, requires_numeric = FALSE,
+                            fn_label = "a multiple-response set")
+  }
+  is_text <- vapply(items, function(v) {
+    x <- data[[v]]
+    is.factor(x) || is.character(unclass(x))
+  }, logical(1))
+  if (!is.character(ticked) && any(is_text)) {
+    tv <- items[is_text]
+    seen <- unique(unlist(lapply(tv, function(v) {
+      x <- .jst_multi_values(data[[v]]); unique(x[!is.na(x)])
+    })))
+    one_mark <- all(vapply(tv, function(v) {
+      x <- .jst_multi_values(data[[v]]); length(unique(x[!is.na(x)])) <= 1L
+    }, logical(1))) && length(seen) == 1L && all(is_text)
+    if (one_mark) {
+      .jst_stop(.jst_and_list(tv), " ", .jst_plural(length(tv), "holds", "hold"),
+                " text (\"", seen, "\"), not numbers, and ticked = is ",
+                .jst_multi_ticked_text(ticked), ".\n",
+                "If \"", seen, "\" marks a chosen option, name it with ticked =:\n",
+                "  ", .jst_call_with(cl, mc, "ticked", seen))
+    }
+    .jst_stop(.jst_and_list(tv), " ",
+              .jst_plural(length(tv), "is a text variable, not a yes/no item.",
+                          "are text variables, not yes/no items."), "\n",
+              "Name only the set's yes/no items, and leave out a text answer ",
+              "such as an \"Other\" box.")
+  }
+  if (is.character(ticked) && any(!is_text)) {
+    nv <- items[!is_text]
+    .jst_stop(.jst_and_list(nv), " ", .jst_plural(length(nv), "holds", "hold"),
+              " numbers, and ticked = is ", .jst_multi_ticked_text(ticked),
+              ", which is text.\n",
+              "Give ticked = the value a chosen option's item holds.")
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: the text a multiple-response set's labels share
+#'
+#' The labels' common start, cut back to the last separator in it -- a
+#' colon, a question mark, an opening bracket or parenthesis, a dash, a
+#' bar, a slash or a full stop -- so "Services used: Counselling" and
+#' "Services used: Housing" share "Services used", LimeSurvey's
+#' \code{"Which services have you used? [Counselling]"} shares
+#' \code{"Which services have you used?"}, and Qualtrics's "Q1 - ... -
+#' Selected Choice - Counselling" shares all but the option. Labels that
+#' share no such start, an item with no label, or an option left empty by
+#' the cut share nothing.
+#'
+#' @param labs Character: the items' labels, NA for an item with none.
+#' @return A list: title (the shared text, NA for none) and cut (the
+#'   start each label's option follows, "" for none).
+#' @keywords internal
+.jst_multi_shared <- function(labs) {
+  none <- list(title = NA_character_, cut = "")
+  labs <- unname(labs)   # the title carries no item's name
+  if (length(labs) < 2L || anyNA(labs)) return(none)
+  p <- labs[1L]
+  for (l in labs[-1L]) {
+    n <- min(nchar(p), nchar(l))
+    a <- strsplit(substr(p, 1L, n), "")[[1L]]
+    b <- strsplit(substr(l, 1L, n), "")[[1L]]
+    k <- which(a != b)[1L]
+    p <- if (is.na(k)) substr(p, 1L, n) else substr(p, 1L, k - 1L)
+    if (!nzchar(p)) return(none)
+  }
+  # The separators, in a Perl class: the hyphen last, so it is no range.
+  cut <- sub("[^:?\\[(|/.\u2013\u2014-]*$", "", p, perl = TRUE)
+  if (!nzchar(cut)) return(none)
+  title <- trimws(sub("[\\s:\\[(|/.\u2013\u2014-]+$", "", cut, perl = TRUE))
+  if (!nzchar(title)) return(none)
+  rest <- vapply(labs, function(l) .jst_multi_option(l, list(cut = cut)), character(1))
+  if (any(!nzchar(rest))) return(none)
+  list(title = title, cut = cut)
+}
+
+#' Internal helper: an option's text, the set's shared text taken off
+#' @param lab The item's label.
+#' @param sh \code{.jst_multi_shared()}'s result.
+#' @return Character(1): the label after the shared start, a closing
+#'   bracket or parenthesis that matches its opening one taken off; the
+#'   whole label when it does not start so.
+#' @keywords internal
+.jst_multi_option <- function(lab, sh) {
+  if (!nzchar(sh$cut) || !startsWith(lab, sh$cut)) return(lab)
+  rest <- trimws(substr(lab, nchar(sh$cut) + 1L, nchar(lab)))
+  if (endsWith(sh$cut, "[")) rest <- trimws(sub("\\]$", "", rest))
+  if (endsWith(sh$cut, "(")) rest <- trimws(sub("\\)$", "", rest))
+  rest
+}
