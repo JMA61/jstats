@@ -396,9 +396,9 @@
     paper            = list(kind = "choice", choices = c("a4", "letter"),
                             about = "the page the file opens on: a4 | letter"),
     caption.form     = list(kind = "choice", choices = c("apa", "journal", "report"),
-                            about = c("apa: bold \"Table 1\", the italic title on the next line",
-                                      "journal: bold \"Table 1.\" and the title on one line",
-                                      "report: \"Table 1:\" and the title")),
+                            about = c("apa: \"Table 1\" in bold, the title in italics on the next line",
+                                      "journal: \"Table 1.\" in bold, the title after it on the same line, not bold",
+                                      "report: \"Table 1:\" and the title on one line, both in bold")),
     caption.position = list(kind = "choice", choices = c("row", "paragraph"),
                             about = c("row: the table's first row, repeated with the header on a new page",
                                       "paragraph: above the table")),
@@ -450,15 +450,22 @@
                             about = c("where N, the number of cases, goes: note (the general note opens",
                                       "on it) | title (\"(N = 103)\" after the title; a table with",
                                       "several ns, such as Ns that differ or a t test's groups, gives",
-                                      "them in the note) | none")),
+                                      "them in the note) | none (no N; a table of models whose Ns",
+                                      "differ still says so in its note)")),
     decimals         = list(kind = "integer", min = 0, max = 6,
                             about = "the decimal places of a statistic, such as a mean"),
     leading.zero     = list(kind = "choice", choices = c("yes", "no", "never"),
-                            about = c("the zero before the point: no drops it on a statistic that cannot",
-                                      "exceed 1, such as p (.23) | yes keeps it (0.23) | never drops it on",
-                                      "every number below 1 (.197 for an SE)")),
+                            about = c("yes: a zero before the point of every number below 1 (0.23)",
+                                      paste0("no: no zero on a statistic that cannot exceed 1, such as p (.23), ",
+                                             "and a zero on any other number below 1, such as an SE (0.197); ",
+                                             "APA's rule"),
+                                      "never: no zero before the point of any number (.23 for p, .197 for an SE)")),
     p.format         = list(kind = "choice", choices = c("exact", "stars", "both"),
-                            about = "exact: the p-value | stars: asterisks | both"),
+                            about = c("exact: the p-value in the p column, with no asterisks",
+                                      paste0("stars: asterisks on the statistic (b, t, F or chi-square) and no ",
+                                             "p column; a table without that statistic keeps a p column of ",
+                                             "asterisks"),
+                                      "both: the p-value and its asterisks in the p column")),
     p.decimals       = list(kind = "integer", min = 1, max = 6,
                             about = "the decimal places of a p-value"),
     stars            = list(kind = "stars",
@@ -1063,6 +1070,38 @@
        call. = FALSE)
 }
 
+#' Internal helper: the general settings a table type's section sets
+#'
+#' A general setting written under a table type's heading sets that kind
+#' of table only (the reference, Part 3.2). This reads a style as the
+#' lookup does, layer by layer, and returns each general setting whose
+#' value for the type comes from a section's own line -- found before any
+#' layer's general value -- so the complete copy can write the line and
+#' the printout show it (Session 419, ruling R82's fixes: until then a
+#' complete copy dropped the line, and its regression tables went back to
+#' the general value with nothing said). [plot] sets none: it takes only a
+#' chart's own settings, so no layer's [plot] holds a general one.
+#'
+#' @param st A style.
+#' @param part Character(1); a table type.
+#' @return A named list, in the general part's order: for each setting,
+#'   list(value, source).
+#' @keywords internal
+.jst_style_section_general <- function(st, part) {
+  out <- list()
+  for (g in setdiff(names(.jst_style_spec$general), names(.jst_style_spec[[part]]))) {
+    for (L in st$layers) {
+      v <- L[[part]][[g]]
+      if (!is.null(v)) {
+        out[[g]] <- list(value = v, source = L$source)
+        break
+      }
+      if (!is.null(L$general[[g]])) break
+    }
+  }
+  out
+}
+
 #' Internal helper: which layer a setting comes from
 #'
 #' @inheritParams .jst_style_key
@@ -1163,9 +1202,20 @@
     path <- style
     if (!grepl("\\.jstyle$", path, ignore.case = TRUE)) {
       if (nzchar(tools::file_ext(basename(path)))) {
+        # A style file saved as .txt -- what an AI assistant or Notepad
+        # hands back -- gets the lines that rename it and use it (ruling
+        # R81, Session 419: .jstyle stays the one extension).
+        fix <- NULL
+        if (grepl("\\.txt$", path, ignore.case = TRUE)) {
+          to <- sub("(\\.jstyle)?\\.txt$", ".jstyle", path, ignore.case = TRUE)
+          if (file.exists(path) && !dir.exists(path) && !file.exists(to)) {
+            .jst_check_path_chars(path, what = "path")
+            fix <- .jst_style_rename_lines(path, to, to, cl, mc, from)
+          }
+        }
         .jst_stop("style = names a file ending in .",
                   tools::file_ext(basename(path)), ", not .jstyle:\n  ", path,
-                  fn = fn)
+                  if (!is.null(fix)) paste0("\n", fix), fn = fn)
       }
       path <- paste0(path, ".jstyle")
     }
@@ -1178,16 +1228,36 @@
   hit   <- match(tolower(nm), tolower(names(files)))
   if (!is.na(hit)) return(unname(files[hit]))
 
-  # Not found: a near name is offered with the call that uses it; else the
-  # styles found are named.
+  # Not found. A name typed with .txt after a style there is gets that
+  # style's name; a file of the name saved with .txt after it -- what an AI
+  # assistant or Notepad hands back -- is named, with the line that renames
+  # it (ruling R81, Session 419: .jstyle stays the one extension); a near
+  # name is offered with the call that uses it; else the styles found are
+  # named.
   avail <- c(names(.jst_style_builtin()), names(files))
   lead  <- if (is.null(from)) paste0("no style named \"", nm, "\" was found.")
            else paste0("line ", from$line, " of ", from$file, " sets based.on = ",
                        nm, ", and no style of that name was found.")
-  dist  <- as.integer(utils::adist(tolower(nm), tolower(avail)))
-  near  <- avail[dist <= 2L & dist * 2L < nchar(nm)]
+  stem  <- sub("\\.jstyle$", "", sub("\\.txt$", "", nm, ignore.case = TRUE),
+               ignore.case = TRUE)
+  typed_txt <- !identical(stem, nm)
+  near  <- character(0)
+  if (typed_txt && tolower(stem) %in% tolower(avail)) {
+    near <- avail[match(tolower(stem), tolower(avail))]
+  } else {
+    twin <- .jst_style_txt_twin(stem)
+    if (!is.null(twin)) {
+      .jst_stop(lead, "\n", twin$where, " holds ", basename(twin$from),
+                ", and jstats reads a style only from a file ending in .jstyle.\n",
+                .jst_style_rename_lines(twin$from, twin$to,
+                                        if (typed_txt) stem, cl, mc, from),
+                fn = fn)
+    }
+    dist <- as.integer(utils::adist(tolower(nm), tolower(avail)))
+    near <- avail[dist <= 2L & dist * 2L < nchar(nm)]
+    if (length(near)) near <- near[which.min(dist[match(near, avail)])]
+  }
   if (length(near)) {
-    near <- near[which.min(dist[match(near, avail)])]
     line <- if (!is.null(cl) && !is.null(mc)) .jst_call_with(cl, mc, "style", near)
     .jst_stop(lead, "\nDid you mean \"", near, "\"?",
               if (!is.null(line)) paste0("\n  ", line), fn = fn)
@@ -1195,6 +1265,115 @@
   .jst_stop(lead, "\nThe styles found are ",
             .jst_and_list(paste0("\"", avail, "\"")), ".\n",
             "jstyle() lists them and the folders searched.", fn = fn)
+}
+
+#' Internal helper: a style file saved with .txt after its name
+#'
+#' A style that comes back from an AI assistant, or out of a text editor,
+#' is often saved as name.jstyle.txt or name.txt, which no lookup reads:
+#' .jstyle is the one extension (ruling R81, Session 419). The folders a
+#' style name is looked for in are read for such a file, so the stop for a
+#' name not found can name it and give the line that renames it.
+#' name.jstyle.txt counts whatever it holds; name.txt only when its text
+#' reads as a style file (\code{.jst_style_text_like()}), since a folder
+#' may hold a notes file of any name. A built-in's name never comes here:
+#' the built-in is loaded before any file is looked for, and a built-in's
+#' name typed with .txt gets the did-you-mean first.
+#'
+#' @param stem Character(1); the style's name, without .jstyle or .txt.
+#' @return NULL, or a list: from (the file found), to (the name it needs)
+#'   and where (the folder's role, opening a sentence).
+#' @keywords internal
+.jst_style_txt_twin <- function(stem) {
+  if (!nzchar(stem)) return(NULL)
+  dirs <- .jst_style_dirs()
+  for (i in seq_along(dirs)) {
+    d <- dirs[[i]]
+    if (!dir.exists(d)) next
+    f <- list.files(d, pattern = "\\.txt$", ignore.case = TRUE)
+    f <- f[!dir.exists(file.path(d, f))]
+    hit <- f[tolower(f) == tolower(paste0(stem, ".jstyle.txt"))]
+    if (!length(hit)) {
+      hit <- f[tolower(f) == tolower(paste0(stem, ".txt"))]
+      hit <- hit[vapply(file.path(d, hit), .jst_style_text_like, logical(1))]
+    }
+    to <- file.path(d, paste0(stem, ".jstyle"))
+    if (length(hit) && !file.exists(to)) {
+      role <- names(dirs)[i]
+      return(list(from = file.path(d, hit[1L]), to = to,
+                  where = paste0(toupper(substr(role, 1L, 1L)),
+                                 substr(role, 2L, nchar(role)))))
+    }
+  }
+  NULL
+}
+
+#' Internal helper: does a text file read as a style file?
+#'
+#' Every line that is not blank or a note is a section's heading or a
+#' name, an equals sign and a value, and at least one name is a setting
+#' jstats has or one of a file's own three lines. A file that cannot be
+#' read as text is not one.
+#'
+#' @param path The file.
+#' @return Logical(1).
+#' @keywords internal
+.jst_style_text_like <- function(path) {
+  isTRUE(tryCatch(suppressWarnings({
+    s <- readLines(path, n = 2000L, encoding = "UTF-8", warn = FALSE)
+    if (length(s)) s[1L] <- sub("^\ufeff", "", s[1L])
+    s <- trimws(sub("\r$", "", s))
+    s <- s[nzchar(s) & !startsWith(s, "#")]
+    head <- grepl("^\\[[^]]*\\]\\s*(#.*)?$", s)
+    key  <- tolower(trimws(sub("=.*$", "", s)))
+    pair <- grepl("=", s, fixed = TRUE) & grepl("^[a-z][a-z0-9._]*$", key)
+    known <- c("format", "written.by", "based.on",
+               unlist(lapply(.jst_style_spec, names), use.names = FALSE))
+    length(s) > 0L && all(head | pair) && any(pair & key %in% known)
+  }), error = function(e) FALSE))
+}
+
+#' Internal helper: the lines that rename a style file saved as .txt
+#'
+#' The file.rename() line, on the files' full paths so it runs from any
+#' folder, and what follows it: nothing when the style was named without
+#' the .txt (the call as typed then finds the renamed file); the call as
+#' typed with the style's new name; for a based.on line, the line to
+#' change; a sentence when no call is in hand (ruling R81, Session 419).
+#' A remedy never leads to another stop (ruling R22), so the second step
+#' is always given.
+#'
+#' @param from_path,to_path The file as it is, and as it must be named.
+#' @param style NULL when the name typed needs no change, else the name or
+#'   path to use once the file is renamed.
+#' @param cl,mc The call as typed and matched, or NULL.
+#' @param from NULL, or where based.on named the style: list(file, line).
+#' @return Character(1), the lines.
+#' @keywords internal
+.jst_style_rename_lines <- function(from_path, to_path, style = NULL,
+                                    cl = NULL, mc = NULL, from = NULL) {
+  # Full paths, so the line runs from any folder; the new name is not a
+  # file yet, so its folder is what is made full.
+  q <- function(p) {
+    paste0("\"", .jst_dq_escape(file.path(.jst_norm_path(dirname(p)), basename(p))),
+           "\"")
+  }
+  rename <- paste0("  file.rename(", q(from_path), ", ", q(to_path), ")")
+  if (is.null(style)) {
+    return(paste0("To rename the file, run this line, then the call again:\n",
+                  rename))
+  }
+  if (!is.null(from)) {
+    return(paste0("To rename the file, run:\n", rename, "\n",
+                  "Then set based.on = ", style, " on line ", from$line, " of ",
+                  from$file, "."))
+  }
+  if (!is.null(cl) && !is.null(mc)) {
+    return(paste0("To rename the file and use it, run:\n", rename, "\n  ",
+                  .jst_call_with(cl, mc, "style", style)))
+  }
+  paste0("To rename the file, run:\n", rename, "\n",
+         "Then name the style \"", style, "\".")
 }
 
 #' Internal helper: read and check one style file
@@ -1302,11 +1481,25 @@
   # Settings this version does not have, then every value.
   layer <- list(source = file)
   for (sec in intersect(names(parts), c("general", types))) {
+    # [plot] takes only a chart's own settings: a figure's frame reads the
+    # general part, so a general setting under [plot] would do nothing
+    # (Session 419, ruling R82's fixes).
     allowed <- if (identical(sec, "general")) c(names(.jst_style_spec$general), own)
+               else if (identical(sec, "plot")) names(.jst_style_spec$plot)
                else c(names(.jst_style_spec[[sec]]), names(.jst_style_spec$general))
     vals <- list()
     for (k in names(parts[[sec]])) {
       it <- parts[[sec]][[k]]
+      # A setting jstats has, in a part that cannot take it: paper under a
+      # heading, a general setting under [plot], another part's setting.
+      wrong <- .jst_style_misplaced(k, sec)
+      if (!is.null(wrong)) {
+        .jst_stop(at(it$line), " sets ", k,
+                  if (identical(sec, "general")) " before the first section"
+                  else paste0(" in [", sec, "]"), ".\n",
+                  paste(.jst_style_misplaced_lines(wrong, k, sec, "file"),
+                        collapse = "\n"), fn = fn)
+      }
       if (!k %in% allowed) {
         near <- .jst_style_near(k, allowed)
         if (length(near)) {
@@ -1407,9 +1600,88 @@
            .jst_and_list(names(.jst_style_spec$general)), ".")
   } else {
     paste0("The settings of [", sec, "] are ",
-           .jst_and_list(names(.jst_style_spec[[sec]])), ".\n",
-           "A general setting may be set there too.")
+           .jst_and_list(names(.jst_style_spec[[sec]])), ".",
+           if (!identical(sec, "plot")) {
+             "\nA general setting may be set there too, except paper."
+           })
   }
+}
+
+#' Internal helper: a setting jstats has, in a part that cannot take it
+#'
+#' The four cases a style file and jstyle()'s settings share (Session 419,
+#' ruling R82's fixes): paper under a table type's heading or under
+#' [plot] -- the page is the whole Word file's, read from the general part
+#' alone; any other general setting under [plot], which a figure's frame
+#' never reads; a table type's setting before the first section; and one
+#' section's setting under another's heading. Until then the first two
+#' were accepted and did nothing, and the last two were called settings
+#' jstats does not have.
+#'
+#' @param k Character(1); the setting's name.
+#' @param sec Character(1); the part it was set in: "general" or a section.
+#' @return NULL when the part takes it, or it is no setting at all; else a
+#'   list: kind ("paper", "general", "section", "other") and, for the last
+#'   two, owners (the sections that have it).
+#' @keywords internal
+.jst_style_misplaced <- function(k, sec) {
+  spec  <- .jst_style_spec
+  parts <- names(.jst_style_type_nouns)
+  owners <- function() {
+    parts[vapply(parts, function(p) k %in% names(spec[[p]]), logical(1))]
+  }
+  if (identical(sec, "general")) {
+    if (k %in% c(names(spec$general), "format", "written.by", "based.on")) return(NULL)
+    own <- owners()
+    return(if (length(own)) list(kind = "section", owners = own))
+  }
+  if (k %in% names(spec[[sec]])) return(NULL)
+  if (identical(k, "paper")) return(list(kind = "paper"))
+  if (k %in% names(spec$general)) {
+    return(if (identical(sec, "plot")) list(kind = "general"))
+  }
+  own <- owners()
+  if (length(own)) list(kind = "other", owners = own)
+}
+
+#' Internal helper: what to say of a setting in the wrong part
+#'
+#' The reason, then where the setting goes: for a style file's line, or
+#' for a setting given to jstyle() in a section's list. One home for both
+#' doors' sentences (the S383 rule).
+#'
+#' @param w What \code{.jst_style_misplaced()} returned.
+#' @param k,sec The setting and the part it was set in.
+#' @param door "file" or "call".
+#' @return Character: the sentences, one an element; the call door's last
+#'   one introduces the line its caller adds.
+#' @keywords internal
+.jst_style_misplaced_lines <- function(w, k, sec, door = c("file", "call")) {
+  door <- match.arg(door)
+  secs <- function(x) .jst_and_list(paste0("[", x, "]"))
+  reason <- switch(w$kind,
+    paper   = paste0("paper is the page size of the whole Word file, so it is ",
+                     "set once, for every table and figure."),
+    general = paste0(k, " is a general setting, and [plot] takes only a ",
+                     "chart's own settings."),
+    section = paste0(k, " is a setting of ", secs(w$owners), "."),
+    other   = paste0(k, " is a setting of ", secs(w$owners), ", not of [", sec,
+                     "]."))
+  where <- if (identical(door, "file")) {
+    switch(w$kind,
+      paper   = "Put the line at the top of the file, before the first section.",
+      general = c(paste0("Put the line at the top of the file, before the first ",
+                         "section, to set every table and figure."),
+                  "To set one kind of table only, put it under that table's heading."),
+      if (length(w$owners) == 1L) paste0("Put the line under [", w$owners, "].")
+      else "Put the line under the heading of the table type it is for.")
+  } else {
+    switch(w$kind,
+      paper   = "Give it by itself, outside the list",
+      general = "Give it by itself, to set every table and figure",
+      "Give it in a list named for its own section, for example:")
+  }
+  c(reason, where)
 }
 
 #' Internal helper: a value's text in a style file
@@ -1656,11 +1928,11 @@
 
 #' Internal helper: whether a number keeps the zero before its point
 #'
-#' The style's leading.zero setting, read for one kind of number: yes
-#' keeps the zero on every number; no drops it on a statistic that cannot
-#' exceed 1 (p, beta, r, R2 -- APA's rule) and keeps it on any other (b,
-#' SE, a mean); never drops it on every number below 1 (".197" for an SE;
-#' Session 402, item 5).
+#' The style's leading.zero setting, read for one kind of number: under
+#' yes every number keeps the zero; under no a statistic that cannot
+#' exceed 1 (p, beta, r, R2 -- APA's rule) loses it and any other (b, SE,
+#' a mean) keeps it; under never no number below 1 has one (".197" for an
+#' SE; Session 402, item 5).
 #'
 #' @param setting The leading.zero value.
 #' @param bounded Logical; TRUE for a statistic bounded by 1.
@@ -2315,10 +2587,12 @@
 #' decimals with APA's leading-zero rule, counts whole. The general note:
 #' N where n.position puts it, the reference categories under reference =
 #' note, the beta* definition when the column is shown, then the user's
-#' text; stars' legend when p.format uses them. Models with different Ns
-#' are built, never stopped: the table says so and the console gets the
-#' jcomplete() line (the structure's \code{messages}, which jtable()
-#' prints).
+#' text; stars' legend when p.format uses them. Under p.format = stars a
+#' model shown with b has no p column, the asterisks on b (ruling R83,
+#' Session 419). Models with different Ns are built, never stopped: the
+#' table says so -- under n.position = none too (ruling R84) -- and the
+#' console gets the jcomplete() line (the structure's \code{messages},
+#' which jtable() prints).
 #'
 #' @param results A list of jst_lm, or of jst_logistic, results; names
 #'   are the model heads.
@@ -2388,8 +2662,19 @@
   last_cols <- if (identical(last_cols, "none")) character(0)
                else setdiff(last_cols, col_keys)
   ci_two    <- identical(key("ci.style"), "two")
+  # p.format = stars (ruling R83, Session 419; Jeff: "We don't need a
+  # column of asterisks alone."): the asterisks go on b and the table has
+  # no p column, the form the no-p-column path below has made since
+  # Session 403. A model shown without b keeps its p column, the one place
+  # its asterisks can go.
+  p_out     <- FALSE
   keys_of   <- lapply(seq_len(nm), function(i) {
-    c(col_keys, if (i == nm) last_cols)
+    ks <- c(col_keys, if (i == nm) last_cols)
+    if (identical(pfmt, "stars") && all(c("b", "p") %in% ks)) {
+      p_out <<- TRUE
+      ks <- setdiff(ks, "p")
+    }
+    ks
   })
   columns <- data.frame(key = "stub", label = key("stub.label"), kind = "text",
                         italic = FALSE, stringsAsFactors = FALSE)
@@ -2576,6 +2861,10 @@
   if (fit_none) fit_keys <- character(0)
   if (ns_differ && !fit_none && !"n" %in% fit_keys) fit_keys <- c(fit_keys, "n")
   messages <- character(0)
+  if (p_out) {
+    messages <- c(messages, .jst_table_stars_note(style, type,
+                                                  c("columns", "columns.last"), "b"))
+  }
   # Delta R2 and its F test need nested models on one set of cases.
   nested <- !ns_differ && nm > 1L && all(vapply(seq_len(nm)[-1L], function(i) {
     all(terms[[i - 1L]]$term %in% terms[[i]]$term)
@@ -2654,7 +2943,14 @@
     }, character(1))
     paste0("*N* differs by model: ", paste(parts, collapse = ", "))
   }
-  np <- .jst_table_n_parts(key("n.position"), n_text, ns_differ)
+  # n.position = none writes no N; the sentence that says the models' Ns
+  # differ stays in the note all the same (ruling R84, Session 419: R53's
+  # boundary -- Jeff, Session 401, "the note ... should say that the Ns
+  # differ to alert the user - they could then erase this note"), so the
+  # console's note below is true under every setting.
+  npos <- key("n.position")
+  np <- .jst_table_n_parts(if (ns_differ && identical(npos, "none")) "note" else npos,
+                           n_text, ns_differ)
   general <- c(np$note, .jst_table_filter_note(results, heads, style, type,
                                                .jst_table_model_list),
                ref_notes)
@@ -2713,6 +3009,32 @@
     style    = style)
   tbl$messages <- messages
   tbl
+}
+
+#' Internal helper: the note for a p column a call lists under stars
+#'
+#' Under p.format = stars a table has no p column, the asterisks on the
+#' statistic (ruling R83, Session 419). When the CALL itself lists p --
+#' columns = c("b", "se", "p") -- the table leaves out a column the call
+#' asked for, so jtable() says so and where the p-values come from; a
+#' style file's own list of columns gets no note, its p.format beside it.
+#'
+#' @param style The table's style.
+#' @param type The table type.
+#' @param args Character; the settings that list columns, as a call names
+#'   them.
+#' @param stat Character(1); the statistic the asterisks are on, as the
+#'   note names it.
+#' @return Character: the note, or none.
+#' @keywords internal
+.jst_table_stars_note <- function(style, type, args, stat) {
+  L <- if (inherits(style, "jst_style")) style$layers[[1L]]
+  if (is.null(L) || !identical(L$source, "the call")) return(character(0))
+  hit <- args[vapply(args, function(a) "p" %in% L[[type]][[a]], logical(1))]
+  if (!length(hit)) return(character(0))
+  paste0("Note: ", hit[1L], " = lists p, and this table has no p column: its ",
+         "style sets p.format = stars, which puts the asterisks on ", stat, ".\n",
+         "To show the p-values, set p.format = exact or both in the style file.")
 }
 
 #' Internal helper: a list of model heads, for a note
@@ -3241,11 +3563,14 @@
 #' ns under n.position = note or title (a range per group where they vary;
 #' ruling R59 keeps them out of the title), the filter, a sentence for a
 #' Welch or a paired test (test.note), the user's text; the stars' legend
-#' when p.format uses them.
+#' when p.format uses them. Under p.format = stars a table shown with its
+#' statistic has no p column, the asterisks on t or F (ruling R83, Session
+#' 419).
 #'
 #' @param results A list of jst_ttest, or of jst_anova, results.
 #' @inheritParams .jst_table_build
-#' @return A jst_table.
+#' @return A jst_table, with a \code{messages} element (character; the
+#'   notes jtable() prints).
 #' @keywords internal
 .jst_table_build_groups <- function(results, style, headings = NULL,
                                     markers = NULL, title = NULL, note = NULL) {
@@ -3310,6 +3635,15 @@
   s_keys <- intersect(req, if (anova) c("f", "p", "eta2")
                            else c("t", "p", "d", "diff", "ci"))
   stat   <- if (anova) "f" else "t"
+  # p.format = stars (ruling R83, Session 419): the asterisks go on the
+  # statistic and the table has no p column; a table shown without the
+  # statistic keeps its p column.
+  messages <- character(0)
+  if (identical(pfmt, "stars") && all(c(stat, "p") %in% s_keys)) {
+    s_keys   <- setdiff(s_keys, "p")
+    messages <- .jst_table_stars_note(style, type, "columns",
+                                      if (anova) "F" else "t")
+  }
   df_txt <- vapply(mods, function(m) {
     if (anova) paste0(dfmt(m$df1), ", ", dfmt(m$df2)) else dfmt(m$df)
   }, character(1))
@@ -3467,7 +3801,7 @@
   }
   if (!is.null(note)) general <- c(general, note)
 
-  .jst_table_new(
+  tbl <- .jst_table_new(
     type     = type,
     columns  = columns,
     rows     = rows,
@@ -3482,6 +3816,8 @@
                                   else character(0)),
     spanners = spanners,
     style    = style)
+  tbl$messages <- messages
+  tbl
 }
 
 
@@ -3507,9 +3843,13 @@
 
 #' Internal helper: the crosstab from one or more jcrosstab() results
 #'
+#' Under p.format = stars a table shown with its chi-square has no p
+#' column, the asterisks on the chi-square (ruling R83, Session 419).
+#'
 #' @param results A list of jst_crosstab results, one column variable.
 #' @inheritParams .jst_table_build
-#' @return A jst_table.
+#' @return A jst_table, with a \code{messages} element (character; the
+#'   notes jtable() prints).
 #' @keywords internal
 .jst_table_build_crosstab <- function(results, style, headings = NULL,
                                       markers = NULL, title = NULL,
@@ -3560,6 +3900,14 @@
   tot    <- identical(key("total"), "yes")
   tests  <- key("test.columns")
   if (identical(tests, "none")) tests <- character(0)
+  # p.format = stars (ruling R83, Session 419): the asterisks go on the
+  # chi-square and the table has no p column; test columns without the
+  # chi-square keep their p column.
+  messages <- character(0)
+  if (identical(pfmt, "stars") && all(c("chisq", "p") %in% tests)) {
+    tests    <- setdiff(tests, "p")
+    messages <- .jst_table_stars_note(style, type, "test.columns", "the chi-square")
+  }
   columns <- data.frame(key = "stub", label = key("stub.label"), kind = "text",
                         italic = FALSE, stringsAsFactors = FALSE)
   add_col <- function(k, lab, ital) {
@@ -3656,7 +4004,7 @@
   general <- c(np$note, .jst_table_filter_note(results, rlabs, style, type))
   if (!is.null(note)) general <- c(general, note)
 
-  .jst_table_new(
+  tbl <- .jst_table_new(
     type     = type,
     columns  = columns,
     rows     = rows,
@@ -3673,6 +4021,8 @@
                                   else character(0)),
     spanners = spanners,
     style    = style)
+  tbl$messages <- messages
+  tbl
 }
 
 
@@ -7777,13 +8127,20 @@ print.jst_figure <- function(x, ...) {
 #' as a brand's), gridlines, axis lines, where the legend goes, the values on
 #' its bars, its width and height in inches, its resolution, and whether a
 #' Word file of figures is written with each chart's data in an Excel file
-#' and each figure as a vector file. A setting the file leaves out comes from
+#' and each figure as a vector file. A general setting's line copied under
+#' a table type's heading sets that kind of table only (all but
+#' \code{paper}, the page of the whole file; \code{[plot]} takes only its
+#' own settings). A setting the file leaves out comes from
 #' the style its \code{based.on} line names; a font or size the
 #' \code{[plot]} section leaves out comes from the file's general settings
 #' first, so a file that sets its tables' font sets its charts' too. \code{\link{jstyle_settings}} lists every
 #' setting and what it takes. jstats looks for a style named in a call in
 #' the style folder (\code{joptions(style.dir = )}), the working directory
-#' and your jstats folder, in that order.
+#' and your jstats folder, in that order. A style file's name ends in
+#' \code{.jstyle}: one saved as myagency.jstyle.txt or myagency.txt, as a
+#' text editor or an AI assistant may save it, is not read, and the stop
+#' for a style not found names such a file and gives the
+#' \code{file.rename()} line that renames it.
 #'
 #' @param style The style's name in quotes -- \code{"apa"}, \code{"report"}
 #'   or a style file's -- or a path to a style file; NULL (the default)
@@ -7813,23 +8170,27 @@ print.jst_figure <- function(x, ...) {
 #'   the style, or the path of the file written.
 #'
 #' @section Making a style with an AI assistant:
-#' A style file is plain text, so an AI assistant can write one from an
-#' example report. Give it a complete copy, which lists every setting and
-#' what each takes -- \code{jstyle("report", save.as = "myagency")} writes
-#' one; a short file hides the settings it takes from its base -- and the
-#' example, with a request such as:
+#' A style file is plain text, so an AI assistant can change one from a
+#' request in plain words ("use Calibri 11 and a light blue header row")
+#' or from an example report. Give it a complete copy, which lists every
+#' setting and what each takes -- \code{jstyle("report", save.as =
+#' "myagency")} writes one; a short file hides the settings it takes from
+#' its base -- and the request or the example, for instance:
 #' \preformatted{
 #' Attached are myagency.jstyle, a jstats table style whose notes say what
-#' each setting does and what it takes, and Report.pdf. Rewrite the style
+#' each setting does and what it takes, and Report.pdf. Change the style
 #' file so that jstats tables look like the tables in the report, following
-#' the instructions at the top of the file, and list what the settings
-#' cannot reproduce.
+#' the instructions at the top of the file. Return the whole file as a
+#' download named myagency.jstyle, list each value you changed, and say
+#' what the settings cannot reproduce.
 #' }
 #' Save its reply over the file and run \code{jstyle("myagency")}, which
 #' names any value it cannot use (give that back to the assistant), then
-#' try the style: \code{jtable(c1, style = "myagency", open = TRUE)}. An
-#' assistant can reach only the looks the settings make; it is told to say
-#' what it could not reproduce rather than invent a setting.
+#' try the style: \code{jtable(c1, style = "myagency", open = TRUE)}. A
+#' reply saved as myagency.jstyle.txt or myagency.txt is not read until it
+#' is renamed; \code{jstyle("myagency")} gives the line that renames it.
+#' An assistant can reach only the looks the settings make; it is told to
+#' say what it could not reproduce rather than invent a setting.
 #'
 #' @seealso \code{\link{jtable}} for the tables, \code{\link{jstyle_settings}}
 #'   for every setting a style holds.
@@ -7905,7 +8266,7 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
     .jst_style_print(st)
     return(invisible(st))
   }
-  vals <- .jst_style_given(given)
+  vals <- .jst_style_given(given, cl)
   path <- .jst_style_save_path(save.as, from = st$name)
   write <- .jst_table_overwrite_gate(path, overwrite, ask = interactive(),
                                      fn = "jstyle", noun = "style")
@@ -8049,11 +8410,18 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
 #' name reads as itself in the file), every other value as the file writes
 #' it.
 #'
+#' A setting jstats has, given in a list that cannot take it -- paper in
+#' a table type's, a general setting in plot's, one section's setting in
+#' another's -- stops as a style file's line does
+#' (\code{.jst_style_misplaced()}; Session 419), with the call rewritten
+#' where the setting only has to move out of its list.
+#'
 #' @param given Named quosures: general settings and section lists.
+#' @param cl The call as typed, for the line a stop offers; NULL for none.
 #' @return A named list of parts (general first, then the sections in the
 #'   file's order), each a named list of the values' text.
 #' @keywords internal
-.jst_style_given <- function(given) {
+.jst_style_given <- function(given, cl = NULL) {
   parts <- names(.jst_style_type_nouns)
   out <- list()
   txt <- function(k, sp, val, part) {
@@ -8075,8 +8443,11 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
         .jst_stop(k, " = names ", names(val)[duplicated(names(val))][1L],
                   " twice.\nGive each setting once.", fn = "jstyle")
       }
-      allowed <- c(names(.jst_style_spec[[k]]), names(.jst_style_spec$general))
+      allowed <- if (identical(k, "plot")) names(.jst_style_spec$plot)
+                 else c(names(.jst_style_spec[[k]]), names(.jst_style_spec$general))
       for (s in names(val)) {
+        wrong <- .jst_style_misplaced(s, k)
+        if (!is.null(wrong)) .jst_style_given_stop(wrong, s, k, cl)
         if (!s %in% allowed) {
           nr <- .jst_style_near(s, allowed)
           .jst_stop(s, " is not a setting of [", k, "].",
@@ -8092,6 +8463,47 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
     }
   }
   out[intersect(c("general", parts), names(out))]
+}
+
+#' Internal helper: the stop for a setting given in the wrong list
+#'
+#' paper, or a general setting in plot's list, only has to move out of the
+#' list: the stop gives the call rewritten, the setting given by itself --
+#' when the list was typed in the call and no setting of that name is
+#' already given by itself; else the sentence alone. Another section's
+#' setting gets an example in a list of its own section, since the call
+#' cannot say which of several sections was meant.
+#'
+#' @param w What \code{.jst_style_misplaced()} returned.
+#' @param s,k The setting, and the section whose list held it.
+#' @param cl The call as typed, or NULL.
+#' @keywords internal
+.jst_style_given_stop <- function(w, s, k, cl = NULL) {
+  txt <- .jst_style_misplaced_lines(w, s, k, "call")
+  if (identical(w$kind, "other")) {
+    o <- w$owners[1L]
+    .jst_stop(paste(txt, collapse = "\n"), "\n  ", o, " = list(", s, " = ",
+              paste(deparse(.jst_style_apa[[o]][[s]]), collapse = ""), ")",
+              fn = "jstyle")
+  }
+  line  <- NULL
+  items <- if (is.null(cl)) list() else as.list(cl)
+  old   <- items[[k]]
+  if (is.call(old) && identical(old[[1L]], as.name("list")) &&
+      s %in% names(old) && !s %in% names(items)) {
+    moved <- old[[s]]
+    rest  <- as.list(old)[names(old) != s]
+    items[[k]] <- if (length(rest) > 1L) as.call(rest) else NULL
+    items[[s]] <- moved
+    line <- .jst_term_text(as.call(items))
+  }
+  # Already given by itself as well: only the list's copy has to go.
+  if (is.null(line) && s %in% names(items)) {
+    .jst_stop(txt[1L], "\n", s, " = is already given by itself, so take it ",
+              "out of the list.", fn = "jstyle")
+  }
+  .jst_stop(txt[1L], "\n", txt[2L],
+            if (is.null(line)) "." else paste0(":\n  ", line), fn = "jstyle")
 }
 
 #' Internal helper: one setting of a section, for an example line
@@ -8145,6 +8557,10 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
            paste0("# Change only the values after the = signs, or add a setting ",
                   "from that list; do not invent a setting, and do not rename a ",
                   "setting or a section."),
+           # Where a setting goes (ruling R82, Session 419).
+           paste0("# A general setting goes at the top, before the first heading in ",
+                  "square brackets, and a table type's setting under its heading."),
+           .jst_style_head_section_line(),
            paste0("# jstyle(\"", name, "\") checks the file and names any value ",
                   "it cannot use."),
            "",
@@ -8374,14 +8790,27 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
     # each section's, the section named before its first, as the file
     # lists them.
     L1  <- st$layers[[1L]]
-    set <- c(names(L1$general),
-             unlist(lapply(names(.jst_style_type_nouns), function(p) {
-               nm <- names(L1[[p]])
-               if (length(nm)) c(paste0("[", p, "] ", nm[1L]), nm[-1L])
-             })))
+    by_part <- function(pick) {
+      unlist(lapply(names(.jst_style_type_nouns), function(p) {
+        nm <- pick(names(L1[[p]]), names(.jst_style_spec[[p]]))
+        if (length(nm)) c(paste0("[", p, "] ", nm[1L]), nm[-1L])
+      }))
+    }
+    set <- c(names(L1$general), by_part(function(nm, own) nm))
+    # A complete copy sets every setting; a general setting it sets again
+    # under a table type's heading is named after that (Session 419).
     all_n <- sum(lengths(.jst_style_spec))
-    if (length(set) >= all_n) {
+    own_n <- length(L1$general) +
+      sum(vapply(names(.jst_style_type_nouns), function(p) {
+        length(intersect(names(L1[[p]]), names(.jst_style_spec[[p]])))
+      }, integer(1)))
+    if (own_n >= all_n) {
       .jst_msg_out("  Set in this file: every setting.")
+      again <- by_part(setdiff)
+      if (length(again)) {
+        .jst_msg_out(paste0("  Also set for one table type only: ",
+                            .jst_and_list(again), "."))
+      }
     } else if (!length(set)) {
       .jst_msg_out("  Set in this file: no setting.")
       .jst_msg_out(paste0("  Every setting comes from ", chain, "."))
@@ -8408,7 +8837,14 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
     }, character(1))
     from <- vapply(keys, function(k) .jst_style_key_source(st, part, k), character(1),
                    USE.NAMES = FALSE)
-    w  <- max(nchar(keys)); vw <- min(max(nchar(vals)), 26L)
+    # The general settings this table type's section sets for itself, after
+    # its own (Session 419): the value, and that it holds for this kind of
+    # table only.
+    sg    <- .jst_style_section_general(st, part)
+    gvals <- vapply(names(sg), function(k) {
+      .jst_style_value_out(sg[[k]]$value, .jst_style_spec$general[[k]])
+    }, character(1))
+    w  <- max(nchar(c(keys, names(sg)))); vw <- min(max(nchar(c(vals, gvals))), 26L)
     for (i in seq_along(keys)) {
       line <- paste0(formatC(keys[i], width = -w), " = ", vals[i])
       if (!identical(from[i], own)) {
@@ -8416,6 +8852,13 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
                        sub("\\.jstyle$", "", from[i], ignore.case = TRUE))
       }
       cat(line, "\n", sep = "")
+    }
+    for (k in names(sg)) {
+      line <- paste0(formatC(k, width = -w), " = ", gvals[[k]])
+      cat(formatC(line, width = -(w + 3L + vw)), "  # for this table type only",
+          if (!identical(sg[[k]]$source, own)) {
+            paste0(", from ", sub("\\.jstyle$", "", sg[[k]]$source, ignore.case = TRUE))
+          }, "\n", sep = "")
     }
     cat("\n")
   }
@@ -8482,22 +8925,44 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
   # (Session 409, the presentation review's entry 7), and a block below it
   # addresses an assistant asked to match an example (Session 409; the AI
   # Integration record, Part 24).
+  # Since Session 419 (rulings R82 and the two leans; the (S418) AI-text
+  # item): the head says how the file is laid out and that a general
+  # setting's line copied under a table type's heading sets that kind of
+  # table only, with the two exceptions the reader stops on; names the
+  # marks a text takes, once; and the block for an assistant serves a
+  # request in words as well as an example, names the sections, and asks
+  # for each value changed.
   out <- c(paste0("# ", name, ".jstyle:"),
            "# A jstats table style.",
            paste0("# Every setting jstats has is below, each after a note saying ",
                   "what it does and what it takes."),
+           "# The general settings come first and set the look of every table and figure.",
+           paste0("# Then each kind of table has a section of its own settings, under ",
+                  "its heading in square brackets, and a chart's settings are under ",
+                  "[plot]."),
            paste0("# Change only the values after the = signs; do not invent a ",
                   "setting, and do not rename a setting or a section."),
+           .jst_style_head_section_line(),
+           paste0("# This works for every general setting but paper, which sets the ",
+                  "page of the whole file, and under every heading but [plot], which ",
+                  "takes only a chart's own settings."),
+           .jst_style_head_marks_line(),
            "# A line that starts with # is a note.",
            paste0("# jstyle(\"", name, "\") checks the file and names any value ",
                   "it cannot use."),
            "#",
-           "# To an AI assistant asked to edit this file so tables look like an example:",
+           paste0("# To an AI assistant asked to change this file, from a request in ",
+                  "words or to match an example:"),
            paste0("# Change only the values after the = signs, using only the values ",
                   "each setting's \"# takes:\" line allows."),
+           paste0("# Where the request is about one kind of table, change that ",
+                  "table's section: its own settings, or a general setting's line ",
+                  "copied under its heading."),
            "# Keep every other line as it is, and return the whole file.",
-           paste0("# Then say what the example has that these settings cannot make, ",
-                  "rather than inventing a setting for it."))
+           paste0("# Then list each value you changed, as it was and as it is now, ",
+                  "and each line you added."),
+           paste0("# Then say what the request asks for that these settings cannot ",
+                  "make, rather than inventing a setting for it."))
   # A copy names as its base the built-in its style reaches first: report
   # for a copy of report, or of a file based on it, so a setting a later
   # jstats adds comes from report as the copy's others did; apa otherwise
@@ -8518,8 +8983,50 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
                paste0(k, " = ", .jst_style_value_out(.jst_style_key_raw(st, part, k),
                                                      spec[[k]])), "")
     }
+    # A general setting the style sets for this kind of table only keeps
+    # its line, under the section's own settings (Session 419: the copy
+    # had dropped it, and the table type went back to the general value).
+    sg <- .jst_style_section_general(st, part)
+    for (k in names(sg)) {
+      sp <- .jst_style_spec$general[[k]]
+      out <- c(out, paste0("# ", .jst_style_about_lines(sp$about)),
+               .jst_style_note_lines(.jst_style_takes(sp, part)),
+               paste0(k, " = ", .jst_style_value_out(sg[[k]]$value, sp)), "")
+    }
   }
   .jst_style_blank_lines(out)
+}
+
+#' Internal helper: two sentences both style files' heads carry
+#'
+#' That a general setting's line copied under a table type's heading sets
+#' that kind of table only (ruling R82, Session 419), and the marks a text
+#' takes (the lean of the same session): one home each, so the complete
+#' copy's head and the short file's cannot come to disagree.
+#'
+#' @return Character(1), a comment line.
+#' @keywords internal
+.jst_style_head_section_line <- function() {
+  paste0("# To give one kind of table its own value of a general setting, copy ",
+         "that setting's line under the table's heading and change the value ",
+         "there.")
+}
+
+#' Internal helper: the head's sentence on the marks a text takes
+#'
+#' The second of the two sentences both heads may carry (see
+#' \code{.jst_style_head_section_line()}); the complete copy's has it.
+#' It names the texts the writers set by the light markup -- a title, a
+#' single column's head, the note's and the source's labels -- as run at
+#' Session 419: a row's label (intercept.label) and a spanner's
+#' (total.label) print the marks as typed.
+#'
+#' @return Character(1), a comment line.
+#' @keywords internal
+.jst_style_head_marks_line <- function() {
+  paste0("# In a title, a single column's head (such as stub.label or b.label), ",
+         "note.label or source.label, *word* sets a word in italics and ^mark^ a ",
+         "superscript; any other label prints the marks as typed.")
 }
 
 
@@ -8618,8 +9125,15 @@ NULL
     "[regression]\n",
     "fit.rows = r2, n\n",
     "}\n",
-    "A general setting may also be set in a table type's section, for that ",
-    "table type only.\n}")
+    "To give one table type its own value of a general setting, copy the ",
+    "setting's line under that type's heading and change the value there: it ",
+    "then holds for that table type only. Two exceptions: \\code{paper}, the ",
+    "page of the whole Word file, is set only at the top, and \\code{[plot]} ",
+    "takes only a chart's own settings. In a title, a single column's head ",
+    "(such as \\code{stub.label} or \\code{b.label}), \\code{note.label} or ",
+    "\\code{source.label}, \\code{*word*} sets a word in italics and ",
+    "\\code{^mark^} a superscript; any other label prints the marks as ",
+    "typed.\n}")
   out <- c(form, sec("General settings", "general"),
            vapply(names(.jst_style_type_nouns), function(p) {
              sec(paste0("[", p, "]: ", .jst_style_type_nouns[[p]]), p)

@@ -81,33 +81,44 @@ size its words are drawn in, its palette (greys, or colors in order, such
 as a brand's), gridlines, axis lines, where the legend goes, the values on
 its bars, its width and height in inches, its resolution, and whether a
 Word file of figures is written with each chart's data in an Excel file
-and each figure as a vector file. A setting the file leaves out comes from
+and each figure as a vector file. A general setting's line copied under
+a table type's heading sets that kind of table only (all but
+\code{paper}, the page of the whole file; \code{[plot]} takes only its
+own settings). A setting the file leaves out comes from
 the style its \code{based.on} line names; a font or size the
 \code{[plot]} section leaves out comes from the file's general settings
 first, so a file that sets its tables' font sets its charts' too. \code{\link{jstyle_settings}} lists every
 setting and what it takes. jstats looks for a style named in a call in
 the style folder (\code{joptions(style.dir = )}), the working directory
-and your jstats folder, in that order.
+and your jstats folder, in that order. A style file's name ends in
+\code{.jstyle}: one saved as myagency.jstyle.txt or myagency.txt, as a
+text editor or an AI assistant may save it, is not read, and the stop
+for a style not found names such a file and gives the
+\code{file.rename()} line that renames it.
 }
 \section{Making a style with an AI assistant}{
 
-A style file is plain text, so an AI assistant can write one from an
-example report. Give it a complete copy, which lists every setting and
-what each takes -- \code{jstyle("report", save.as = "myagency")} writes
-one; a short file hides the settings it takes from its base -- and the
-example, with a request such as:
+A style file is plain text, so an AI assistant can change one from a
+request in plain words ("use Calibri 11 and a light blue header row")
+or from an example report. Give it a complete copy, which lists every
+setting and what each takes -- \code{jstyle("report", save.as =
+"myagency")} writes one; a short file hides the settings it takes from
+its base -- and the request or the example, for instance:
 \preformatted{
 Attached are myagency.jstyle, a jstats table style whose notes say what
-each setting does and what it takes, and Report.pdf. Rewrite the style
+each setting does and what it takes, and Report.pdf. Change the style
 file so that jstats tables look like the tables in the report, following
-the instructions at the top of the file, and list what the settings
-cannot reproduce.
+the instructions at the top of the file. Return the whole file as a
+download named myagency.jstyle, list each value you changed, and say
+what the settings cannot reproduce.
 }
 Save its reply over the file and run \code{jstyle("myagency")}, which
 names any value it cannot use (give that back to the assistant), then
-try the style: \code{jtable(c1, style = "myagency", open = TRUE)}. An
-assistant can reach only the looks the settings make; it is told to say
-what it could not reproduce rather than invent a setting.
+try the style: \code{jtable(c1, style = "myagency", open = TRUE)}. A
+reply saved as myagency.jstyle.txt or myagency.txt is not read until it
+is renamed; \code{jstyle("myagency")} gives the line that renames it.
+An assistant can reach only the looks the settings make; it is told to
+say what it could not reproduce rather than invent a setting.
 }
 
 \examples{

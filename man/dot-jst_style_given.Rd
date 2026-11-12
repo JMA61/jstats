@@ -4,10 +4,12 @@
 \alias{.jst_style_given}
 \title{Internal helper: the settings given to jstyle(save.as =), checked}
 \usage{
-.jst_style_given(given)
+.jst_style_given(given, cl = NULL)
 }
 \arguments{
 \item{given}{Named quosures: general settings and section lists.}
+
+\item{cl}{The call as typed, for the line a stop offers; NULL for none.}
 }
 \value{
 A named list of parts (general first, then the sections in the
@@ -19,5 +21,12 @@ a file's value is; a general setting may be given in a section's list,
 as a file may set one in a section. A color is kept as it was typed (a
 name reads as itself in the file), every other value as the file writes
 it.
+}
+\details{
+A setting jstats has, given in a list that cannot take it -- paper in
+a table type's, a general setting in plot's, one section's setting in
+another's -- stops as a style file's line does
+(\code{.jst_style_misplaced()}; Session 419), with the call rewritten
+where the setting only has to move out of its list.
 }
 \keyword{internal}

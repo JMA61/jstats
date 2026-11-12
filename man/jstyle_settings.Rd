@@ -30,14 +30,14 @@ font     = Arial
 [regression]
 fit.rows = r2, n
 }
-A general setting may also be set in a table type's section, for that table type only.
+To give one table type its own value of a general setting, copy the setting's line under that type's heading and change the value there: it then holds for that table type only. Two exceptions: \code{paper}, the page of the whole Word file, is set only at the top, and \code{[plot]} takes only a chart's own settings. In a title, a single column's head (such as \code{stub.label} or \code{b.label}), \code{note.label} or \code{source.label}, \code{*word*} sets a word in italics and \code{^mark^} a superscript; any other label prints the marks as typed.
 }
 \section{General settings}{
 \describe{
 \item{\code{font}}{the typeface of every cell, caption and note. Takes any text. In apa: \code{Times New Roman}; in report: \code{Arial}.}
 \item{\code{size}}{the text size, in points. Takes a number from 6 to 72. In apa: \code{12}; in report: \code{10}.}
 \item{\code{paper}}{the page the file opens on: a4 | letter. Takes one of a4 | letter. In apa: \code{a4}.}
-\item{\code{caption.form}}{apa: bold "Table 1", the italic title on the next line | journal: bold "Table 1." and the title on one line | report: "Table 1:" and the title. Takes one of apa | journal | report. In apa: \code{apa}; in report: \code{report}.}
+\item{\code{caption.form}}{apa: "Table 1" in bold, the title in italics on the next line | journal: "Table 1." in bold, the title after it on the same line, not bold | report: "Table 1:" and the title on one line, both in bold. Takes one of apa | journal | report. In apa: \code{apa}; in report: \code{report}.}
 \item{\code{caption.position}}{row: the table's first row, repeated with the header on a new page | paragraph: above the table. Takes one of row | paragraph. In apa: \code{row}.}
 \item{\code{caption.size}}{the caption's text size, in points, or size for the text size (size - 1 a point smaller), so it moves when size does. Takes a number from 6 to 72, or size, or size and a number such as size - 1. In apa: \code{size}.}
 \item{\code{caption.fill}}{a color filling the caption row (caption.position = row), header for the header's fill and text color, or none. Takes a color name such as lightblue, or six hex digits such as ADD8E6; or header, or none. In apa: \code{none}.}
@@ -57,10 +57,10 @@ A general setting may also be set in a table type's section, for that table type
 \item{\code{note.order}}{apa: the general note, then the specific notes, then the probability note | report: the probability note, the specific notes, then the general note. Takes one of apa | report. In apa: \code{apa}; in report: \code{report}.}
 \item{\code{source.position}}{where a call's source = goes: note (the general note's last sentence) | line (a line of its own, last, after source.label). Takes one of note | line. In apa: \code{note}; in report: \code{line}.}
 \item{\code{source.label}}{the word the source line opens on, upright: Source: | Sources:. Takes any text, or nothing. In apa: \code{Source:}.}
-\item{\code{n.position}}{where N, the number of cases, goes: note (the general note opens on it) | title ("(N = 103)" after the title; a table with several ns, such as Ns that differ or a t test's groups, gives them in the note) | none. Takes one of note | title | none. In apa: \code{title}.}
+\item{\code{n.position}}{where N, the number of cases, goes: note (the general note opens on it) | title ("(N = 103)" after the title; a table with several ns, such as Ns that differ or a t test's groups, gives them in the note) | none (no N; a table of models whose Ns differ still says so in its note). Takes one of note | title | none. In apa: \code{title}.}
 \item{\code{decimals}}{the decimal places of a statistic, such as a mean. Takes a whole number from 0 to 6. In apa: \code{2}.}
-\item{\code{leading.zero}}{the zero before the point: no drops it on a statistic that cannot exceed 1, such as p (.23) | yes keeps it (0.23) | never drops it on every number below 1 (.197 for an SE). Takes one of yes | no | never. In apa: \code{no}; in report: \code{yes}.}
-\item{\code{p.format}}{exact: the p-value | stars: asterisks | both. Takes one of exact | stars | both. In apa: \code{exact}.}
+\item{\code{leading.zero}}{yes: a zero before the point of every number below 1 (0.23) | no: no zero on a statistic that cannot exceed 1, such as p (.23), and a zero on any other number below 1, such as an SE (0.197); APA's rule | never: no zero before the point of any number (.23 for p, .197 for an SE). Takes one of yes | no | never. In apa: \code{no}; in report: \code{yes}.}
+\item{\code{p.format}}{exact: the p-value in the p column, with no asterisks | stars: asterisks on the statistic (b, t, F or chi-square) and no p column; a table without that statistic keeps a p column of asterisks | both: the p-value and its asterisks in the p column. Takes one of exact | stars | both. In apa: \code{exact}.}
 \item{\code{p.decimals}}{the decimal places of a p-value. Takes a whole number from 1 to 6. In apa: \code{3}.}
 \item{\code{stars}}{the p-values the asterisks mark, largest first. Takes one to three p-values between 0 and 1, largest first. In apa: \code{.05, .01, .001}.}
 \item{\code{marks}}{the marks of the notes on rows: letters (a, b, c) | symbols (daggers). Takes one of letters | symbols. In apa: \code{letters}.}

@@ -15,10 +15,10 @@
 Logical(1).
 }
 \description{
-The style's leading.zero setting, read for one kind of number: yes
-keeps the zero on every number; no drops it on a statistic that cannot
-exceed 1 (p, beta, r, R2 -- APA's rule) and keeps it on any other (b,
-SE, a mean); never drops it on every number below 1 (".197" for an SE;
-Session 402, item 5).
+The style's leading.zero setting, read for one kind of number: under
+yes every number keeps the zero; under no a statistic that cannot
+exceed 1 (p, beta, r, R2 -- APA's rule) loses it and any other (b, SE,
+a mean) keeps it; under never no number below 1 has one (".197" for an
+SE; Session 402, item 5).
 }
 \keyword{internal}

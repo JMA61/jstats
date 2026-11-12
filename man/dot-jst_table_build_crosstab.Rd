@@ -27,9 +27,11 @@
 \item{note}{The user's general note, or NULL.}
 }
 \value{
-A jst_table.
+A jst_table, with a \code{messages} element (character; the
+notes jtable() prints).
 }
 \description{
-Internal helper: the crosstab from one or more jcrosstab() results
+Under p.format = stars a table shown with its chi-square has no p
+column, the asterisks on the chi-square (ruling R83, Session 419).
 }
 \keyword{internal}
