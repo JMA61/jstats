@@ -605,7 +605,7 @@ prints the marks as typed.
 
   the title when the call gives none; {group} is the grouping variable's
   label. Takes any text. In apa:
-  `Means, Standard Deviations, and t Tests by {group}`.
+  `Means, Standard Deviations, and *t* Tests by {group}`.
 
 - `columns`:
 

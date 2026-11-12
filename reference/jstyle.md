@@ -273,7 +273,7 @@ jstyle("apa")
 #> method.note    = yes
 #> 
 #> [ttest]
-#> title         = Means, Standard Deviations, and t Tests by {group}
+#> title         = Means, Standard Deviations, and *t* Tests by {group}
 #> columns       = mean, sd, t, p, d
 #> stub.label    = Variable
 #> n.label       = n
@@ -482,7 +482,7 @@ jstyle("report")
 #> method.note    = yes                         # from apa
 #> 
 #> [ttest]
-#> title         = Means, Standard Deviations, and t Tests by {group}  # from apa
+#> title         = Means, Standard Deviations, and *t* Tests by {group}  # from apa
 #> columns       = mean, sd, t, p, d           # from apa
 #> stub.label    = Variable                    # from apa
 #> n.label       = n                           # from apa
@@ -574,10 +574,10 @@ jstyle("report")
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/RtmpqYO2CE/myjournal.jstyle
+#> Style written to /tmp/RtmppH5BxR/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/RtmpqYO2CE/myapa.jstyle
+#> Style written to /tmp/RtmppH5BxR/myapa.jstyle
 #> 
 ```
