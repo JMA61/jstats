@@ -217,7 +217,10 @@
                                        # Kendall table's correlations
   ),
   ttest = list(                        # jt() results (build 4)
-    title          = "Means, Standard Deviations, and t Tests by {group}",
+    # The t a statistical symbol, so marked (Session 420, the (S419) t
+    # item): italic in an upright title (report's), upright inside apa's
+    # italic one, APA's reverse italics, as the N after a title is.
+    title          = "Means, Standard Deviations, and *t* Tests by {group}",
     columns        = c("mean", "sd", "t", "p", "d"),  # n, diff, ci
     stub.label     = "Variable",
     n.label        = "n",
@@ -8897,7 +8900,8 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
 #' The header says to change values only, so the file can be handed to a
 #' person or an AI assistant with a request: the file's name on a line of
 #' its own, then one sentence a line, none wrapped (Session 407), and since
-#' Session 409 a block for an assistant asked to match an example. based.on
+#' Session 409 a block for an assistant asked to match an example -- since
+#' Session 420 naming the file to return, name.jstyle. based.on
 #' names the built-in the copied style reaches first: report for a copy of
 #' report or of a file based on it, else apa. A blank line follows each
 #' part's heading note and each setting, none between a setting's notes
@@ -8932,6 +8936,11 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
   # marks a text takes, once; and the block for an assistant serves a
   # request in words as well as an example, names the sections, and asks
   # for each value changed.
+  # Since Session 420 (the (S419) head item, Claude's call): the block
+  # names the file to return, <name>.jstyle and not .txt, and what to do
+  # where the assistant cannot make a file; the stop for a .txt file
+  # (ruling R81) stays the net. The short file gains no block: an
+  # assistant is given a complete copy, which lists every setting.
   out <- c(paste0("# ", name, ".jstyle:"),
            "# A jstats table style.",
            paste0("# Every setting jstats has is below, each after a note saying ",
@@ -8958,7 +8967,10 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
            paste0("# Where the request is about one kind of table, change that ",
                   "table's section: its own settings, or a general setting's line ",
                   "copied under its heading."),
-           "# Keep every other line as it is, and return the whole file.",
+           paste0("# Keep every other line as it is, and return the whole file, ",
+                  "named ", name, ".jstyle (not .txt)."),
+           paste0("# Where you cannot make a file, give the whole text for the ",
+                  "user to save as ", name, ".jstyle."),
            paste0("# Then list each value you changed, as it was and as it is now, ",
                   "and each line you added."),
            paste0("# Then say what the request asks for that these settings cannot ",

@@ -161,7 +161,7 @@ To give one table type its own value of a general setting, copy the setting's li
 }
 \section{[ttest]: a t-test table}{
 \describe{
-\item{\code{title}}{the title when the call gives none; \{group\} is the grouping variable's label. Takes any text. In apa: \code{Means, Standard Deviations, and t Tests by \{group\}}.}
+\item{\code{title}}{the title when the call gives none; \{group\} is the grouping variable's label. Takes any text. In apa: \code{Means, Standard Deviations, and *t* Tests by \{group\}}.}
 \item{\code{columns}}{the columns, in order: each group's n, mean and sd, then t (with its df), p, d (Cohen's d), diff (the mean difference) and ci (its confidence interval). Takes one or more of n, mean, sd, t, p, d, diff, ci, in order, separated by commas. In apa: \code{mean, sd, t, p, d}.}
 \item{\code{stub.label}}{the first column's head. Takes any text, or nothing. In apa: \code{Variable}.}
 \item{\code{n.label}}{the head of the n column. Takes any text, or nothing. In apa: \code{n}.}
