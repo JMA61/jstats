@@ -1,6 +1,7 @@
 # Internal helper: the crosstab from one or more jcrosstab() results
 
-Internal helper: the crosstab from one or more jcrosstab() results
+Under p.format = stars a table shown with its chi-square has no p
+column, the asterisks on the chi-square (ruling R83, Session 419).
 
 ## Usage
 
@@ -43,4 +44,5 @@ Internal helper: the crosstab from one or more jcrosstab() results
 
 ## Value
 
-A jst_table.
+A jst_table, with a `messages` element (character; the notes jtable()
+prints).

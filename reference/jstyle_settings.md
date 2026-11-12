@@ -35,8 +35,14 @@ first, then each table type's under its heading:
     [regression]
     fit.rows = r2, n
 
-A general setting may also be set in a table type's section, for that
-table type only.
+To give one table type its own value of a general setting, copy the
+setting's line under that type's heading and change the value there: it
+then holds for that table type only. Two exceptions: `paper`, the page
+of the whole Word file, is set only at the top, and `[plot]` takes only
+a chart's own settings. In a title, a single column's head (such as
+`stub.label` or `b.label`), `note.label` or `source.label`, `*word*`
+sets a word in italics and `^mark^` a superscript; any other label
+prints the marks as typed.
 
 ## General settings
 
@@ -57,10 +63,11 @@ table type only.
 
 - `caption.form`:
 
-  apa: bold "Table 1", the italic title on the next line \| journal:
-  bold "Table 1." and the title on one line \| report: "Table 1:" and
-  the title. Takes one of apa \| journal \| report. In apa: `apa`; in
-  report: `report`.
+  apa: "Table 1" in bold, the title in italics on the next line \|
+  journal: "Table 1." in bold, the title after it on the same line, not
+  bold \| report: "Table 1:" and the title on one line, both in bold.
+  Takes one of apa \| journal \| report. In apa: `apa`; in report:
+  `report`.
 
 - `caption.position`:
 
@@ -178,7 +185,8 @@ table type only.
   where N, the number of cases, goes: note (the general note opens on
   it) \| title ("(N = 103)" after the title; a table with several ns,
   such as Ns that differ or a t test's groups, gives them in the note)
-  \| none. Takes one of note \| title \| none. In apa: `title`.
+  \| none (no N; a table of models whose Ns differ still says so in its
+  note). Takes one of note \| title \| none. In apa: `title`.
 
 - `decimals`:
 
@@ -187,14 +195,18 @@ table type only.
 
 - `leading.zero`:
 
-  the zero before the point: no drops it on a statistic that cannot
-  exceed 1, such as p (.23) \| yes keeps it (0.23) \| never drops it on
-  every number below 1 (.197 for an SE). Takes one of yes \| no \|
-  never. In apa: `no`; in report: `yes`.
+  yes: a zero before the point of every number below 1 (0.23) \| no: no
+  zero on a statistic that cannot exceed 1, such as p (.23), and a zero
+  on any other number below 1, such as an SE (0.197); APA's rule \|
+  never: no zero before the point of any number (.23 for p, .197 for an
+  SE). Takes one of yes \| no \| never. In apa: `no`; in report: `yes`.
 
 - `p.format`:
 
-  exact: the p-value \| stars: asterisks \| both. Takes one of exact \|
+  exact: the p-value in the p column, with no asterisks \| stars:
+  asterisks on the statistic (b, t, F or chi-square) and no p column; a
+  table without that statistic keeps a p column of asterisks \| both:
+  the p-value and its asterisks in the p column. Takes one of exact \|
   stars \| both. In apa: `exact`.
 
 - `p.decimals`:

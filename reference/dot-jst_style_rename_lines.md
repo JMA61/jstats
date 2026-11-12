@@ -1,0 +1,45 @@
+# Internal helper: the lines that rename a style file saved as .txt
+
+The file.rename() line, on the files' full paths so it runs from any
+folder, and what follows it: nothing when the style was named without
+the .txt (the call as typed then finds the renamed file); the call as
+typed with the style's new name; for a based.on line, the line to
+change; a sentence when no call is in hand (ruling R81, Session 419). A
+remedy never leads to another stop (ruling R22), so the second step is
+always given.
+
+## Usage
+
+``` r
+.jst_style_rename_lines(
+  from_path,
+  to_path,
+  style = NULL,
+  cl = NULL,
+  mc = NULL,
+  from = NULL
+)
+```
+
+## Arguments
+
+- from_path, to_path:
+
+  The file as it is, and as it must be named.
+
+- style:
+
+  NULL when the name typed needs no change, else the name or path to use
+  once the file is renamed.
+
+- cl, mc:
+
+  The call as typed and matched, or NULL.
+
+- from:
+
+  NULL, or where based.on named the style: list(file, line).
+
+## Value
+
+Character(1), the lines.

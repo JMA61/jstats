@@ -25,7 +25,7 @@ open = TRUE) opens the file in the editor instead of printing it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.280</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.281</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -145,33 +145,44 @@ size its words are drawn in, its palette (greys, or colors in order, such
 as a brand's), gridlines, axis lines, where the legend goes, the values on
 its bars, its width and height in inches, its resolution, and whether a
 Word file of figures is written with each chart's data in an Excel file
-and each figure as a vector file. A setting the file leaves out comes from
+and each figure as a vector file. A general setting's line copied under
+a table type's heading sets that kind of table only (all but
+<code>paper</code>, the page of the whole file; <code>[plot]</code> takes only its
+own settings). A setting the file leaves out comes from
 the style its <code>based.on</code> line names; a font or size the
 <code>[plot]</code> section leaves out comes from the file's general settings
 first, so a file that sets its tables' font sets its charts' too. <code><a href="jstyle_settings.html">jstyle_settings</a></code> lists every
 setting and what it takes. jstats looks for a style named in a call in
 the style folder (<code>joptions(style.dir = )</code>), the working directory
-and your jstats folder, in that order.</p>
+and your jstats folder, in that order. A style file's name ends in
+<code>.jstyle</code>: one saved as myagency.jstyle.txt or myagency.txt, as a
+text editor or an AI assistant may save it, is not read, and the stop
+for a style not found names such a file and gives the
+<code><a href="https://rdrr.io/r/base/files.html" class="external-link">file.rename()</a></code> line that renames it.</p>
     </div>
     <div class="section level2">
     <h2 id="making-a-style-with-an-ai-assistant">Making a style with an AI assistant<a class="anchor" aria-label="anchor" href="#making-a-style-with-an-ai-assistant"></a></h2>
 
 
-<p>A style file is plain text, so an AI assistant can write one from an
-example report. Give it a complete copy, which lists every setting and
-what each takes – <code>jstyle("report", save.as = "myagency")</code> writes
-one; a short file hides the settings it takes from its base – and the
-example, with a request such as:</p><div class="sourceCode"><pre><code>
+<p>A style file is plain text, so an AI assistant can change one from a
+request in plain words ("use Calibri 11 and a light blue header row")
+or from an example report. Give it a complete copy, which lists every
+setting and what each takes – <code>jstyle("report", save.as =
+"myagency")</code> writes one; a short file hides the settings it takes from
+its base – and the request or the example, for instance:</p><div class="sourceCode"><pre><code>
 Attached are myagency.jstyle, a jstats table style whose notes say what
-each setting does and what it takes, and Report.pdf. Rewrite the style
+each setting does and what it takes, and Report.pdf. Change the style
 file so that jstats tables look like the tables in the report, following
-the instructions at the top of the file, and list what the settings
-cannot reproduce.
+the instructions at the top of the file. Return the whole file as a
+download named myagency.jstyle, list each value you changed, and say
+what the settings cannot reproduce.
 </code></pre></div><p>Save its reply over the file and run <code>jstyle("myagency")</code>, which
 names any value it cannot use (give that back to the assistant), then
-try the style: <code>jtable(c1, style = "myagency", open = TRUE)</code>. An
-assistant can reach only the looks the settings make; it is told to say
-what it could not reproduce rather than invent a setting.</p>
+try the style: <code>jtable(c1, style = "myagency", open = TRUE)</code>. A
+reply saved as myagency.jstyle.txt or myagency.txt is not read until it
+is renamed; <code>jstyle("myagency")</code> gives the line that renames it.
+An assistant can reach only the looks the settings make; it is told to
+say what it could not reproduce rather than invent a setting.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -613,11 +624,11 @@ for every setting a style holds.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A complete copy to edit, and a short one holding two changes</span></span></span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"apa"</span>, save.as <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"myjournal"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmprXDOjw/myjournal.jstyle</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpqYO2CE/myjournal.jstyle</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jstyle</span><span class="op">(</span><span class="st">"apa"</span>, save.as <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"myapa"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
 <span class="r-in"><span>       font <span class="op">=</span> <span class="st">"Arial"</span>, regression <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fit.rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"r2"</span>, <span class="st">"n"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmprXDOjw/myapa.jstyle</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Style written to /tmp/RtmpqYO2CE/myapa.jstyle</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

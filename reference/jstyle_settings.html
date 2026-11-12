@@ -27,7 +27,7 @@ written in a style file as the letter itself; this page names it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.280</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.281</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -81,7 +81,7 @@ font     = Arial
 
 [regression]
 fit.rows = r2, n
-</code></pre></div><p>A general setting may also be set in a table type's section, for that table type only.</p>
+</code></pre></div><p>To give one table type its own value of a general setting, copy the setting's line under that type's heading and change the value there: it then holds for that table type only. Two exceptions: <code>paper</code>, the page of the whole Word file, is set only at the top, and <code>[plot]</code> takes only a chart's own settings. In a title, a single column's head (such as <code>stub.label</code> or <code>b.label</code>), <code>note.label</code> or <code>source.label</code>, <code>*word*</code> sets a word in italics and <code>^mark^</code> a superscript; any other label prints the marks as typed.</p>
     </div>
     <div class="section level2">
     <h2 id="general-settings">General settings<a class="anchor" aria-label="anchor" href="#general-settings"></a></h2>
@@ -96,7 +96,7 @@ fit.rows = r2, n
 <dd><p>the page the file opens on: a4 | letter. Takes one of a4 | letter. In apa: <code>a4</code>.</p></dd>
 
 <dt><code>caption.form</code></dt>
-<dd><p>apa: bold "Table 1", the italic title on the next line | journal: bold "Table 1." and the title on one line | report: "Table 1:" and the title. Takes one of apa | journal | report. In apa: <code>apa</code>; in report: <code>report</code>.</p></dd>
+<dd><p>apa: "Table 1" in bold, the title in italics on the next line | journal: "Table 1." in bold, the title after it on the same line, not bold | report: "Table 1:" and the title on one line, both in bold. Takes one of apa | journal | report. In apa: <code>apa</code>; in report: <code>report</code>.</p></dd>
 
 <dt><code>caption.position</code></dt>
 <dd><p>row: the table's first row, repeated with the header on a new page | paragraph: above the table. Takes one of row | paragraph. In apa: <code>row</code>.</p></dd>
@@ -156,16 +156,16 @@ fit.rows = r2, n
 <dd><p>the word the source line opens on, upright: Source: | Sources:. Takes any text, or nothing. In apa: <code>Source:</code>.</p></dd>
 
 <dt><code>n.position</code></dt>
-<dd><p>where N, the number of cases, goes: note (the general note opens on it) | title ("(N = 103)" after the title; a table with several ns, such as Ns that differ or a t test's groups, gives them in the note) | none. Takes one of note | title | none. In apa: <code>title</code>.</p></dd>
+<dd><p>where N, the number of cases, goes: note (the general note opens on it) | title ("(N = 103)" after the title; a table with several ns, such as Ns that differ or a t test's groups, gives them in the note) | none (no N; a table of models whose Ns differ still says so in its note). Takes one of note | title | none. In apa: <code>title</code>.</p></dd>
 
 <dt><code>decimals</code></dt>
 <dd><p>the decimal places of a statistic, such as a mean. Takes a whole number from 0 to 6. In apa: <code>2</code>.</p></dd>
 
 <dt><code>leading.zero</code></dt>
-<dd><p>the zero before the point: no drops it on a statistic that cannot exceed 1, such as p (.23) | yes keeps it (0.23) | never drops it on every number below 1 (.197 for an SE). Takes one of yes | no | never. In apa: <code>no</code>; in report: <code>yes</code>.</p></dd>
+<dd><p>yes: a zero before the point of every number below 1 (0.23) | no: no zero on a statistic that cannot exceed 1, such as p (.23), and a zero on any other number below 1, such as an SE (0.197); APA's rule | never: no zero before the point of any number (.23 for p, .197 for an SE). Takes one of yes | no | never. In apa: <code>no</code>; in report: <code>yes</code>.</p></dd>
 
 <dt><code>p.format</code></dt>
-<dd><p>exact: the p-value | stars: asterisks | both. Takes one of exact | stars | both. In apa: <code>exact</code>.</p></dd>
+<dd><p>exact: the p-value in the p column, with no asterisks | stars: asterisks on the statistic (b, t, F or chi-square) and no p column; a table without that statistic keeps a p column of asterisks | both: the p-value and its asterisks in the p column. Takes one of exact | stars | both. In apa: <code>exact</code>.</p></dd>
 
 <dt><code>p.decimals</code></dt>
 <dd><p>the decimal places of a p-value. Takes a whole number from 1 to 6. In apa: <code>3</code>.</p></dd>

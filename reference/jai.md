@@ -92,7 +92,7 @@ jai()
 #> jstats conventions
 #> 
 #> Orientation for users and AI assistants.
-#> Orientation text v3.11 | jstats 0.9.280 | generated 2026-11-10
+#> Orientation text v3.12 | jstats 0.9.281 | generated 2026-11-12
 #> 
 #> jstats is an integrated set of j-prefixed analysis functions (jdesc,
 #> jfreq, jlm, ...) with shared syntax and output styled after commercial
@@ -201,8 +201,13 @@ jai()
 #>   prints its settings, jstyle("myagency", open = TRUE) opens it in the
 #>   editor, and ?jstyle_settings lists every setting. To change a style,
 #>   edit its values, or add to a short file a setting from that list; do
-#>   not invent a setting, and do not rename a setting or a section. Give
-#>   colors by name (lightblue) or six hex digits (ADD8E6), then run
+#>   not invent a setting, and do not rename a setting or a section. The
+#>   general settings, at the top of the file, set every table; to give one
+#>   kind of table its own value of one, copy its line under that table's
+#>   heading, such as [regression], and change the value there (paper
+#>   is the whole file's, and [plot] takes only a chart's own settings).
+#>   Give colors by name (lightblue) or six hex digits (ADD8E6). Save
+#>   the file with a name ending in .jstyle, not .txt, then run
 #>   jstyle("myagency"), which names any value it cannot use.
 #> 
 #> - Draw charts with jplot(), which chooses the chart from the variables:

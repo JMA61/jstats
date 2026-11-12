@@ -19,9 +19,11 @@ a standardized coefficient, R2 and p at the decimals with APA's
 leading-zero rule, counts whole. The general note: N where n.position
 puts it, the reference categories under reference = note, the beta\*
 definition when the column is shown, then the user's text; stars' legend
-when p.format uses them. Models with different Ns are built, never
-stopped: the table says so and the console gets the jcomplete() line
-(the structure's `messages`, which jtable() prints).
+when p.format uses them. Under p.format = stars a model shown with b has
+no p column, the asterisks on b (ruling R83, Session 419). Models with
+different Ns are built, never stopped: the table says so – under
+n.position = none too (ruling R84) – and the console gets the
+jcomplete() line (the structure's `messages`, which jtable() prints).
 
 ## Usage
 

@@ -9,7 +9,9 @@ group's mean minus the second's. The general note: the groups' ns under
 n.position = note or title (a range per group where they vary; ruling
 R59 keeps them out of the title), the filter, a sentence for a Welch or
 a paired test (test.note), the user's text; the stars' legend when
-p.format uses them.
+p.format uses them. Under p.format = stars a table shown with its
+statistic has no p column, the asterisks on t or F (ruling R83, Session
+419).
 
 ## Usage
 
@@ -52,4 +54,5 @@ p.format uses them.
 
 ## Value
 
-A jst_table.
+A jst_table, with a `messages` element (character; the notes jtable()
+prints).

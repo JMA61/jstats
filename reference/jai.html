@@ -19,7 +19,7 @@ what they find there."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.280</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.281</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,7 +137,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats conventions</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Orientation for users and AI assistants.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.11 | jstats 0.9.280 | generated 2026-11-10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.12 | jstats 0.9.281 | generated 2026-11-12</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats is an integrated set of j-prefixed analysis functions (jdesc,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jfreq, jlm, ...) with shared syntax and output styled after commercial</span>
@@ -246,8 +246,13 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   prints its settings, jstyle("myagency", open = TRUE) opens it in the</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   editor, and ?jstyle_settings lists every setting. To change a style,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   edit its values, or add to a short file a setting from that list; do</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   not invent a setting, and do not rename a setting or a section. Give</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   colors by name (lightblue) or six hex digits (ADD8E6), then run</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   not invent a setting, and do not rename a setting or a section. The</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   general settings, at the top of the file, set every table; to give one</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   kind of table its own value of one, copy its line under that table's</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   heading, such as [regression], and change the value there (paper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   is the whole file's, and [plot] takes only a chart's own settings).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Give colors by name (lightblue) or six hex digits (ADD8E6). Save</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   the file with a name ending in .jstyle, not .txt, then run</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jstyle("myagency"), which names any value it cannot use.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Draw charts with jplot(), which chooses the chart from the variables:</span>

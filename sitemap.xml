@@ -717,11 +717,16 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_files.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_find.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_given.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_given_stop.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_head_marks_line.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_head_section_line.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_key.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_key_raw.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_key_source.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_list_print.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_load.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_misplaced.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_misplaced_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_near.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_newer_line.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_note_lines.html</loc></url>
@@ -730,10 +735,12 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_open_file.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_print.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_read.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_rename_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_report.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_reserved.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_resolve.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_save_path.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_section_general.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_settings_line.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_settings_rd.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_shadowed.html</loc></url>
@@ -742,6 +749,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_size_value.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_spec.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_takes.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_text_like.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_txt_twin.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_value_out.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_style_value_text.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_surviving_value_labels.html</loc></url>
@@ -793,6 +802,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_table_share_groups.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_table_share_key.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_table_split_stop.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_table_stars_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_table_strip_markup.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_table_style.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_table_summary.html</loc></url>
