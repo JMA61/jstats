@@ -134,6 +134,10 @@ note under a significant test (\code{"acceptable"}, \code{"unreliable"}
 or \code{"differ"}), recorded at every output level, or \code{NA} when
 no note applies (the test not significant, or Welch's test run);
 \code{NULL} when Levene's test was not asked for or the test is paired.
+A result kept with \code{<-} holds the output its call printed -- or
+would have printed, under \code{print = FALSE} or
+\code{joutput("silent")} -- and typing its name, or \code{print()},
+shows that output again.
 }
 \description{
 Runs a t-test and prints formatted group descriptives and test results.

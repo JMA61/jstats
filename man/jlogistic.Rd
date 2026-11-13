@@ -216,6 +216,10 @@ prints them; NULL otherwise.}
 \item{sample_info}{Pipeline and missing data counts.}
 \item{data_name}{The data frame's name as the call gave it.}
 }
+A result kept with \code{<-} holds the output its call printed -- or
+would have printed, under \code{print = FALSE} or
+\code{joutput("silent")} -- and typing its name, or \code{print()},
+shows that output again.
 }
 \description{
 Fits a binary logistic regression using \code{stats::glm()} with

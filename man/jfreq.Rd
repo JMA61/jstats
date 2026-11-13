@@ -95,6 +95,10 @@ frame, or \code{NULL} when there are none; \code{total},
 \code{var_label}, the variable's display label),
 \code{sample_info} (pipeline and missing data counts) and
 \code{data_name} (the data frame as the call named it).
+A result kept with \code{<-} holds the output its call printed -- or
+would have printed, under \code{print = FALSE} or
+\code{joutput("silent")} -- and typing its name, or \code{print()},
+shows that output again.
 }
 \description{
 Prints an SPSS-style frequency table (Freq, Total \%, Valid \%, Cum. \%) for

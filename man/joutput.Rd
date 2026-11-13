@@ -305,7 +305,8 @@ in light of the others: \code{case.processing = FALSE} silences
 the other two, and \code{case.processing.detail = "none"} silences
 \code{case.processing.filter}. Passing \code{setting = NULL} as a
 named argument leaves that setting as it is and echoes its current
-value.}
+value, and a note says so and gives the call that puts the level's
+default back.}
 \item{\code{joutput(NULL)}}{Reset to the standard level with no
 overrides.}
 }

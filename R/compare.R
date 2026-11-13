@@ -547,6 +547,10 @@
 #'   or \code{"differ"}), recorded at every output level, or \code{NA} when
 #'   no note applies (the test not significant, or Welch's test run);
 #'   \code{NULL} when Levene's test was not asked for or the test is paired.
+#'   A result kept with \code{<-} holds the output its call printed -- or
+#'   would have printed, under \code{print = FALSE} or
+#'   \code{joutput("silent")} -- and typing its name, or \code{print()},
+#'   shows that output again.
 #'
 #' @examples
 #' # With explicit data frame
@@ -1235,6 +1239,10 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   at every output level, or \code{NA} when no note applies (the test not
 #'   significant, or Welch's ANOVA run); \code{NULL} when Levene's test was
 #'   not asked for.
+#'   A result kept with \code{<-} holds the output its call printed -- or
+#'   would have printed, under \code{print = FALSE} or
+#'   \code{joutput("silent")} -- and typing its name, or \code{print()},
+#'   shows that output again.
 #'
 #' @examples
 #' # With explicit data frame
@@ -2182,6 +2190,10 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   its sign in a 2x2 table), and for 2x2 tables
 #'   \code{chi_square_corrected} and \code{p_corrected} (the Yates
 #'   continuity-corrected values).
+#'   A result kept with \code{<-} holds the output its call printed -- or
+#'   would have printed, under \code{print = FALSE} or
+#'   \code{joutput("silent")} -- and typing its name, or \code{print()},
+#'   shows that output again.
 #'
 #' @examples
 #' # Cross-tabulation only

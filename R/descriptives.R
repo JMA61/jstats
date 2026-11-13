@@ -124,6 +124,10 @@
 #'   \code{sample_info} (pipeline and missing data counts) and
 #'   \code{data_name} (the data frame as the call named it). Also
 #'   prints a formatted table to the console.
+#'   A result kept with \code{<-} holds the output its call printed -- or
+#'   would have printed, under \code{print = FALSE} or
+#'   \code{joutput("silent")} -- and typing its name, or \code{print()},
+#'   shows that output again.
 #'
 #' @examples
 #' # With explicit data frame
@@ -641,7 +645,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     )
     class(ret) <- "jst_desc"
     ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
-    return(invisible(ret))
+    return(invisible(.jst_scope_result(ret)))
   }
 
   # -- Standard (ungrouped) descriptives --------------------------------------
@@ -1095,6 +1099,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #'   \code{var_label}, the variable's display label),
 #'   \code{sample_info} (pipeline and missing data counts) and
 #'   \code{data_name} (the data frame as the call named it).
+#'   A result kept with \code{<-} holds the output its call printed -- or
+#'   would have printed, under \code{print = FALSE} or
+#'   \code{joutput("silent")} -- and typing its name, or \code{print()},
+#'   shows that output again.
 #'
 #' @examples
 #' # With explicit data frame
@@ -2965,6 +2973,10 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 #'   who answered), \code{n_excluded} (those who answered no item),
 #'   \code{n_none} (those who answered and chose none), \code{sample_info}
 #'   and \code{data_name}.
+#'   A result kept with \code{<-} holds the output its call printed -- or
+#'   would have printed, under \code{print = FALSE} or
+#'   \code{joutput("silent")} -- and typing its name, or \code{print()},
+#'   shows that output again.
 #'
 #' @examples
 #' # "Which services have you used?" -- one item per service, 1 = chosen,

@@ -63,6 +63,10 @@ the \code{none =} item last), \code{none}, \code{ticked}, \code{rank},
 who answered), \code{n_excluded} (those who answered no item),
 \code{n_none} (those who answered and chose none), \code{sample_info}
 and \code{data_name}.
+A result kept with \code{<-} holds the output its call printed -- or
+would have printed, under \code{print = FALSE} or
+\code{joutput("silent")} -- and typing its name, or \code{print()},
+shows that output again.
 }
 \description{
 Tabulates a multiple-response question -- "Which of these services have

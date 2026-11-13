@@ -123,6 +123,10 @@ Invisibly returns a list of class \code{jst_desc} containing:
 \code{sample_info} (pipeline and missing data counts) and
 \code{data_name} (the data frame as the call named it). Also
 prints a formatted table to the console.
+A result kept with \code{<-} holds the output its call printed -- or
+would have printed, under \code{print = FALSE} or
+\code{joutput("silent")} -- and typing its name, or \code{print()},
+shows that output again.
 }
 \description{
 Computes basic descriptive statistics (N, non-missing, min, max, mean, SD)

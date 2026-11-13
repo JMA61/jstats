@@ -252,7 +252,8 @@
 #'     the other two, and \code{case.processing.detail = "none"} silences
 #'     \code{case.processing.filter}. Passing \code{setting = NULL} as a
 #'     named argument leaves that setting as it is and echoes its current
-#'     value.}
+#'     value, and a note says so and gives the call that puts the level's
+#'     default back.}
 #'   \item{\code{joutput(NULL)}}{Reset to the standard level with no
 #'     overrides.}
 #' }
@@ -463,6 +464,18 @@ joutput <- function(level, effect.size = NULL,
           c(supplied,
             unlist(.jst_output_related[names(toggle_args)],
                    use.names = FALSE)))
+        # A named NULL leaves its setting as it is, as in joptions(): the
+        # same note, with the call that puts the level's default back
+        # (Session 423).
+        given <- mget(supplied, envir = environment())
+        nulls <- supplied[vapply(given, is.null, logical(1L))]
+        if (length(nulls)) {
+          lvl <- getOption(".jst_output_level", "standard")
+          .jst_msg(.jst_null_leaves_note("joutput", nulls,
+                                         .jst_output_defaults[[lvl]][nulls],
+                                         level = lvl))
+          cat("\n")
+        }
       }
     } else {
       # A bare joutput() query always prints, regardless of quiet.
@@ -683,6 +696,45 @@ joutput <- function(level, effect.size = NULL,
   missing.convention   = "missing.convention.codes",
   missing.convention.codes = "missing.convention"
 )
+
+#' Internal helper: the note under a setting given as NULL
+#'
+#' joptions() and joutput() read a setting named with the value NULL as
+#' "leave it as it is" and echo its value (S233, S332), which reads easily
+#' as a reset (Jeff, S422-S423, on joptions(style = NULL)). The note says
+#' the setting was left as it is and gives the call that puts its default
+#' back: the default itself, as Section 332's rule has it ("pass any slot
+#' its default to reset it"); for joutput() the default of the level in
+#' force, and where that level's default is no value (standard's
+#' case.processing) the level call, which puts every setting back
+#' (Session 423).
+#'
+#' @param fn "joptions" or "joutput".
+#' @param slots Character; the settings given as NULL, in the call's order.
+#' @param defaults A list of their defaults, named by setting.
+#' @param level For joutput(), the output level in force; NULL otherwise.
+#' @return Character(1).
+#' @keywords internal
+.jst_null_leaves_note <- function(fn, slots, defaults, level = NULL) {
+  one  <- length(slots) == 1L
+  head <- paste0("Note: ", .jst_and_list(paste0(slots, " = NULL")),
+                 if (one) " leaves the setting as it is."
+                 else " leave those settings as they are.")
+  none <- vapply(defaults, is.null, logical(1L))
+  if (any(none)) {
+    args <- c(deparse(level),
+              if ("diagnostics" %in% slots) "diagnostics = FALSE")
+    how  <- "A level call puts the settings back to that level's defaults:"
+  } else {
+    args <- paste0(slots, " = ",
+                   vapply(defaults, function(v)
+                     paste(deparse(v, width.cutoff = 500L), collapse = " "),
+                     character(1L)))
+    how  <- paste0("To go back to ", if (one) "its default" else "their defaults",
+                   if (!is.null(level)) paste0(" at the ", level, " level"), ":")
+  }
+  paste0(head, "\n", how, "\n  ", fn, "(", paste(args, collapse = ", "), ")")
+}
 
 
 # -- Internal: print current joptions() status --------------------------------
@@ -1164,11 +1216,12 @@ joutput <- function(level, effect.size = NULL,
 #'     Passing \code{slot = NULL} as a named
 #'     argument leaves that slot at its current value -- useful for
 #'     setting one slot without touching another -- and echoes that
-#'     unchanged value back. To reset a single
+#'     unchanged value back, with a note that says so and gives the call
+#'     that puts the slot's default back. To reset a single
 #'     slot to its default, pass the default value explicitly (e.g.
-#'     \code{joptions(missing.convention = "none")}). \code{data.dir}
-#'     is the one slot whose default is itself \code{NULL}, so for it a
-#'     named \code{NULL} is that default:
+#'     \code{joptions(missing.convention = "none")}). \code{data.dir},
+#'     \code{output.dir} and \code{style.dir} have \code{NULL} as their
+#'     default, so for them a named \code{NULL} is that default:
 #'     \code{joptions(data.dir = NULL)} clears the folder back to the
 #'     working directory, as \code{data.dir = ""} does.}
 #' }
@@ -1674,6 +1727,24 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
       echo_slots <- setdiff(echo_slots, "missing.convention.codes")
     }
     .jst_options_status(echo_slots)
+    # A named NULL leaves its setting as it is and echoes it (S233). For a
+    # setting whose default is not NULL that reads easily as a reset, so a
+    # note says so and gives the call that puts the default back (Session
+    # 423; Jeff, S423: "Yes to what you'd do instead"). data.dir,
+    # output.dir and style.dir clear on NULL, which is their default
+    # (S332), and get none. quiet silences it with the rest.
+    nulls <- c(if (mc_supplied && is.null(missing.convention)) "missing.convention",
+               if (cc_supplied && is.null(missing.convention.codes))
+                 "missing.convention.codes",
+               if (st_supplied && is.null(style)) "style",
+               if (cl_supplied && is.null(corr.layout)) "corr.layout",
+               if (md_supplied && is.null(missing.detail)) "missing.detail",
+               if (mw_supplied && is.null(message.width)) "message.width")
+    if (length(nulls)) {
+      .jst_msg(.jst_null_leaves_note("joptions", nulls,
+                                     .jst_options_defaults[nulls]))
+      cat("\n")
+    }
   }
   # The folder note follows the echo it explains and precedes the nudge,
   # which is about another slot. quiet silences it with the rest (Jeff,

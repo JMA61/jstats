@@ -218,11 +218,12 @@ independent and are not pulled in.
 Passing \code{slot = NULL} as a named
 argument leaves that slot at its current value -- useful for
 setting one slot without touching another -- and echoes that
-unchanged value back. To reset a single
+unchanged value back, with a note that says so and gives the call
+that puts the slot's default back. To reset a single
 slot to its default, pass the default value explicitly (e.g.
-\code{joptions(missing.convention = "none")}). \code{data.dir}
-is the one slot whose default is itself \code{NULL}, so for it a
-named \code{NULL} is that default:
+\code{joptions(missing.convention = "none")}). \code{data.dir},
+\code{output.dir} and \code{style.dir} have \code{NULL} as their
+default, so for them a named \code{NULL} is that default:
 \code{joptions(data.dir = NULL)} clears the folder back to the
 working directory, as \code{data.dir = ""} does.}
 }

@@ -143,6 +143,10 @@ and if \code{chisq = TRUE}: \code{chi_square},
 its sign in a 2x2 table), and for 2x2 tables
 \code{chi_square_corrected} and \code{p_corrected} (the Yates
 continuity-corrected values).
+A result kept with \code{<-} holds the output its call printed -- or
+would have printed, under \code{print = FALSE} or
+\code{joutput("silent")} -- and typing its name, or \code{print()},
+shows that output again.
 }
 \description{
 Produces a cross-tabulation of two categorical variables, showing

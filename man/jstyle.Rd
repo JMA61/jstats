@@ -15,7 +15,10 @@ opens \code{joptions(style = )}.}
 \item{save.as}{A name for the copy, in quotes: written as
 \code{<name>.jstyle} in the style folder when one is set, else in
 your jstats folder (\code{tools::R_user_dir("jstats")}), or to a path
-given with a folder. "apa" and "report" name the built-in styles, so
+given with a folder. Your jstats folder is hidden in File Explorer and
+in Finder, and a note says so when the copy goes there, with the
+folder's path and the line that sets a style folder of your own. "apa" and "report" name the
+built-in styles, so
 neither can be a copy's name; a file named apa.jstyle or report.jstyle
 is not read, and jstats says so.}
 

@@ -15,17 +15,36 @@
 The body's value.
 }
 \description{
-Wraps the whole body of each analysis function (jdesc, jfreq, jt, jaov,
-jcrosstab, jlm, jlogistic, jcorr, jalpha, jscreen). When the call prints
-(\code{.jst_print_on()}), the body runs as it is. When it does not, its
-standard output goes to a null file (every table and title is written
-with \code{cat()}, and the stdout emitter's prose with it) and its
-messages are muffled (every note goes through \code{message()}), while
-warnings and errors pass: a warning is a condition the handler leaves
-alone, and an error unwinds through the sink's \code{on.exit}, so both
-show as they always have. The body's own \code{return()} calls,
-\code{on.exit()} calls, \code{sys.call()} and \code{match.call()} work
-as before: the body is a promise evaluated in the function's own frame.
-The value is the body's, visible or not as the body left it.
+Wraps the whole body of each analysis function (jdesc, jfreq, jmulti,
+jt, jaov, jcrosstab, jlm, jlogistic, jcorr, jalpha, jscreen). The
+body's standard output goes to a buffer of the scope's own -- and on to
+the Console as well when the call prints (\code{.jst_print_on()}) --
+and each message it signals is recorded in its place among that output,
+and muffled when the call does not print (every note goes through
+\code{message()}). Warnings and errors pass: a warning is a condition
+the handler leaves alone, and an error unwinds through the scope's
+\code{on.exit}, so both show as they always have. The body's own
+\code{return()} calls, \code{on.exit()} calls, \code{sys.call()} and
+\code{match.call()} work as before: the body is a promise evaluated in
+the function's own frame. The value is the body's, visible or not as
+the body left it.
+}
+\details{
+Session 423 (the (S422) printed-result item, ruled S423): what the call
+printed -- or, under \code{print = FALSE} or \code{joutput("silent")},
+would have printed -- is kept on its result as the attribute
+\code{jstats_output} (\code{.jst_scope_result()}), so a saved result
+typed at the Console, or given to \code{print()}, shows that output
+again (\code{.jst_print_result()}). The color the output takes in the
+RStudio Console is decided before the scope's buffer is opened -- an
+open sink turns \code{.jst_use_color()} off -- and held for the body
+through \code{options(jstats.color =)}, put back as the scope exits, so
+the Console shows the colors it always did and the kept text carries
+them. A body that returns early -- jdesc()'s grouped form, jcorr()'s
+two-variable form -- attaches through \code{.jst_scope_result()} itself,
+which reads the innermost scope open; a call given a single vector
+returns the result of a second call, which kept its own.
+Before Session 423 a call that did not print wrote its output to a null
+file.
 }
 \keyword{internal}

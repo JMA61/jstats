@@ -109,6 +109,10 @@ Invisibly returns a list of class \code{jst_corr} containing:
 analysis data frame used for plotting), \code{sample_info}
 (pipeline and missing data counts), \code{data_name} (the data
 frame's name, for the lines \code{jplot()} offers) and \code{labels}.
+A result kept with \code{<-} holds the output its call printed -- or
+would have printed, under \code{print = FALSE} or
+\code{joutput("silent")} -- and typing its name, or \code{print()},
+shows that output again.
 }
 \description{
 Computes pairwise correlations and prints a formatted lower-triangle

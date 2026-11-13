@@ -8152,7 +8152,10 @@ print.jst_figure <- function(x, ...) {
 #' @param save.as A name for the copy, in quotes: written as
 #'   \code{<name>.jstyle} in the style folder when one is set, else in
 #'   your jstats folder (\code{tools::R_user_dir("jstats")}), or to a path
-#'   given with a folder. "apa" and "report" name the built-in styles, so
+#'   given with a folder. Your jstats folder is hidden in File Explorer and
+#'   in Finder, and a note says so when the copy goes there, with the
+#'   folder's path and the line that sets a style folder of your own. "apa" and "report" name the
+#'   built-in styles, so
 #'   neither can be a copy's name; a file named apa.jstyle or report.jstyle
 #'   is not read, and jstats says so.
 #' @param overwrite Logical. Replace a style file that exists? With FALSE
@@ -8286,8 +8289,53 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
   close(con)
   .jst_msg_out(paste0("Style written to ", .jst_norm_path(path)))
   cat("\n")
+  # The per-user folder is hidden on Windows and on a Mac (the (S420)
+  # item, Session 423): the note says so, gives the folder's path to open
+  # it by -- the path above is the file's, which File Explorer would open
+  # as a file -- and the line that sets a style folder the reader can see,
+  # the one the guides recommend.
+  if (.jst_style_in_hidden_folder(path)) {
+    .jst_msg(.jst_style_hidden_note(.jst_norm_path(dirname(path))))
+    cat("\n")
+  }
   .jst_style_open(path, open)
   invisible(path)
+}
+
+#' Internal helper: is a style file in the hidden per-user folder?
+#'
+#' @param path The file's path.
+#' @return Logical(1): TRUE when the file is in
+#'   \code{tools::R_user_dir("jstats", "data")}, the folder jstyle(save.as =)
+#'   writes to when no style folder is set.
+#' @keywords internal
+.jst_style_in_hidden_folder <- function(path) {
+  norm <- function(p) .jst_norm_path(normalizePath(p, winslash = "/",
+                                                   mustWork = FALSE))
+  identical(norm(dirname(path)), norm(tools::R_user_dir("jstats", "data")))
+}
+
+#' Internal helper: the note under a copy saved in the hidden folder
+#'
+#' The (S420) item, built Session 423: the per-user folder is hidden by
+#' File Explorer on Windows (AppData) and by Finder on a Mac (Library). The
+#' way to open it is the guides' page 6, Keeping your styles, with the
+#' folder's own path: the "Style written to" line gives the file's, which
+#' File Explorer's address bar opens as a file rather than showing its
+#' folder. The folder the last line sets is the one the guides recommend.
+#'
+#' @param dir The folder's path, as printed.
+#' @return Character(1).
+#' @keywords internal
+.jst_style_hidden_note <- function(dir) {
+  paste0("Note: your jstats folder, where the copy was saved, is hidden in ",
+         "File Explorer on Windows and in Finder on a Mac.\n",
+         "To open it, paste the folder's path into File Explorer's address ",
+         "bar, or into Finder's Go > Go to Folder:\n",
+         "  ", dir, "\n",
+         "To keep your styles in a folder you can see, set one, then save ",
+         "the copy again:\n",
+         "  joptions(style.dir = \"~/jstats styles\")")
 }
 
 #' Internal helper: open a style's file, for jstyle(open = TRUE)

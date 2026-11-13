@@ -1788,31 +1788,274 @@
 
 #' Internal helper: run an analysis function's body, printing or silent
 #'
-#' Wraps the whole body of each analysis function (jdesc, jfreq, jt, jaov,
-#' jcrosstab, jlm, jlogistic, jcorr, jalpha, jscreen). When the call prints
-#' (\code{.jst_print_on()}), the body runs as it is. When it does not, its
-#' standard output goes to a null file (every table and title is written
-#' with \code{cat()}, and the stdout emitter's prose with it) and its
-#' messages are muffled (every note goes through \code{message()}), while
-#' warnings and errors pass: a warning is a condition the handler leaves
-#' alone, and an error unwinds through the sink's \code{on.exit}, so both
-#' show as they always have. The body's own \code{return()} calls,
-#' \code{on.exit()} calls, \code{sys.call()} and \code{match.call()} work
-#' as before: the body is a promise evaluated in the function's own frame.
-#' The value is the body's, visible or not as the body left it.
+#' Wraps the whole body of each analysis function (jdesc, jfreq, jmulti,
+#' jt, jaov, jcrosstab, jlm, jlogistic, jcorr, jalpha, jscreen). The
+#' body's standard output goes to a buffer of the scope's own -- and on to
+#' the Console as well when the call prints (\code{.jst_print_on()}) --
+#' and each message it signals is recorded in its place among that output,
+#' and muffled when the call does not print (every note goes through
+#' \code{message()}). Warnings and errors pass: a warning is a condition
+#' the handler leaves alone, and an error unwinds through the scope's
+#' \code{on.exit}, so both show as they always have. The body's own
+#' \code{return()} calls, \code{on.exit()} calls, \code{sys.call()} and
+#' \code{match.call()} work as before: the body is a promise evaluated in
+#' the function's own frame. The value is the body's, visible or not as
+#' the body left it.
+#'
+#' Session 423 (the (S422) printed-result item, ruled S423): what the call
+#' printed -- or, under \code{print = FALSE} or \code{joutput("silent")},
+#' would have printed -- is kept on its result as the attribute
+#' \code{jstats_output} (\code{.jst_scope_result()}), so a saved result
+#' typed at the Console, or given to \code{print()}, shows that output
+#' again (\code{.jst_print_result()}). The color the output takes in the
+#' RStudio Console is decided before the scope's buffer is opened -- an
+#' open sink turns \code{.jst_use_color()} off -- and held for the body
+#' through \code{options(jstats.color =)}, put back as the scope exits, so
+#' the Console shows the colors it always did and the kept text carries
+#' them. A body that returns early -- jdesc()'s grouped form, jcorr()'s
+#' two-variable form -- attaches through \code{.jst_scope_result()} itself,
+#' which reads the innermost scope open; a call given a single vector
+#' returns the result of a second call, which kept its own.
+#' Before Session 423 a call that did not print wrote its output to a null
+#' file.
 #'
 #' @param print The call's \code{print} argument, already checked.
 #' @param body The function's body, braced.
 #' @return The body's value.
 #' @keywords internal
 .jst_output_scope <- function(print, body) {
-  if (.jst_print_on(print)) return(body)
-  zz <- file(nullfile(), open = "w")
-  sink(zz)
-  on.exit({ sink(); close(zz) }, add = TRUE)
-  withCallingHandlers(body,
-                      message = function(m) invokeRestart("muffleMessage"))
+  on  <- .jst_print_on(print)
+  col <- .jst_use_color()
+  old <- options(jstats.color = col)
+  ctx <- .jst_capture_open(split = on)
+  on.exit({
+    .jst_capture_close(ctx)
+    options(old)
+  }, add = TRUE)
+  val <- withVisible(withCallingHandlers(body, message = function(m) {
+    .jst_capture_note(ctx, conditionMessage(m))
+    if (!on) invokeRestart("muffleMessage")
+  }))
+  v <- .jst_scope_result(val$value, ctx)
+  if (val$visible) v else invisible(v)
 }
+
+# The output scopes open now, innermost last (Session 423). A body that
+# returns early attaches its output through .jst_scope_result(), which has
+# no other way to reach the scope it runs in.
+.jst_capture <- new.env(parent = emptyenv())
+.jst_capture$stack <- list()
+
+#' Internal helper: open an output scope's buffer
+#'
+#' A raw connection taken as the standard output, \code{split} sending the
+#' output on to the Console as well. A raw connection, not a text one, so
+#' a line not yet ended when a note arrives is kept whole and in its place
+#' (Session 423).
+#'
+#' @param split Logical(1); also print what is written.
+#' @return The scope's context: an environment holding the connection, the
+#'   bytes already read (\code{off}) and the parts kept (\code{parts}).
+#' @keywords internal
+.jst_capture_open <- function(split) {
+  ctx <- new.env(parent = emptyenv())
+  ctx$con    <- rawConnection(raw(0L), open = "w")
+  ctx$off    <- 0L
+  ctx$parts  <- character(0)
+  ctx$closed <- FALSE
+  sink(ctx$con, split = split)
+  .jst_capture$stack <- c(.jst_capture$stack, list(ctx))
+  ctx
+}
+
+#' Internal helper: keep the output written since the last part
+#'
+#' @param ctx A scope's context (\code{.jst_capture_open()}).
+#' @return \code{ctx}, invisibly; a part named "out" added when any output
+#'   was written.
+#' @keywords internal
+.jst_capture_flush <- function(ctx) {
+  if (isTRUE(ctx$closed)) return(invisible(ctx))
+  bytes <- rawConnectionValue(ctx$con)
+  n <- length(bytes)
+  if (n > ctx$off) {
+    txt <- rawToChar(bytes[(ctx$off + 1L):n])
+    if (validUTF8(txt)) Encoding(txt) <- "UTF-8"
+    ctx$parts <- c(ctx$parts, stats::setNames(txt, "out"))
+    ctx$off <- n
+  }
+  invisible(ctx)
+}
+
+#' Internal helper: keep a note in its place among the output
+#'
+#' @param ctx A scope's context.
+#' @param text The message's text, as conditionMessage() gives it (its
+#'   closing newline included).
+#' @return \code{ctx}, invisibly.
+#' @keywords internal
+.jst_capture_note <- function(ctx, text) {
+  .jst_capture_flush(ctx)
+  ctx$parts <- c(ctx$parts, stats::setNames(text, "message"))
+  invisible(ctx)
+}
+
+#' Internal helper: close an output scope's buffer
+#'
+#' @param ctx A scope's context.
+#' @return Invisibly NULL.
+#' @keywords internal
+.jst_capture_close <- function(ctx) {
+  if (isTRUE(ctx$closed)) return(invisible(NULL))
+  .jst_capture_flush(ctx)
+  sink()
+  close(ctx$con)
+  ctx$closed <- TRUE
+  st <- .jst_capture$stack
+  .jst_capture$stack <- st[!vapply(st, identical, logical(1L), ctx)]
+  invisible(NULL)
+}
+
+#' Internal helper: keep a call's output on its result
+#'
+#' Sets the attribute \code{jstats_output} -- the parts the scope kept, a
+#' character vector named "out" (standard output) and "message" (a note) in
+#' the order they were written -- on a result of one of the ten analysis
+#' classes (Session 423). Any other value passes untouched: jscreen()'s data
+#' frame, which prints as a table.
+#'
+#' @param x The value.
+#' @param ctx A scope's context, or NULL for the innermost scope open (a
+#'   body that returns early).
+#' @return \code{x}, the attribute set where it applies.
+#' @keywords internal
+.jst_scope_result <- function(x, ctx = NULL) {
+  if (is.null(ctx)) {
+    st <- .jst_capture$stack
+    if (!length(st)) return(x)
+    ctx <- st[[length(st)]]
+  }
+  if (!inherits(x, .jst_result_classes)) return(x)
+  .jst_capture_flush(ctx)
+  attr(x, "jstats_output") <- ctx$parts
+  x
+}
+
+# The classes whose results keep their output and print it (Session 423):
+# every class an analysis function returns, the accessors' list less its
+# default.
+.jst_result_classes <- setdiff(.jst_apa_classes, "default")
+
+#' Internal helper: take the color codes out of text
+#'
+#' @param x Character.
+#' @return \code{x} without its ANSI color codes.
+#' @keywords internal
+.jst_strip_color <- function(x) {
+  gsub("\033\\[[0-9;]*m", "", x)
+}
+
+#' Internal helper: print a saved result's output again
+#'
+#' Writes the parts \code{jstats_output} holds, in order -- the output to
+#' standard output, each note as a message -- so a saved result shows what
+#' its call printed (Session 423). Color only where the output takes it now
+#' (\code{.jst_use_color()}). A result made before Session 423 holds no
+#' output, and a line says so.
+#'
+#' @param x A saved result.
+#' @return \code{x}, invisibly.
+#' @keywords internal
+.jst_print_result <- function(x) {
+  out <- attr(x, "jstats_output", exact = TRUE)
+  if (is.null(out)) {
+    .jst_msg_out(.jst_result_no_output_text(x))
+    cat("\n")
+    return(invisible(x))
+  }
+  col <- .jst_use_color()
+  for (i in seq_along(out)) {
+    txt <- out[[i]]
+    if (!col) txt <- .jst_strip_color(txt)
+    if (identical(names(out)[i], "message")) {
+      message(txt, appendLF = FALSE)
+    } else {
+      cat(txt)
+    }
+  }
+  invisible(x)
+}
+
+#' Internal helper: the line for a result that kept no output
+#'
+#' @param x A saved result made before Session 423.
+#' @return Character(1).
+#' @keywords internal
+.jst_result_no_output_text <- function(x) {
+  v    <- attr(x, "jstats_version", exact = TRUE)
+  made <- if (is.null(v)) "an earlier version of jstats" else paste0("jstats ", v)
+  noun <- sub("^a ", "", .jst_result_noun(x))
+  paste0("This ", noun, " was made by ", made,
+         ", before a saved result kept its output.\n",
+         "Run the analysis again to see it.")
+}
+
+#' Printing a saved analysis result
+#'
+#' A result kept with \code{<-} -- \code{m1 <- jlm(...)} -- holds the output
+#' its analysis printed, or would have printed under \code{print = FALSE} or
+#' \code{joutput("silent")}: typing \code{m1}, or \code{print(m1)}, shows it
+#' again, as it was at the call. The parts the result holds are read as
+#' before, with \code{$}, \code{str()} or \code{jtable()}.
+#'
+#' @param x A saved result of \code{jdesc()}, \code{jfreq()},
+#'   \code{jmulti()}, \code{jt()}, \code{jaov()}, \code{jcrosstab()},
+#'   \code{jcorr()}, \code{jlm()}, \code{jlogistic()} or \code{jalpha()}.
+#' @param ... Not used.
+#' @return \code{x}, invisibly.
+#' @name jst_result_print
+#' @keywords internal
+NULL
+
+#' @rdname jst_result_print
+#' @exportS3Method
+print.jst_desc <- function(x, ...) .jst_print_result(x)
+
+#' @rdname jst_result_print
+#' @exportS3Method
+print.jst_freq <- function(x, ...) .jst_print_result(x)
+
+#' @rdname jst_result_print
+#' @exportS3Method
+print.jst_multi <- function(x, ...) .jst_print_result(x)
+
+#' @rdname jst_result_print
+#' @exportS3Method
+print.jst_ttest <- function(x, ...) .jst_print_result(x)
+
+#' @rdname jst_result_print
+#' @exportS3Method
+print.jst_anova <- function(x, ...) .jst_print_result(x)
+
+#' @rdname jst_result_print
+#' @exportS3Method
+print.jst_crosstab <- function(x, ...) .jst_print_result(x)
+
+#' @rdname jst_result_print
+#' @exportS3Method
+print.jst_corr <- function(x, ...) .jst_print_result(x)
+
+#' @rdname jst_result_print
+#' @exportS3Method
+print.jst_lm <- function(x, ...) .jst_print_result(x)
+
+#' @rdname jst_result_print
+#' @exportS3Method
+print.jst_logistic <- function(x, ...) .jst_print_result(x)
+
+#' @rdname jst_result_print
+#' @exportS3Method
+print.jst_alpha <- function(x, ...) .jst_print_result(x)
 
 #' Internal helper: the note under a significant Levene's test
 #'

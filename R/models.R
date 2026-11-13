@@ -76,6 +76,10 @@
 #'   analysis data frame used for plotting), \code{sample_info}
 #'   (pipeline and missing data counts), \code{data_name} (the data
 #'   frame's name, for the lines \code{jplot()} offers) and \code{labels}.
+#'   A result kept with \code{<-} holds the output its call printed -- or
+#'   would have printed, under \code{print = FALSE} or
+#'   \code{joutput("silent")} -- and typing its name, or \code{print()},
+#'   shows that output again.
 #'
 #' @examples
 #' # With explicit data frame
@@ -412,7 +416,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                          character(1)), variable_names))
     class(ret) <- "jst_corr"
     ret <- .jst_stamp_result(ret)   # Session 399: the version that made it
-    return(invisible(ret))
+    return(invisible(.jst_scope_result(ret)))
   }
 
   # --- 3+ variables: lower-triangular matrix, cells stacked per layout -------
@@ -3361,6 +3365,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'     \item{sample_info}{Pipeline and missing data counts.}
 #'     \item{data_name}{The data frame's name as the call gave it.}
 #'   }
+#'   A result kept with \code{<-} holds the output its call printed -- or
+#'   would have printed, under \code{print = FALSE} or
+#'   \code{joutput("silent")} -- and typing its name, or \code{print()},
+#'   shows that output again.
 #'
 #' @section Interactions:
 #'   An interaction is entered in the formula with \code{*}, as in R:
@@ -4685,6 +4693,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'     \item{sample_info}{Pipeline and missing data counts.}
 #'     \item{data_name}{The data frame's name as the call gave it.}
 #'   }
+#'   A result kept with \code{<-} holds the output its call printed -- or
+#'   would have printed, under \code{print = FALSE} or
+#'   \code{joutput("silent")} -- and typing its name, or \code{print()},
+#'   shows that output again.
 #'
 #' @section Interactions:
 #'   An interaction is entered in the formula with \code{*}, as in R:
@@ -5983,6 +5995,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   \code{n_excluded}, \code{item_statistics}, \code{item_total_statistics},
 #'   \code{sample_info} (pipeline and missing data counts) and
 #'   \code{data_name} (the data frame as the call named it).
+#'   A result kept with \code{<-} holds the output its call printed -- or
+#'   would have printed, under \code{print = FALSE} or
+#'   \code{joutput("silent")} -- and typing its name, or \code{print()},
+#'   shows that output again.
 #'
 #' @examples
 #' # With explicit data frame
