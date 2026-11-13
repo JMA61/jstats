@@ -873,7 +873,8 @@ prints the marks as typed.
 - `title`:
 
   the title when the call gives none; {set} is the text the items'
-  labels share, else Options Chosen. Takes any text. In apa: `{set}`.
+  labels share, else Multiple-Response Set. Takes any text. In apa:
+  `{set}`.
 
 - `columns`:
 
@@ -883,7 +884,8 @@ prints the marks as typed.
 
 - `stub.label`:
 
-  the first column's head. Takes any text, or nothing. In apa: `Option`.
+  the first column's head. Takes any text, or nothing. In apa:
+  `Category`.
 
 - `n.label`:
 
@@ -901,8 +903,8 @@ prints the marks as typed.
 
 - `choice.note`:
 
-  yes: the note says respondents could choose more than one, so the
-  percentages sum to more than 100 \| no. Takes one of yes \| no. In
+  yes: the note says a case can be counted in more than one category, so
+  the percentages sum to more than 100 \| no. Takes one of yes \| no. In
   apa: `yes`.
 
 ## \[plot\]: a chart

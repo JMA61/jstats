@@ -1,8 +1,7 @@
 # Internal helper: the style a built table is drawn in
 
 A table keeps the style it was built under, the call's own settings
-included, so it prints and writes as it was built; a table made before
-Session 401 carries the style's name instead, read again here.
+included, so it prints and writes as it was built.
 
 ## Usage
 

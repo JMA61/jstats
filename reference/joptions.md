@@ -349,11 +349,11 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> 
 joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: /tmp/RtmpQioa65/Data
+#> Data folder: /tmp/RtmpJ90FB7/Data
 #> Run joptions() to see all settings.
 #> 
 #> Created the data folder:
-#>   /tmp/RtmpQioa65/Data
+#>   /tmp/RtmpJ90FB7/Data
 #> 
                                                   # (created if absent)
 joptions(data.dir = NULL)                         # back to the working directory
@@ -363,11 +363,11 @@ joptions(data.dir = NULL)                         # back to the working director
 #> 
 joptions(output.dir = file.path(tempdir(), "Tables")) # where tables are written
 #> Options Settings
-#> Output folder: /tmp/RtmpQioa65/Tables
+#> Output folder: /tmp/RtmpJ90FB7/Tables
 #> Run joptions() to see all settings.
 #> 
 #> Created the output folder:
-#>   /tmp/RtmpQioa65/Tables
+#>   /tmp/RtmpJ90FB7/Tables
 #> 
 joptions(output.dir = NULL)                       # back to the working directory
 #> Options Settings

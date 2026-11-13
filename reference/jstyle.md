@@ -339,7 +339,7 @@ jstyle("apa")
 #> [multiresponse]
 #> title         = {set}
 #> columns       = n, percent
-#> stub.label    = Option
+#> stub.label    = Category
 #> n.label       = n
 #> percent.label = %
 #> none.label    = None of these
@@ -548,7 +548,7 @@ jstyle("report")
 #> [multiresponse]
 #> title         = {set}          # from apa
 #> columns       = n, percent     # from apa
-#> stub.label    = Option         # from apa
+#> stub.label    = Category       # from apa
 #> n.label       = n              # from apa
 #> percent.label = %              # from apa
 #> none.label    = None of these  # from apa
@@ -576,10 +576,10 @@ jstyle("report")
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/RtmpQioa65/myjournal.jstyle
+#> Style written to /tmp/RtmpJ90FB7/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/RtmpQioa65/myapa.jstyle
+#> Style written to /tmp/RtmpJ90FB7/myapa.jstyle
 #> 
 ```

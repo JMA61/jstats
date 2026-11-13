@@ -28,6 +28,6 @@ its variable, at the place of its first column.
 ## Value
 
 A list: `vars`, the variables in model order; `groups`, the result's
-`dummy_groups` whose dummy columns are all in the model frame (a result
-made before Session 360 has none, and its columns are drawn as before);
-and `owner`, the variable of each dummy column, named by column.
+`dummy_groups` whose dummy columns are all in the model frame (none for
+a model with no dummy-coded variable); and `owner`, the variable of each
+dummy column, named by column.

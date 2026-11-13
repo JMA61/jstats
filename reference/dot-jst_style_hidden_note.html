@@ -4,12 +4,20 @@ File Explorer on Windows (AppData) and by Finder on a Mac (Library). The
 way to open it is the guides' page 6, Keeping your styles, with the
 folder's own path: the &quot;Style written to&quot; line gives the file's, which
 File Explorer's address bar opens as a file rather than showing its
-folder. The folder the last line sets is the one the guides recommend."><meta property="og:description" content="The (S420) item, built Session 423: the per-user folder is hidden by
+folder. The folder the last line sets is the one the guides recommend,
+Documents/jstats styles, by its full path (the (S423) path item, built
+Session 424; Jeff: &quot;Some of my students, even at the masters level,
+have a difficult time with the ~ and the concept of a working
+directory.&quot;), so the line runs as printed and says where the folder is."><meta property="og:description" content="The (S420) item, built Session 423: the per-user folder is hidden by
 File Explorer on Windows (AppData) and by Finder on a Mac (Library). The
 way to open it is the guides' page 6, Keeping your styles, with the
 folder's own path: the &quot;Style written to&quot; line gives the file's, which
 File Explorer's address bar opens as a file rather than showing its
-folder. The folder the last line sets is the one the guides recommend."></head><body>
+folder. The folder the last line sets is the one the guides recommend,
+Documents/jstats styles, by its full path (the (S423) path item, built
+Session 424; Jeff: &quot;Some of my students, even at the masters level,
+have a difficult time with the ~ and the concept of a working
+directory.&quot;), so the line runs as printed and says where the folder is."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -17,7 +25,7 @@ folder. The folder the last line sets is the one the guides recommend."></head><
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.283</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.284</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,12 +57,16 @@ File Explorer on Windows (AppData) and by Finder on a Mac (Library). The
 way to open it is the guides' page 6, Keeping your styles, with the
 folder's own path: the "Style written to" line gives the file's, which
 File Explorer's address bar opens as a file rather than showing its
-folder. The folder the last line sets is the one the guides recommend.</p>
+folder. The folder the last line sets is the one the guides recommend,
+Documents/jstats styles, by its full path (the (S423) path item, built
+Session 424; Jeff: "Some of my students, even at the masters level,
+have a difficult time with the ~ and the concept of a working
+directory."), so the line runs as printed and says where the folder is.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_style_hidden_note</span><span class="op">(</span><span class="va">dir</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_style_hidden_note</span><span class="op">(</span><span class="va">dir</span>, visible <span class="op">=</span> <span class="fu"><a href="dot-jst_style_visible_dir.html">.jst_style_visible_dir</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -63,6 +75,11 @@ folder. The folder the last line sets is the one the guides recommend.</p>
 
 <dl><dt id="arg-dir">dir<a class="anchor" aria-label="anchor" href="#arg-dir"></a></dt>
 <dd><p>The folder's path, as printed.</p></dd>
+
+
+<dt id="arg-visible">visible<a class="anchor" aria-label="anchor" href="#arg-visible"></a></dt>
+<dd><p>The folder the last line sets
+(<code><a href="dot-jst_style_visible_dir.html">.jst_style_visible_dir()</a></code>).</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -5,9 +5,7 @@ jdesc() result, every jfreq() and every jalpha() result of a call
 stacks; models of one outcome sit side by side; t tests, ANOVAs and
 crosstabs of one grouping (column) variable with one set of groups
 stack; each jcorr() result is a table of its own. Two results share a
-table when their keys are the same. A field a result made before it
-existed cannot give is read as a key of its own, so the result's table
-is built alone and its stop says which version made it.
+table when their keys are the same.
 
 ## Usage
 

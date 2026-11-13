@@ -123,7 +123,7 @@ first; `rank = FALSE` keeps the order of the data frame. Either way the
 used" for items labelled "Services used: Counselling" and "Services
 used: Housing" – and each option is named by the rest of its label.
 Items whose labels share no text are named by their labels, and the set
-is titled "Options Chosen". Keep the result with `<-` to make a
+is titled "Multiple-Response Set". Keep the result with `<-` to make a
 publication table of it with
 [`jtable`](https://jma61.github.io/jstats/reference/jtable.md).
 

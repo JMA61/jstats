@@ -5,9 +5,9 @@ the result's table – most chosen first, or the data frame's order where
 the table keeps it – with "None of these" last after a small gap,
 whatever its size; each bar's percentage of everyone who answered at its
 end (ruling R70: one series, under the style's values = yes); one color;
-the value axis titled "Percentage of respondents" and running to the
-next ten above the longest bar (the S412 audit's F15); the look's axes
-and gridlines, turned for bars that run across.
+the value axis titled "Percentage of cases" (ruling R88) and running to
+the next ten above the longest bar (the S412 audit's F15); the look's
+axes and gridlines, turned for bars that run across.
 
 ## Usage
 
