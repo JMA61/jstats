@@ -353,7 +353,8 @@ level and is turned on with `diagnostics`, here or in an analysis call.
   the others: `case.processing = FALSE` silences the other two, and
   `case.processing.detail = "none"` silences `case.processing.filter`.
   Passing `setting = NULL` as a named argument leaves that setting as it
-  is and echoes its current value.
+  is and echoes its current value, and a note says so and gives the call
+  that puts the level's default back.
 
 - `joutput(NULL)`:
 

@@ -193,7 +193,10 @@ requested), and `levene`: Levene's test as printed, a list of `F`,
 significant test (`"acceptable"`, `"unreliable"` or `"differ"`),
 recorded at every output level, or `NA` when no note applies (the test
 not significant, or Welch's ANOVA run); `NULL` when Levene's test was
-not asked for.
+not asked for. A result kept with `<-` holds the output its call printed
+– or would have printed, under `print = FALSE` or `joutput("silent")` –
+and typing its name, or [`print()`](https://rdrr.io/r/base/print.html),
+shows that output again.
 
 ## Details
 

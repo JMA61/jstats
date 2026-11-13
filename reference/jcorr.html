@@ -15,7 +15,7 @@ Warns when variables may be categorical rather than continuous."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.282</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.283</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -186,7 +186,11 @@ wants no output: see <code><a href="joutput.html">joutput</a></code>.</p></dd>
 <code>n</code> (pairwise N matrix), <code>method</code>, <code>model_frame</code> (the
 analysis data frame used for plotting), <code>sample_info</code>
 (pipeline and missing data counts), <code>data_name</code> (the data
-frame's name, for the lines <code><a href="jplot.html">jplot()</a></code> offers) and <code>labels</code>.</p>
+frame's name, for the lines <code><a href="jplot.html">jplot()</a></code> offers) and <code>labels</code>.
+A result kept with <code>&lt;-</code> holds the output its call printed – or
+would have printed, under <code>print = FALSE</code> or
+<code>joutput("silent")</code> – and typing its name, or <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>,
+shows that output again.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

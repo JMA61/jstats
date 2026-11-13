@@ -13,7 +13,7 @@ Gelman-standardized coefficients and odds ratios (Exp(b))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.282</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.283</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -343,7 +343,11 @@ prints them; NULL otherwise.</p></dd>
 <dd><p>The data frame's name as the call gave it.</p></dd>
 
 
-</dl></div>
+</dl><p>A result kept with <code>&lt;-</code> holds the output its call printed – or
+would have printed, under <code>print = FALSE</code> or
+<code>joutput("silent")</code> – and typing its name, or <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>,
+shows that output again.</p>
+    </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The outcome must be coded 0/1. If it is not, the function

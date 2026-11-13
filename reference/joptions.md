@@ -271,12 +271,13 @@ query, or as an echo of the slots a setting call touched.
   The other four slots are independent and are not pulled in. Passing
   `slot = NULL` as a named argument leaves that slot at its current
   value – useful for setting one slot without touching another – and
-  echoes that unchanged value back. To reset a single slot to its
-  default, pass the default value explicitly (e.g.
-  `joptions(missing.convention = "none")`). `data.dir` is the one slot
-  whose default is itself `NULL`, so for it a named `NULL` is that
-  default: `joptions(data.dir = NULL)` clears the folder back to the
-  working directory, as `data.dir = ""` does.
+  echoes that unchanged value back, with a note that says so and gives
+  the call that puts the slot's default back. To reset a single slot to
+  its default, pass the default value explicitly (e.g.
+  `joptions(missing.convention = "none")`). `data.dir`, `output.dir` and
+  `style.dir` have `NULL` as their default, so for them a named `NULL`
+  is that default: `joptions(data.dir = NULL)` clears the folder back to
+  the working directory, as `data.dir = ""` does.
 
 ## Environment-scan notice
 
@@ -348,11 +349,11 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> 
 joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: /tmp/RtmppH5BxR/Data
+#> Data folder: /tmp/RtmpQioa65/Data
 #> Run joptions() to see all settings.
 #> 
 #> Created the data folder:
-#>   /tmp/RtmppH5BxR/Data
+#>   /tmp/RtmpQioa65/Data
 #> 
                                                   # (created if absent)
 joptions(data.dir = NULL)                         # back to the working directory
@@ -362,11 +363,11 @@ joptions(data.dir = NULL)                         # back to the working director
 #> 
 joptions(output.dir = file.path(tempdir(), "Tables")) # where tables are written
 #> Options Settings
-#> Output folder: /tmp/RtmppH5BxR/Tables
+#> Output folder: /tmp/RtmpQioa65/Tables
 #> Run joptions() to see all settings.
 #> 
 #> Created the output folder:
-#>   /tmp/RtmppH5BxR/Tables
+#>   /tmp/RtmpQioa65/Tables
 #> 
 joptions(output.dir = NULL)                       # back to the working directory
 #> Options Settings
@@ -401,6 +402,10 @@ joptions(missing.convention = "spss",
 #> Missing-value convention: SPSS-style
 #> SPSS-style missing value codes: -99, -98, -97
 #> Run joptions() to see all settings.
+#> 
+#> Note: missing.convention.codes = NULL leaves the setting as it is.
+#> To go back to its default:
+#>   joptions(missing.convention.codes = c(-99, -98, -97))
 #> 
 joptions(NULL)                                    # reset all to defaults
 #> Options Settings

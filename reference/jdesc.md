@@ -157,7 +157,11 @@ jdesc(
 Invisibly returns a list of class `jst_desc` containing: `descriptives`
 (data frame of statistics, or NULL for grouped output), `sample_info`
 (pipeline and missing data counts) and `data_name` (the data frame as
-the call named it). Also prints a formatted table to the console.
+the call named it). Also prints a formatted table to the console. A
+result kept with `<-` holds the output its call printed – or would have
+printed, under `print = FALSE` or `joutput("silent")` – and typing its
+name, or [`print()`](https://rdrr.io/r/base/print.html), shows that
+output again.
 
 ## Details
 

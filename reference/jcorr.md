@@ -153,7 +153,10 @@ Invisibly returns a list of class `jst_corr` containing: `r`
 `sample_info` (pipeline and missing data counts), `data_name` (the data
 frame's name, for the lines
 [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) offers)
-and `labels`.
+and `labels`. A result kept with `<-` holds the output its call printed
+– or would have printed, under `print = FALSE` or `joutput("silent")` –
+and typing its name, or [`print()`](https://rdrr.io/r/base/print.html),
+shows that output again.
 
 ## Details
 

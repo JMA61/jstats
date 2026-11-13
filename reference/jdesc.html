@@ -11,7 +11,7 @@ invisibly returns the underlying results as a data frame."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.282</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.283</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -192,7 +192,11 @@ wants no output: see <code><a href="joutput.html">joutput</a></code>.</p></dd>
 <code>descriptives</code> (data frame of statistics, or NULL for grouped output),
 <code>sample_info</code> (pipeline and missing data counts) and
 <code>data_name</code> (the data frame as the call named it). Also
-prints a formatted table to the console.</p>
+prints a formatted table to the console.
+A result kept with <code>&lt;-</code> holds the output its call printed – or
+would have printed, under <code>print = FALSE</code> or
+<code>joutput("silent")</code> – and typing its name, or <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>,
+shows that output again.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

@@ -19,7 +19,7 @@ are displayed alongside labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.282</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.283</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -221,7 +221,11 @@ data frame used for plotting), <code>test_type</code>, <code>formula</code>,
 note under a significant test (<code>"acceptable"</code>, <code>"unreliable"</code>
 or <code>"differ"</code>), recorded at every output level, or <code>NA</code> when
 no note applies (the test not significant, or Welch's test run);
-<code>NULL</code> when Levene's test was not asked for or the test is paired.</p>
+<code>NULL</code> when Levene's test was not asked for or the test is paired.
+A result kept with <code>&lt;-</code> holds the output its call printed – or
+would have printed, under <code>print = FALSE</code> or
+<code>joutput("silent")</code> – and typing its name, or <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>,
+shows that output again.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

@@ -88,7 +88,10 @@ unrounded percentage), `items` (the items, the `none =` item last),
 `none`, `ticked`, `rank`, `title` (the text the labels share, or NA),
 `n` (everyone who answered), `n_excluded` (those who answered no item),
 `n_none` (those who answered and chose none), `sample_info` and
-`data_name`.
+`data_name`. A result kept with `<-` holds the output its call printed –
+or would have printed, under `print = FALSE` or `joutput("silent")` –
+and typing its name, or [`print()`](https://rdrr.io/r/base/print.html),
+shows that output again.
 
 ## Details
 

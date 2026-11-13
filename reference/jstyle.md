@@ -30,9 +30,11 @@ jstyle(style = NULL, save.as = NULL, overwrite = FALSE, open = FALSE, ...)
   A name for the copy, in quotes: written as `<name>.jstyle` in the
   style folder when one is set, else in your jstats folder
   (`tools::R_user_dir("jstats")`), or to a path given with a folder.
-  "apa" and "report" name the built-in styles, so neither can be a
-  copy's name; a file named apa.jstyle or report.jstyle is not read, and
-  jstats says so.
+  Your jstats folder is hidden in File Explorer and in Finder, and a
+  note says so when the copy goes there, with the folder's path and the
+  line that sets a style folder of your own. "apa" and "report" name the
+  built-in styles, so neither can be a copy's name; a file named
+  apa.jstyle or report.jstyle is not read, and jstats says so.
 
 - overwrite:
 
@@ -574,10 +576,10 @@ jstyle("report")
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/RtmppH5BxR/myjournal.jstyle
+#> Style written to /tmp/RtmpQioa65/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/RtmppH5BxR/myapa.jstyle
+#> Style written to /tmp/RtmpQioa65/myapa.jstyle
 #> 
 ```

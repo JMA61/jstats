@@ -180,7 +180,10 @@ frame as the call named it), and if `chisq = TRUE`: `chi_square`, `df`,
 and `p` (the Pearson chi-square), `chi_method` (the test's method
 string), `cramers_v` (Cramer's V, phi without its sign in a 2x2 table),
 and for 2x2 tables `chi_square_corrected` and `p_corrected` (the Yates
-continuity-corrected values).
+continuity-corrected values). A result kept with `<-` holds the output
+its call printed – or would have printed, under `print = FALSE` or
+`joutput("silent")` – and typing its name, or
+[`print()`](https://rdrr.io/r/base/print.html), shows that output again.
 
 ## Details
 

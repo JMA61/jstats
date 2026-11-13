@@ -177,7 +177,10 @@ list of `F`, `df1`, `df2`, `p` and `note` – the verdict of the note
 under a significant test (`"acceptable"`, `"unreliable"` or `"differ"`),
 recorded at every output level, or `NA` when no note applies (the test
 not significant, or Welch's test run); `NULL` when Levene's test was not
-asked for or the test is paired.
+asked for or the test is paired. A result kept with `<-` holds the
+output its call printed – or would have printed, under `print = FALSE`
+or `joutput("silent")` – and typing its name, or
+[`print()`](https://rdrr.io/r/base/print.html), shows that output again.
 
 ## Details
 

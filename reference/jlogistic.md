@@ -337,6 +337,11 @@ Invisibly returns a list of class `jst_logistic` containing:
 
   The data frame's name as the call gave it.
 
+A result kept with `<-` holds the output its call printed – or would
+have printed, under `print = FALSE` or `joutput("silent")` – and typing
+its name, or [`print()`](https://rdrr.io/r/base/print.html), shows that
+output again.
+
 ## Details
 
 The outcome must be coded 0/1. If it is not, the function stops with a

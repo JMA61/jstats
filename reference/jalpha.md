@@ -102,7 +102,10 @@ Invisibly returns a list of class `jst_alpha` containing: `alpha`
 (Cronbach's alpha), `n_items`, `n_used`, `n_excluded`,
 `item_statistics`, `item_total_statistics`, `sample_info` (pipeline and
 missing data counts) and `data_name` (the data frame as the call named
-it).
+it). A result kept with `<-` holds the output its call printed – or
+would have printed, under `print = FALSE` or `joutput("silent")` – and
+typing its name, or [`print()`](https://rdrr.io/r/base/print.html),
+shows that output again.
 
 ## Details
 

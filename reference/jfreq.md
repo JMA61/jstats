@@ -113,7 +113,10 @@ variable has none; `na`, the system-missing row as a one-row data frame,
 or `NULL` when there are none; `total`, `valid_count`, and `missing`,
 the case counts; and `var_label`, the variable's display label),
 `sample_info` (pipeline and missing data counts) and `data_name` (the
-data frame as the call named it).
+data frame as the call named it). A result kept with `<-` holds the
+output its call printed – or would have printed, under `print = FALSE`
+or `joutput("silent")` – and typing its name, or
+[`print()`](https://rdrr.io/r/base/print.html), shows that output again.
 
 ## Details
 
