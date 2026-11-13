@@ -3727,9 +3727,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' the table keeps it -- with "None of these" last after a small gap,
 #' whatever its size; each bar's percentage of everyone who answered at
 #' its end (ruling R70: one series, under the style's values = yes); one
-#' color; the value axis titled "Percentage of respondents" and running to
-#' the next ten above the longest bar (the S412 audit's F15); the look's
-#' axes and gridlines, turned for bars that run across.
+#' color; the value axis titled "Percentage of cases" (ruling R88) and
+#' running to the next ten above the longest bar (the S412 audit's F15); the
+#' look's axes and gridlines, turned for bars that run across.
 #'
 #' @param rows A data frame: label (each bar's), percent, n, and none
 #'   (TRUE for a "None of these" row).
@@ -3770,9 +3770,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                                 limits = c(min(rows$y) - 0.6, -0.4),
                                 expand = c(0, 0)) +
     ggplot2::coord_cartesian(clip = "off") +
-    ggplot2::labs(x = "Percentage of respondents", y = NULL)
+    ggplot2::labs(x = "Percentage of cases", y = NULL)
   p <- .jst_plot_add_scales(p, sc, look) + .jst_plot_theme(look, flip = TRUE)
-  sheet <- data.frame(Option = rows$label, n = rows$n, Percent = rows$percent,
+  sheet <- data.frame(Category = rows$label, n = rows$n, Percent = rows$percent,
                       stringsAsFactors = FALSE)
   .jst_plot_built(p, sc, sheet, flip = TRUE)
 }
@@ -4292,9 +4292,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @param iv_names Character; the model frame's predictor columns.
 #' @return A list: \code{vars}, the variables in model order;
 #'   \code{groups}, the result's \code{dummy_groups} whose dummy columns
-#'   are all in the model frame (a result made before Session 360 has
-#'   none, and its columns are drawn as before); and \code{owner}, the
-#'   variable of each dummy column, named by column.
+#'   are all in the model frame (none for a model with no dummy-coded
+#'   variable); and \code{owner}, the variable of each dummy column, named
+#'   by column.
 #' @keywords internal
 .jst_plot_variables <- function(x, iv_names) {
   groups <- x$dummy_groups
@@ -5537,24 +5537,6 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
   r
 }
 
-#' Internal helper: the residuals of a jt() or jaov() result
-#'
-#' The \code{residuals} element, which results made before Session 375 do
-#' not carry; for one of those, the stop that asks for the call again.
-#'
-#' @param x A \code{jst_ttest} or \code{jst_anova} result.
-#' @param fn Character(1); \code{"jt"} or \code{"jaov"}.
-#' @return Numeric vector.
-#' @keywords internal
-.jst_result_residuals <- function(x, fn) {
-  if (is.null(x$residuals)) {
-    .jst_stop("This ", fn, "() result was made by an earlier version of ",
-              "jstats and holds no residuals.\n",
-              "Run ", fn, "() again to draw the Q-Q plot.")
-  }
-  x$residuals
-}
-
 #' Internal helper: the normal Q-Q plot of a comparison's residuals
 #'
 #' The standardized residuals against the normal quantiles, the line of
@@ -5679,7 +5661,7 @@ jplot.jst_ttest <- function(x, which = "core", ..., style = NULL) {
 
   # The normal Q-Q plot of the residuals (Session 375; ruling R14, part 2).
   if ("qq" %in% plot_set) {
-    plots$qq <- .jst_plot_group_qq(.jst_result_residuals(x, "jt"),
+    plots$qq <- .jst_plot_group_qq(x$residuals,
                                    paired = identical(x$test_type, "paired"))
   }
 
@@ -5746,7 +5728,7 @@ jplot.jst_anova <- function(x, which = "core", ..., style = NULL) {
 
   # The normal Q-Q plot of the residuals (Session 375; ruling R14, part 2).
   if ("qq" %in% plot_set) {
-    plots$qq <- .jst_plot_group_qq(.jst_result_residuals(x, "jaov"))
+    plots$qq <- .jst_plot_group_qq(x$residuals)
   }
 
   .jst_group_plot_list(c(box = "Box Plot", qq = "Normal Q-Q")[names(plots)])
@@ -5785,8 +5767,8 @@ jplot.jst_corr <- function(x, which = "core", ..., style = NULL) {
   # three or more, the stop says so and gives the two-variable call (Fix
   # Slate 23, Session 377; Jeff: "Default okay."), where it said scatter
   # "is not a plot of a jcorr() result". The data frame is the one the
-  # result was made from (data_name, since v0.9.250; MyData for an older
-  # result) and the method stays as it was.
+  # result was made from (data_name; MyData for an expression given as the
+  # data) and the method stays as it was.
   explain <- NULL
   if (n_vars >= 3) {
     vn <- rownames(r_matrix)[1:2]
@@ -5795,7 +5777,7 @@ jplot.jst_corr <- function(x, which = "core", ..., style = NULL) {
       tryCatch(str2lang(dn), error = function(e) NULL)
     if (!(is.symbol(dx) ||
           (is.call(dx) && identical(dx[[1L]], as.name("$"))))) {
-      dn <- "MyData"   # an older result, or an expression given as the data
+      dn <- "MyData"   # an expression given as the data
     }
     meth <- if (!is.null(x$method) && !identical(x$method, "pearson"))
       paste0(", method = \"", x$method, "\"") else ""
@@ -6134,7 +6116,7 @@ jplot.jst_multi <- function(x, which = "core", ..., style = NULL) {
     attr(p, "jst_built") <- NULL
     attr(p, "jst_title") <- if (is.character(x$title) && length(x$title) == 1L &&
                                 !is.na(x$title) && nzchar(x$title)) x$title
-                            else "Options Chosen"
+                            else "Multiple-Response Set"
     attr(p, "jst_scales") <- built$scales
     attr(p, "jst_data")   <- built$data
     attr(p, "jst_flip")   <- TRUE

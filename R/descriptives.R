@@ -2933,7 +2933,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 #' "Services used" for items labelled "Services used: Counselling" and
 #' "Services used: Housing" -- and each option is named by the rest of its
 #' label. Items whose labels share no text are named by their labels, and
-#' the set is titled "Options Chosen". Keep the result with \code{<-} to
+#' the set is titled "Multiple-Response Set". Keep the result with \code{<-} to
 #' make a publication table of it with \code{\link{jtable}}.
 #'
 #' @param data A data frame.
@@ -3184,7 +3184,7 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
       .jst_combine_id(nm, rows_raw$option[i], vlmode, cap = TRUE)
     } else nm
   }, character(1))
-  title <- if (is.na(sh$title)) "Options Chosen" else sh$title
+  title <- if (is.na(sh$title)) "Multiple-Response Set" else sh$title
   tab <- data.frame(Option = disp, Freq = rows_raw$n,
                     Percent = round(rows_raw$percent, 2),
                     stringsAsFactors = FALSE, row.names = NULL)
@@ -3196,8 +3196,8 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
     .print_var_labels(data, items)
   }
   if (identical(getOption(".jst_output_level", "standard"), "full")) {
-    .jst_advisory_note("Note: respondents could choose more than one option, ",
-                       "so the percentages sum to more than 100.")
+    .jst_advisory_note("Note: a case can be counted in more than one ",
+                       "category, so the percentages sum to more than 100.")
     cat("\n")
   }
   # No item holds a "No" (R62's lean, Session 414): an unticked box is

@@ -219,8 +219,7 @@ and warnings still show.
 \strong{Keeping a result for a later session.} A saved result is an R
 object, which base R keeps in a file of its own:
 \code{saveRDS(m1, "m1.rds")}, then in a later session
-\code{m1 <- readRDS("m1.rds")}. A result made by an earlier version of
-jstats than the table needs stops, and says which version made it.
+\code{m1 <- readRDS("m1.rds")}.
 }
 \examples{
 # Keep a result, make its table, and look at it in the console

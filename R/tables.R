@@ -291,9 +291,9 @@
   multiresponse = list(                # a jmulti() result (Session 414;
                                        # rulings R60-R62)
     title          = "{set}",          # {set}: the text the items' labels
-                                       # share, else "Options Chosen"
+                                       # share, else "Multiple-Response Set"
     columns        = c("n", "percent"),
-    stub.label     = "Option",
+    stub.label     = "Category",
     n.label        = "n",
     percent.label  = "%",
     none.label     = "None of these",  # the row of those who chose none
@@ -727,7 +727,7 @@
   multiresponse = list(
     title          = list(kind = "text",
                           about = c("the title when the call gives none; {set} is the text the items'",
-                                    "labels share, else Options Chosen")),
+                                    "labels share, else Multiple-Response Set")),
     columns        = list(kind = "columns", cols = c("n", "percent"),
                           about = c("the columns, in order: n (those who chose the option), percent (of",
                                     "everyone who answered)")),
@@ -738,8 +738,8 @@
     none.label     = list(kind = "text",
                           about = "the label of the row of those who answered and chose none"),
     choice.note    = list(kind = "choice", choices = c("yes", "no"),
-                          about = c("yes: the note says respondents could choose more than one, so the",
-                                    "percentages sum to more than 100 | no"))
+                          about = c("yes: the note says a case can be counted in more than one category,",
+                                    "so the percentages sum to more than 100 | no"))
   ),
   plot = list(
     font            = list(kind = "text", about = "the typeface of a chart's text"),
@@ -790,9 +790,12 @@
 )
 
 # The sentence a multiple-response table and its chart carry in the note
-# (ruling R61; one home since Session 416, when the chart joined the table).
-.jst_table_choice_note <- paste0("Respondents could choose more than one, so the ",
-                               "percentages sum to more than 100.")
+# (ruling R61; one home since Session 416, when the chart joined the table;
+# its words ruling R88's, Session 424: "a case", since a set can come from
+# records as well as from a survey's respondents).
+.jst_table_choice_note <- paste0("A case can be counted in more than one ",
+                                 "category, so the percentages sum to more ",
+                                 "than 100.")
 
 # The table types, as messages name them, in the file's section order.
 .jst_style_type_nouns <- c(descriptives = "a descriptives table",
@@ -2186,7 +2189,6 @@
   frames <- lapply(seq_along(results), function(i) {
     r  <- results[[i]]
     tf <- .jst_apa_terms(r)
-    if (is.null(tf)) .jst_table_old_stop(r, "jdesc()")
     if (!is.null(attr(tf, "by"))) {
       .jst_stop("no table is made from a grouped jdesc() result (one made ",
                 "with by =) yet.", fn = "jtable")
@@ -2420,10 +2422,6 @@
   for (i in seq_along(results)) {
     r <- results[[i]]
     tf <- .jst_apa_terms(r); md <- .jst_apa_model(r)
-    if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(tf) ||
-        is.null(md)) {
-      .jst_table_old_stop(r, "jfreq()")
-    }
     h <- if (!is.null(names(results)) && nzchar(names(results)[i]))
            names(results)[i] else NA_character_
     for (j in seq_len(nrow(md))) {
@@ -2608,7 +2606,6 @@
                                     note = NULL) {
   logistic <- inherits(results[[1L]], "jst_logistic")
   type <- if (logistic) "logistic" else "regression"
-  fn   <- if (logistic) "jlogistic()" else "jlm()"
   key  <- function(k) .jst_style_key(style, type, k)
   dec  <- key("decimals"); thou <- key("thousands"); minus <- key("minus")
   lzs  <- key("leading.zero"); pfmt <- key("p.format"); pdec <- key("p.decimals")
@@ -2626,18 +2623,13 @@
 
   .jst_table_no_headings(headings, type, "the predictors in the models' order")
 
-  # Each result's fields, as this build stores them: a result made before
-  # them stops with its version (as the other builders stop).
+  # Each result's fields.
   nm <- length(results)
   terms <- vector("list", nm); mods <- vector("list", nm)
   groups <- vector("list", nm)
   for (i in seq_len(nm)) {
     r  <- results[[i]]
     tf <- .jst_apa_terms(r); md <- .jst_apa_model(r); gr <- r$dummy_groups
-    ok <- !is.null(attr(r, "jstats_version", exact = TRUE)) &&
-      !is.null(tf) && !is.null(md) && !is.null(r$formula_used) &&
-      all(vapply(gr, function(g) !is.null(g$codes), logical(1)))
-    if (!ok) .jst_table_old_stop(r, fn)
     terms[[i]] <- tf; mods[[i]] <- md; groups[[i]] <- gr
   }
 
@@ -3088,18 +3080,6 @@
   c(setdiff(tf$term, c("(Intercept)", dummies)), names(r$dummy_groups))
 }
 
-#' Internal helper: the version a result was made by, for a stop
-#'
-#' @param x A result.
-#' @return Character(1): "jstats 0.9.200" from the stamp, or "an earlier
-#'   version of jstats" when there is none (a result made before the
-#'   stamp).
-#' @keywords internal
-.jst_table_result_version <- function(x) {
-  v <- attr(x, "jstats_version", exact = TRUE)
-  if (is.null(v)) "an earlier version of jstats" else paste("jstats", as.character(v))
-}
-
 #' Internal helper: names given in headings = or markers = are the result's
 #'
 #' @param given Character; the names given.
@@ -3127,22 +3107,6 @@
 # 4d. What every builder shares: the stops, the names, the filter sentence
 #     (build 4, Session 405)
 # -----------------------------------------------------------------------------
-
-#' Internal helper: the stop for a result made before its table's fields
-#'
-#' One home for the stop every builder gives a result whose fields predate
-#' its table: the version that made it, from the stamp, and the way out.
-#'
-#' @param r The result.
-#' @param fn The analysis function that made it, as messages name it
-#'   ("jdesc()").
-#' @keywords internal
-.jst_table_old_stop <- function(r, fn) {
-  .jst_stop("this ", fn, " result was made by ", .jst_table_result_version(r),
-            ", before the fields a table needs were stored.\n",
-            "Run the analysis again, then jtable() on the new result.",
-            fn = "jtable")
-}
 
 #' Internal helper: the stop for headings = on a table that takes none
 #'
@@ -3453,11 +3417,7 @@
   }
   r  <- results[[1L]]
   tf <- .jst_apa_terms(r)
-  vt <- if (is.null(tf)) NULL else attr(tf, "variables")
-  if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(vt) ||
-      is.null(r$r)) {
-    .jst_table_old_stop(r, "jcorr()")
-  }
+  vt <- attr(tf, "variables")
   vars <- rownames(r$r); k <- length(vars)
   vt   <- vt[match(vars, vt$variable), , drop = FALSE]
   labs <- ifelse(is.na(vt$label) | !nzchar(vt$label), vars, vt$label)
@@ -3579,7 +3539,6 @@
                                     markers = NULL, title = NULL, note = NULL) {
   anova <- inherits(results[[1L]], "jst_anova")
   type  <- if (anova) "anova" else "ttest"
-  fn    <- if (anova) "jaov()" else "jt()"
   key   <- function(k) .jst_style_key(style, type, k)
   dec   <- key("decimals"); thou <- key("thousands"); minus <- key("minus")
   lzs   <- key("leading.zero"); pfmt <- key("p.format"); pdec <- key("p.decimals")
@@ -3604,10 +3563,6 @@
   for (i in seq_len(nr)) {
     r  <- results[[i]]
     tf <- .jst_apa_terms(r); md <- .jst_apa_model(r)
-    if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(tf) ||
-        is.null(md)) {
-      .jst_table_old_stop(r, fn)
-    }
     terms[[i]] <- tf; mods[[i]] <- md
   }
   # One grouping variable (ruling R54), the same groups in every result,
@@ -3872,12 +3827,6 @@
   use_stars <- !identical(pfmt, "exact")
   .jst_table_no_headings(headings, type, "its variables in the order given")
 
-  for (r in results) {
-    if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(r$observed) ||
-        is.null(r$row_categories) || is.null(r$col_categories)) {
-      .jst_table_old_stop(r, "jcrosstab()")
-    }
-  }
   vname <- function(cats) unname(attr(cats, "variable")["name"])
   # One column variable with one set of categories (ruling R54); jtable()
   # sorts its results before a builder sees them (ruling R56, Session 406).
@@ -4068,10 +4017,6 @@
   for (i in seq_len(ns)) {
     r  <- results[[i]]
     tf <- .jst_apa_terms(r); md <- .jst_apa_model(r)
-    if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(tf) ||
-        is.null(md)) {
-      .jst_table_old_stop(r, "jalpha()")
-    }
     terms[[i]] <- tf; mods[[i]] <- md
   }
   items <- unlist(lapply(terms, function(tf) as.character(tf$item)))
@@ -4183,7 +4128,7 @@
 #' row of those who chose none named by the style's none.label. The
 #' columns are the style's: n and the percentage of the set's N. The title
 #' is the style's template, \code{{set}} the text the labels share, else
-#' "Options Chosen" (ruling R69); N goes where n.position puts it; the
+#' "Multiple-Response Set" (rulings R69 and R88); N goes where n.position puts it; the
 #' general note carries the filter, the more-than-100 sentence
 #' (choice.note, removable by ruling R53) and the call's text. markers =
 #' marks an item's row.
@@ -4207,10 +4152,6 @@
   }
   r  <- results[[1L]]
   tf <- .jst_apa_terms(r); md <- .jst_apa_model(r)
-  if (is.null(attr(r, "jstats_version", exact = TRUE)) || is.null(tf) ||
-      is.null(md)) {
-    .jst_table_old_stop(r, "jmulti()")
-  }
 
   col_keys <- key("columns")
   col_labs <- vapply(col_keys, function(k) key(paste0(k, ".label")), character(1),
@@ -4238,7 +4179,7 @@
 
   # The notes: N where n.position puts it (one pool: everyone who answered,
   # ruling R61); the filter; the more-than-100 sentence; the user's text.
-  set_title <- if (is.na(md$title) || !nzchar(md$title)) "Options Chosen" else md$title
+  set_title <- if (is.na(md$title) || !nzchar(md$title)) "Multiple-Response Set" else md$title
   np <- .jst_table_n_parts(key("n.position"),
                            paste0("*N* = ", .jst_tbl_count(md$n, thou)))
   general <- c(np$note, .jst_table_filter_note(results, set_title, style, type))
@@ -6539,7 +6480,7 @@
   }
   # The frame by its name where the result or the chart keeps a plain one
   # (every analysis result since Session 416); MyData for an expression,
-  # which modify = TRUE cannot change, and for an older result.
+  # which modify = TRUE cannot change.
   frame <- .jst_kept_data_name(gaps$data_name)
   if (is.null(frame)) frame <- "MyData"
   line <- if (length(nm)) {
@@ -6834,8 +6775,7 @@
 #' \strong{Keeping a result for a later session.} A saved result is an R
 #' object, which base R keeps in a file of its own:
 #' \code{saveRDS(m1, "m1.rds")}, then in a later session
-#' \code{m1 <- readRDS("m1.rds")}. A result made by an earlier version of
-#' jstats than the table needs stops, and says which version made it.
+#' \code{m1 <- readRDS("m1.rds")}.
 #'
 #' @param x A saved result -- what an analysis function returns, kept with
 #'   \code{<-} -- or a list of them that share one table: a list of
@@ -7329,9 +7269,7 @@ print.jst_figure <- function(x, ...) {
 #' models of one outcome sit side by side; t tests, ANOVAs and crosstabs of
 #' one grouping (column) variable with one set of groups stack; each
 #' jcorr() result is a table of its own. Two results share a table when
-#' their keys are the same. A field a result made before it existed cannot
-#' give is read as a key of its own, so the result's table is built alone
-#' and its stop says which version made it.
+#' their keys are the same.
 #'
 #' @param r A result.
 #' @param i Its place in the list.
@@ -7854,15 +7792,13 @@ print.jst_figure <- function(x, ...) {
 #' Internal helper: the style a built table is drawn in
 #'
 #' A table keeps the style it was built under, the call's own settings
-#' included, so it prints and writes as it was built; a table made before
-#' Session 401 carries the style's name instead, read again here.
+#' included, so it prints and writes as it was built.
 #'
 #' @param tbl A jst_table.
 #' @param style The style to use when the table carries none.
 #' @keywords internal
 .jst_table_style <- function(tbl, style) {
   if (inherits(tbl$style, "jst_style")) return(tbl$style)
-  if (is.character(tbl$style)) return(.jst_style_resolve(tbl$style))
   .jst_style_resolve(style)
 }
 
@@ -8322,12 +8258,18 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
 #' way to open it is the guides' page 6, Keeping your styles, with the
 #' folder's own path: the "Style written to" line gives the file's, which
 #' File Explorer's address bar opens as a file rather than showing its
-#' folder. The folder the last line sets is the one the guides recommend.
+#' folder. The folder the last line sets is the one the guides recommend,
+#' Documents/jstats styles, by its full path (the (S423) path item, built
+#' Session 424; Jeff: "Some of my students, even at the masters level,
+#' have a difficult time with the ~ and the concept of a working
+#' directory."), so the line runs as printed and says where the folder is.
 #'
 #' @param dir The folder's path, as printed.
+#' @param visible The folder the last line sets
+#'   (\code{.jst_style_visible_dir()}).
 #' @return Character(1).
 #' @keywords internal
-.jst_style_hidden_note <- function(dir) {
+.jst_style_hidden_note <- function(dir, visible = .jst_style_visible_dir()) {
   paste0("Note: your jstats folder, where the copy was saved, is hidden in ",
          "File Explorer on Windows and in Finder on a Mac.\n",
          "To open it, paste the folder's path into File Explorer's address ",
@@ -8335,7 +8277,31 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
          "  ", dir, "\n",
          "To keep your styles in a folder you can see, set one, then save ",
          "the copy again:\n",
-         "  joptions(style.dir = \"~/jstats styles\")")
+         "  joptions(style.dir = \"", .jst_dq_escape(visible), "\")")
+}
+
+#' Internal helper: the visible style folder the jstats-folder note names
+#'
+#' Documents/jstats styles, by its full path, worked out on the computer:
+#' R's home folder is the Documents folder on Windows
+#' (C:/Users/jeff/Documents, or OneDrive's), so the folder is in it; on a
+#' Mac and on Linux the home folder holds Documents. A home whose last part is
+#' Documents is taken as the Documents folder whatever the system, so no
+#' test of the system is needed. joptions(style.dir =) creates the folder
+#' when the line is run.
+#'
+#' @param home The home folder (\code{path.expand("~")}); an argument so a
+#'   battery can stand in for either shape. Its backslashes become forward
+#'   slashes and a trailing one is dropped; it is not otherwise normalized,
+#'   since R's home folder is already a full path, and normalizePath() on
+#'   Windows would put a drive before a stand-in's "/Users/...".
+#' @return Character(1), with forward slashes.
+#' @keywords internal
+.jst_style_visible_dir <- function(home = path.expand("~")) {
+  home <- sub("/+$", "", gsub("\\", "/", home, fixed = TRUE))
+  docs <- if (identical(tolower(basename(home)), "documents")) home
+          else file.path(home, "Documents")
+  file.path(docs, "jstats styles")
 }
 
 #' Internal helper: open a style's file, for jstyle(open = TRUE)

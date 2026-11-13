@@ -1960,8 +1960,10 @@
 #' Writes the parts \code{jstats_output} holds, in order -- the output to
 #' standard output, each note as a message -- so a saved result shows what
 #' its call printed (Session 423). Color only where the output takes it now
-#' (\code{.jst_use_color()}). A result made before Session 423 holds no
-#' output, and a line says so.
+#' (\code{.jst_use_color()}). A result that holds no output prints as R's
+#' plain list (\code{print.default()}), as every result did before Session
+#' 423 (ruling R87, Session 424: no message for an object an earlier build
+#' saved).
 #'
 #' @param x A saved result.
 #' @return \code{x}, invisibly.
@@ -1969,8 +1971,7 @@
 .jst_print_result <- function(x) {
   out <- attr(x, "jstats_output", exact = TRUE)
   if (is.null(out)) {
-    .jst_msg_out(.jst_result_no_output_text(x))
-    cat("\n")
+    print.default(x)
     return(invisible(x))
   }
   col <- .jst_use_color()
@@ -1984,20 +1985,6 @@
     }
   }
   invisible(x)
-}
-
-#' Internal helper: the line for a result that kept no output
-#'
-#' @param x A saved result made before Session 423.
-#' @return Character(1).
-#' @keywords internal
-.jst_result_no_output_text <- function(x) {
-  v    <- attr(x, "jstats_version", exact = TRUE)
-  made <- if (is.null(v)) "an earlier version of jstats" else paste0("jstats ", v)
-  noun <- sub("^a ", "", .jst_result_noun(x))
-  paste0("This ", noun, " was made by ", made,
-         ", before a saved result kept its output.\n",
-         "Run the analysis again to see it.")
 }
 
 #' Printing a saved analysis result

@@ -231,13 +231,13 @@ To give one table type its own value of a general setting, copy the setting's li
 }
 \section{[multiresponse]: a multiple-response table}{
 \describe{
-\item{\code{title}}{the title when the call gives none; \{set\} is the text the items' labels share, else Options Chosen. Takes any text. In apa: \code{\{set\}}.}
+\item{\code{title}}{the title when the call gives none; \{set\} is the text the items' labels share, else Multiple-Response Set. Takes any text. In apa: \code{\{set\}}.}
 \item{\code{columns}}{the columns, in order: n (those who chose the option), percent (of everyone who answered). Takes one or more of n, percent, in order, separated by commas. In apa: \code{n, percent}.}
-\item{\code{stub.label}}{the first column's head. Takes any text, or nothing. In apa: \code{Option}.}
+\item{\code{stub.label}}{the first column's head. Takes any text, or nothing. In apa: \code{Category}.}
 \item{\code{n.label}}{the head of the n column. Takes any text, or nothing. In apa: \code{n}.}
 \item{\code{percent.label}}{the head of the percent column. Takes any text, or nothing. In apa: \code{\%}.}
 \item{\code{none.label}}{the label of the row of those who answered and chose none. Takes any text. In apa: \code{None of these}.}
-\item{\code{choice.note}}{yes: the note says respondents could choose more than one, so the percentages sum to more than 100 | no. Takes one of yes | no. In apa: \code{yes}.}
+\item{\code{choice.note}}{yes: the note says a case can be counted in more than one category, so the percentages sum to more than 100 | no. Takes one of yes | no. In apa: \code{yes}.}
 }
 }
 \section{[plot]: a chart}{

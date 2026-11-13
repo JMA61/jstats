@@ -16,7 +16,9 @@
 Writes the parts \code{jstats_output} holds, in order -- the output to
 standard output, each note as a message -- so a saved result shows what
 its call printed (Session 423). Color only where the output takes it now
-(\code{.jst_use_color()}). A result made before Session 423 holds no
-output, and a line says so.
+(\code{.jst_use_color()}). A result that holds no output prints as R's
+plain list (\code{print.default()}), as every result did before Session
+423 (ruling R87, Session 424: no message for an object an earlier build
+saved).
 }
 \keyword{internal}

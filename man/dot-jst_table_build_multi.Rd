@@ -36,7 +36,7 @@ item's label adds to what the set's labels share ("Housing" of
 row of those who chose none named by the style's none.label. The
 columns are the style's: n and the percentage of the set's N. The title
 is the style's template, \code{{set}} the text the labels share, else
-"Options Chosen" (ruling R69); N goes where n.position puts it; the
+"Multiple-Response Set" (rulings R69 and R88); N goes where n.position puts it; the
 general note carries the filter, the more-than-100 sentence
 (choice.note, removable by ruling R53) and the call's text. markers =
 marks an item's row.

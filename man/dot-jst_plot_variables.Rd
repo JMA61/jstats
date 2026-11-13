@@ -14,9 +14,9 @@
 \value{
 A list: \code{vars}, the variables in model order;
 \code{groups}, the result's \code{dummy_groups} whose dummy columns
-are all in the model frame (a result made before Session 360 has
-none, and its columns are drawn as before); and \code{owner}, the
-variable of each dummy column, named by column.
+are all in the model frame (none for a model with no dummy-coded
+variable); and \code{owner}, the variable of each dummy column, named
+by column.
 }
 \description{
 A dummy-coded predictor is fit as one column per category but is ONE
