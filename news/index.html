@@ -33,28 +33,42 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.9.275" id="jstats-09275">jstats 0.9.275<a class="anchor" aria-label="anchor" href="#jstats-09275"></a></h2>
-<p>Thank you for trying jstats. Here is what is new since 0.9.267.</p>
+<h2 class="pkg-version" data-toc-text="0.9.287" id="jstats-09287">jstats 0.9.287<a class="anchor" aria-label="anchor" href="#jstats-09287"></a></h2>
+<p>Thank you for trying jstats. Here is what is new since 0.9.267, the first release with tables and charts for publication.</p>
 <ul><li>
-<strong>Tables for publication, in Word.</strong> Keep a result with <code>&lt;-</code> and give it to <code><a href="../reference/jtable.html">jtable()</a></code>, which makes an APA-style table and can write it to a Word file: <code>m1 &lt;- jlm(WellbeingScore ~ Age + Income, community)</code> <code>jtable(m1, file = "Table1.docx")</code> It makes tables from <code><a href="../reference/jdesc.html">jdesc()</a></code>, <code><a href="../reference/jfreq.html">jfreq()</a></code>, <code><a href="../reference/jt.html">jt()</a></code>, <code><a href="../reference/jaov.html">jaov()</a></code>, <code><a href="../reference/jcrosstab.html">jcrosstab()</a></code>, <code><a href="../reference/jcorr.html">jcorr()</a></code>, <code><a href="../reference/jlm.html">jlm()</a></code>, <code><a href="../reference/jlogistic.html">jlogistic()</a></code> and <code><a href="../reference/jalpha.html">jalpha()</a></code> results, with your variable and value labels. Results of one kind share a table: models of one outcome side by side, or t tests of one grouping variable one under another. <code><a href="../reference/jtable.html">jtable()</a></code> says what it made and where it wrote it, and <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows a table in the Console.</li>
+<strong>Tables for publication, in Word.</strong> Keep a result with <code>&lt;-</code> and give it to <code><a href="../reference/jtable.html">jtable()</a></code>, which makes an APA-style table and can write it to a Word file: <code>m1 &lt;- jlm(WellbeingScore ~ Age + Income, community)</code> <code>jtable(m1, file = "Table1.docx")</code> It makes tables from <code><a href="../reference/jdesc.html">jdesc()</a></code>, <code><a href="../reference/jfreq.html">jfreq()</a></code>, <code><a href="../reference/jt.html">jt()</a></code>, <code><a href="../reference/jaov.html">jaov()</a></code>, <code><a href="../reference/jcrosstab.html">jcrosstab()</a></code>, <code><a href="../reference/jcorr.html">jcorr()</a></code>, <code><a href="../reference/jlm.html">jlm()</a></code>, <code><a href="../reference/jlogistic.html">jlogistic()</a></code>, <code><a href="../reference/jalpha.html">jalpha()</a></code> and <code><a href="../reference/jmulti.html">jmulti()</a></code> results, with your variable and value labels. Results of one kind share a table: models of one outcome side by side, or t tests of one grouping variable one under another. <code><a href="../reference/jtable.html">jtable()</a></code> says what it made and where it wrote it, and <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows a table in the Console.</li>
 <li>
-<strong>Several tables in one file.</strong> Make each table, then give them together: <code>jtable(list(t1, t2), file = "Tables.docx")</code> Each table gets the page it needs, portrait or landscape.</li>
+<strong>Tables and charts in one file.</strong> Make each table, keep a chart with <code>&lt;-</code>, then give them together: <code>p1 &lt;- jplot(community, Region)</code> <code>jtable(list(t1, t2, p1), file = "Report.docx")</code> Tables and figures are numbered apart, and each gets the page it needs, portrait or landscape.</li>
 <li>
-<strong>Your own table style.</strong> A table’s look comes from a style, and apa is built in. <code>jstyle("apa", save.as = "myjournal")</code> copies it to a text file you can edit, and <code>jtable(m1, style = "myjournal")</code> uses it. A copy can hold only what you change, such as <code>jstyle("apa", save.as = "myapa", font = "Arial")</code> and <code><a href="../reference/jstyle_settings.html">?jstyle_settings</a></code> lists every setting.</li>
+<strong>Two styles built in, and your own.</strong> A table’s look comes from a style: apa, the default, or report, in Arial with the caption on one line and a grey header row: <code>jtable(m1, style = "report")</code> <code>jstyle("apa", save.as = "myjournal")</code> copies apa to a text file you can edit, <code>jstyle("myjournal", open = TRUE)</code> opens it in the editor, and <code>jtable(m1, style = "myjournal")</code> uses it. A copy can hold only what you change, such as <code>jstyle("apa", save.as = "myapa", font = "Arial")</code> and <code><a href="../reference/jstyle_settings.html">?jstyle_settings</a></code> lists every setting.</li>
+<li>
+<strong>Change a style with an AI assistant.</strong> A style file’s first lines tell an AI assistant, such as Copilot, how to change it to match a published table or a request in words, and what to send back. When the file comes back saved as .txt, jstats says so and gives the line that renames it.</li>
+<li>
+<strong>Step by step in the guides.</strong> The How-To pages on publication tables and on your own table styles walk through all of this, starting at <a href="https://jma61.github.io/jstats-guides/tables-saving-results.html" class="uri">https://jma61.github.io/jstats-guides/tables-saving-results.html</a>
+</li>
 <li>
 <strong>Three new rows in <code><a href="../reference/joptions.html">joptions()</a></code>.</strong> Output folder, where Word files go; Publication style, the style <code><a href="../reference/jtable.html">jtable()</a></code> uses unless told otherwise; and Style folder, where your styles are kept.</li>
+<li>
+<strong>Charts in a publication look.</strong> <code><a href="../reference/jplot.html">jplot()</a></code> draws in greys, in the look of the publication style, and titles its axes with your variable labels, where it drew in blue with the variable names.</li>
+<li>
+<strong>New charts.</strong> A pie or donut chart of one variable, <code>jplot(community, Region, type = "pie")</code>, and a 100% stacked bar chart of items that share their answers, <code>jplot(community, Environment1:Environment5, type = "stacked")</code>, or of a variable within groups, with <code>by =</code>.</li>
+<li>
+<strong>Check-all-that-apply questions.</strong> <code><a href="../reference/jmulti.html">jmulti()</a></code> counts a multiple-response question, such as “Which services have you used?”, stored as one yes/no item per answer, and gives the percentage of cases choosing each: <code>jmulti(d, Counselling:Financial)</code> <code><a href="../reference/jtable.html">jtable()</a></code> makes its table, and <code><a href="../reference/jplot.html">jplot()</a></code> its ranked bar chart.</li>
+<li>
+<strong>Keeping a result.</strong> Type a kept result’s name, or <code>print(m1)</code>, and it shows its output again, even one made with <code>print = FALSE</code>, where it printed R’s list of its parts. <code><a href="../reference/jsave.html">jsave()</a></code> saves data frames; a result or a table is kept with base R’s <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> and read back with <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS()</a></code>, and <code><a href="../reference/jsave.html">jsave()</a></code> given one shows the two lines.</li>
+<li>
+<strong>A range of variables in more functions.</strong> A range such as <code>Environment1:Environment5</code>, every variable from the first to the last in the data frame’s order, now works in <code><a href="../reference/jdesc.html">jdesc()</a></code>, <code><a href="../reference/jfreq.html">jfreq()</a></code>, <code><a href="../reference/jcorr.html">jcorr()</a></code>, <code><a href="../reference/jscreen.html">jscreen()</a></code>, <code><a href="../reference/jcomplete.html">jcomplete()</a></code>, <code><a href="../reference/jdeclare_missing.html">jdeclare_missing()</a></code>, <code><a href="../reference/jconvert.html">jconvert()</a></code>, <code><a href="../reference/jdummy.html">jdummy()</a></code>, <code><a href="../reference/jnumeric.html">jnumeric()</a></code>, <code><a href="../reference/jcount.html">jcount()</a></code> and <code><a href="../reference/jlikert.html">jlikert()</a></code>, as it did in <code><a href="../reference/jalpha.html">jalpha()</a></code>: <code>jcorr(community, Environment1:Environment5)</code>
+</li>
 <li>
 <strong>Two codes with one label stay apart.</strong> When two codes share a value label, such as 2 = Other and 3 = Other, <code><a href="../reference/jfreq.html">jfreq()</a></code> counts them on separate rows, and <code><a href="../reference/jt.html">jt()</a></code>, <code><a href="../reference/jaov.html">jaov()</a></code>, <code><a href="../reference/jcrosstab.html">jcrosstab()</a></code>, <code>jdesc(by =)</code> and <code><a href="../reference/jplot.html">jplot()</a></code> keep them as separate groups, each shown with its code: 2: Other and 3: Other. Before, <code><a href="../reference/jfreq.html">jfreq()</a></code> with <code>value.id = "labels"</code> counted them as one row, and the others made them one group.</li>
 <li>
 <strong>A formula function given variables.</strong> <code>jt(d, Age, Volunteer)</code>, typed the way <code><a href="../reference/jdesc.html">jdesc()</a></code> takes its variables, now stops with the formula to use, <code>jt(Age ~ Volunteer, d)</code>. The same for <code><a href="../reference/jaov.html">jaov()</a></code>, <code><a href="../reference/jcrosstab.html">jcrosstab()</a></code>, <code><a href="../reference/jlm.html">jlm()</a></code> and <code><a href="../reference/jlogistic.html">jlogistic()</a></code>.</li>
-<li>
-<strong>Keeping a result.</strong> <code><a href="../reference/jsave.html">jsave()</a></code> saves data frames. A result or a table is kept with base R’s <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> and read back with <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS()</a></code>, and <code><a href="../reference/jsave.html">jsave()</a></code> given one shows the two lines.</li>
 </ul><p>When something you typed before now stops, its message says what to type instead.</p>
 <p>Problems or suggestions: tell me, or open an issue at <a href="https://github.com/jma61/jstats/issues" class="external-link uri">https://github.com/jma61/jstats/issues</a>.</p>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.267" id="jstats-09267">jstats 0.9.267<a class="anchor" aria-label="anchor" href="#jstats-09267"></a></h2>
-<p>Thank you for trying jstats. Here is what is new since 0.9.265.</p>
+<p>Here is what is new since 0.9.265.</p>
 <ul><li>
 <strong>“Not at all” scales read as Likert.</strong> A single question whose labels run from Not at all to Extremely, Very or A great deal, among others, now reads as a Likert item: <code><a href="../reference/jscreen.html">jscreen()</a></code> shows it as Likert, and <code><a href="../reference/jdesc.html">jdesc()</a></code> no longer warns that it seems categorical.</li>
 <li>
@@ -65,11 +79,10 @@
 <strong>Words beyond A to Z in <code><a href="../reference/jencode.html">jencode()</a></code>.</strong> When the words hold letters such as Á or 北, its note says it coded them in character-code order, which may not be alphabetical: Ávila comes after Zebrinha. A map sets any order you like: <code>d$CityN &lt;- jencode(d, City, map = "Ávila=1; Belém=2; Zebrinha=3")</code>
 </li>
 </ul><p>When something you typed before now stops, its message says what to type instead.</p>
-<p>Problems or suggestions: tell me, or open an issue at <a href="https://github.com/jma61/jstats/issues" class="external-link uri">https://github.com/jma61/jstats/issues</a>.</p>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.265" id="jstats-09265">jstats 0.9.265<a class="anchor" aria-label="anchor" href="#jstats-09265"></a></h2>
-<p>Thank you for trying jstats. Here is what is new since 0.9.254.</p>
+<p>Here is what is new since 0.9.254.</p>
 <ul><li>
 <strong>Chinese, Japanese and Korean text.</strong> Tables, notes and labels line up, each character taking two columns. Text loaded from a CSV file sorts, so <code><a href="../reference/jencode.html">jencode()</a></code> codes it, where it stopped with an encoding error. A full-width semicolon or equals sign typed in a map stops, with the call retyped in plain characters, ready to run.</li>
 <li>
@@ -84,11 +97,10 @@
 <li>
 <strong>Plots of labelled variables.</strong> A labelled variable with a few categories is drawn as categories, unless <code>numeric =</code> says otherwise. So <code>jplot(WellbeingScore ~ Region, community)</code> draws a boxplot for each region, where it plotted the region codes as numbers.</li>
 </ul><p>When something you typed before now stops, its message says what to type instead.</p>
-<p>Problems or suggestions: tell me, or open an issue at <a href="https://github.com/jma61/jstats/issues" class="external-link uri">https://github.com/jma61/jstats/issues</a>.</p>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.254" id="jstats-09254">jstats 0.9.254<a class="anchor" aria-label="anchor" href="#jstats-09254"></a></h2>
-<p>Thank you for trying jstats. Here is what is new since the last release (0.9.252).</p>
+<p>Here is what is new since the last release (0.9.252).</p>
 <ul><li>
 <strong>CSV files load as written.</strong> A postcode such as 0800 keeps its zero, a long ID keeps every digit, a column of F stays F, and the word NA in a text column (Namibia’s country code) stays a word. A note says when a column of numbers was kept as text, so a file you loaded before may now give such a column as text, with the reason beside it.</li>
 <li>
@@ -100,7 +112,6 @@
 <li>
 <strong>What is new, when you update.</strong> From your next update on, <code><a href="../reference/jupdate.html">jupdate()</a></code> prints these notes for each release it installs.</li>
 </ul><p>When something you typed before now stops, its message says what to type instead.</p>
-<p>Problems or suggestions: tell me, or open an issue at <a href="https://github.com/jma61/jstats/issues" class="external-link uri">https://github.com/jma61/jstats/issues</a>.</p>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.252" id="jstats-09252">jstats 0.9.252<a class="anchor" aria-label="anchor" href="#jstats-09252"></a></h2>
@@ -120,8 +131,7 @@
 <strong>Loading files.</strong> <code><a href="../reference/jload.html">jload()</a></code> reads the package’s example files by name, skips title rows in Excel and CSV files (<code>skip =</code>), reads files with no names row (<code>header = FALSE</code>), and fixes variable names R cannot read, keeping the original as the label.</li>
 <li>
 <strong>Clearer messages throughout.</strong> Every line of code a message suggests now runs as printed.</li>
-</ul><p>Problems or suggestions: tell me, or open an issue at <a href="https://github.com/jma61/jstats/issues" class="external-link uri">https://github.com/jma61/jstats/issues</a>.</p>
-</div>
+</ul></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

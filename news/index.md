@@ -1,8 +1,9 @@
 # Changelog
 
-## jstats 0.9.275
+## jstats 0.9.287
 
-Thank you for trying jstats. Here is what is new since 0.9.267.
+Thank you for trying jstats. Here is what is new since 0.9.267, the
+first release with tables and charts for publication.
 
 - **Tables for publication, in Word.** Keep a result with `<-` and give
   it to
@@ -17,8 +18,9 @@ Thank you for trying jstats. Here is what is new since 0.9.267.
   [`jcrosstab()`](https://jma61.github.io/jstats/reference/jcrosstab.md),
   [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md),
   [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md),
-  [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md)
-  and [`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md)
+  [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md),
+  [`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md) and
+  [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md)
   results, with your variable and value labels. Results of one kind
   share a table: models of one outcome side by side, or t tests of one
   grouping variable one under another.
@@ -26,21 +28,79 @@ Thank you for trying jstats. Here is what is new since 0.9.267.
   what it made and where it wrote it, and
   [`print()`](https://rdrr.io/r/base/print.html) shows a table in the
   Console.
-- **Several tables in one file.** Make each table, then give them
-  together: `jtable(list(t1, t2), file = "Tables.docx")` Each table gets
-  the page it needs, portrait or landscape.
-- **Your own table style.** A table’s look comes from a style, and apa
-  is built in. `jstyle("apa", save.as = "myjournal")` copies it to a
-  text file you can edit, and `jtable(m1, style = "myjournal")` uses it.
-  A copy can hold only what you change, such as
+- **Tables and charts in one file.** Make each table, keep a chart with
+  `<-`, then give them together: `p1 <- jplot(community, Region)`
+  `jtable(list(t1, t2, p1), file = "Report.docx")` Tables and figures
+  are numbered apart, and each gets the page it needs, portrait or
+  landscape.
+- **Two styles built in, and your own.** A table’s look comes from a
+  style: apa, the default, or report, in Arial with the caption on one
+  line and a grey header row: `jtable(m1, style = "report")`
+  `jstyle("apa", save.as = "myjournal")` copies apa to a text file you
+  can edit, `jstyle("myjournal", open = TRUE)` opens it in the editor,
+  and `jtable(m1, style = "myjournal")` uses it. A copy can hold only
+  what you change, such as
   `jstyle("apa", save.as = "myapa", font = "Arial")` and
   [`?jstyle_settings`](https://jma61.github.io/jstats/reference/jstyle_settings.md)
   lists every setting.
+- **Change a style with an AI assistant.** A style file’s first lines
+  tell an AI assistant, such as Copilot, how to change it to match a
+  published table or a request in words, and what to send back. When the
+  file comes back saved as .txt, jstats says so and gives the line that
+  renames it.
+- **Step by step in the guides.** The How-To pages on publication tables
+  and on your own table styles walk through all of this, starting at
+  <https://jma61.github.io/jstats-guides/tables-saving-results.html>
 - **Three new rows in
   [`joptions()`](https://jma61.github.io/jstats/reference/joptions.md).**
   Output folder, where Word files go; Publication style, the style
   [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md) uses
   unless told otherwise; and Style folder, where your styles are kept.
+- **Charts in a publication look.**
+  [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) draws
+  in greys, in the look of the publication style, and titles its axes
+  with your variable labels, where it drew in blue with the variable
+  names.
+- **New charts.** A pie or donut chart of one variable,
+  `jplot(community, Region, type = "pie")`, and a 100% stacked bar chart
+  of items that share their answers,
+  `jplot(community, Environment1:Environment5, type = "stacked")`, or of
+  a variable within groups, with `by =`.
+- **Check-all-that-apply questions.**
+  [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md)
+  counts a multiple-response question, such as “Which services have you
+  used?”, stored as one yes/no item per answer, and gives the percentage
+  of cases choosing each: `jmulti(d, Counselling:Financial)`
+  [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md) makes
+  its table, and
+  [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) its
+  ranked bar chart.
+- **Keeping a result.** Type a kept result’s name, or `print(m1)`, and
+  it shows its output again, even one made with `print = FALSE`, where
+  it printed R’s list of its parts.
+  [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) saves
+  data frames; a result or a table is kept with base R’s
+  [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) and read back with
+  [`readRDS()`](https://rdrr.io/r/base/readRDS.html), and
+  [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) given
+  one shows the two lines.
+- **A range of variables in more functions.** A range such as
+  `Environment1:Environment5`, every variable from the first to the last
+  in the data frame’s order, now works in
+  [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md),
+  [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md),
+  [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md),
+  [`jscreen()`](https://jma61.github.io/jstats/reference/jscreen.md),
+  [`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md),
+  [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md),
+  [`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md),
+  [`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md),
+  [`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md),
+  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md) and
+  [`jlikert()`](https://jma61.github.io/jstats/reference/jlikert.md), as
+  it did in
+  [`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md):
+  `jcorr(community, Environment1:Environment5)`
 - **Two codes with one label stay apart.** When two codes share a value
   label, such as 2 = Other and 3 = Other,
   [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md) counts
@@ -63,13 +123,6 @@ Thank you for trying jstats. Here is what is new since 0.9.267.
   [`jcrosstab()`](https://jma61.github.io/jstats/reference/jcrosstab.md),
   [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md) and
   [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md).
-- **Keeping a result.**
-  [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) saves
-  data frames. A result or a table is kept with base R’s
-  [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) and read back with
-  [`readRDS()`](https://rdrr.io/r/base/readRDS.html), and
-  [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) given
-  one shows the two lines.
 
 When something you typed before now stops, its message says what to type
 instead.
@@ -79,7 +132,7 @@ Problems or suggestions: tell me, or open an issue at
 
 ## jstats 0.9.267
 
-Thank you for trying jstats. Here is what is new since 0.9.265.
+Here is what is new since 0.9.265.
 
 - **“Not at all” scales read as Likert.** A single question whose labels
   run from Not at all to Extremely, Very or A great deal, among others,
@@ -116,12 +169,9 @@ Thank you for trying jstats. Here is what is new since 0.9.265.
 When something you typed before now stops, its message says what to type
 instead.
 
-Problems or suggestions: tell me, or open an issue at
-<https://github.com/jma61/jstats/issues>.
-
 ## jstats 0.9.265
 
-Thank you for trying jstats. Here is what is new since 0.9.254.
+Here is what is new since 0.9.254.
 
 - **Chinese, Japanese and Korean text.** Tables, notes and labels line
   up, each character taking two columns. Text loaded from a CSV file
@@ -159,13 +209,9 @@ Thank you for trying jstats. Here is what is new since 0.9.254.
 When something you typed before now stops, its message says what to type
 instead.
 
-Problems or suggestions: tell me, or open an issue at
-<https://github.com/jma61/jstats/issues>.
-
 ## jstats 0.9.254
 
-Thank you for trying jstats. Here is what is new since the last release
-(0.9.252).
+Here is what is new since the last release (0.9.252).
 
 - **CSV files load as written.** A postcode such as 0800 keeps its zero,
   a long ID keeps every digit, a column of F stays F, and the word NA in
@@ -185,9 +231,6 @@ Thank you for trying jstats. Here is what is new since the last release
 
 When something you typed before now stops, its message says what to type
 instead.
-
-Problems or suggestions: tell me, or open an issue at
-<https://github.com/jma61/jstats/issues>.
 
 ## jstats 0.9.252
 
@@ -218,6 +261,3 @@ thank you. Here is what is new since the last release (0.9.223).
   label.
 - **Clearer messages throughout.** Every line of code a message suggests
   now runs as printed.
-
-Problems or suggestions: tell me, or open an issue at
-<https://github.com/jma61/jstats/issues>.
