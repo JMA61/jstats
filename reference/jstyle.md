@@ -3,9 +3,11 @@
 A style holds a table's look and a journal's or a report's conventions:
 the font, the caption's form, the rules, the decimals, and for each
 table type its columns and labels. `jstyle()` lists the styles jstats
-can find; `jstyle("myjournal")` checks a style file and prints every
-setting the style gives, marking each one it takes from another style;
-and `jstyle("apa", save.as = "myjournal")` saves a copy as a style file,
+can find and the folders it looks in, and, when no style folder is set,
+gives the line that sets one in your Documents folder;
+`jstyle("myjournal")` checks a style file and prints every setting the
+style gives, marking each one it takes from another style; and
+`jstyle("apa", save.as = "myjournal")` saves a copy as a style file,
 myjournal.jstyle, every setting written out with a note on what it does
 and what it takes, to edit in any text editor (the step SPSS calls "Save
 TableLook As"). `jstyle("myjournal", open = TRUE)` opens the file in the
@@ -153,6 +155,11 @@ jstyle()
 #> jstats looks for a style file in these folders, in this order:
 #>   /home/runner/work/jstats/jstats/docs/reference (the working directory)
 #>   /home/runner/.local/share/R/jstats (your jstats folder, not created yet)
+#> 
+#> No style folder is set, so jstyle() saves copies in your jstats folder, which
+#> is hidden.
+#> To keep them in your Documents folder instead, run:
+#>   joptions(style.dir = "/home/runner/Documents/jstats styles")
 #> 
 
 # Every setting of the built-in styles
@@ -576,10 +583,10 @@ jstyle("report")
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/Rtmpyc96lJ/myjournal.jstyle
+#> Style written to /tmp/RtmpSqlcrB/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/Rtmpyc96lJ/myapa.jstyle
+#> Style written to /tmp/RtmpSqlcrB/myapa.jstyle
 #> 
 ```

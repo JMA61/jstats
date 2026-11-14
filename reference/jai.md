@@ -92,7 +92,7 @@ jai()
 #> jstats conventions
 #> 
 #> Orientation for users and AI assistants.
-#> Orientation text v3.12 | jstats 0.9.286 | generated 2026-11-14
+#> Orientation text v3.12 | jstats 0.9.287 | generated 2026-11-14
 #> 
 #> jstats is an integrated set of j-prefixed analysis functions (jdesc,
 #> jfreq, jlm, ...) with shared syntax and output styled after commercial
