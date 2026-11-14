@@ -43,7 +43,11 @@ jdummy(
 
 - ...:
 
-  One or more unquoted variable names to register. The variable may be
+  One or more unquoted variable names to register. A
+  [`c()`](https://rdrr.io/r/base/c.html) of names, bare or quoted, is
+  read as the names. A range of variables in colon notation
+  (`Environment1:Environment5`) names every variable from the first to
+  the last, in the data frame's order. The variable may be
   haven-labelled, numeric, logical, character, or a factor: for a factor
   the levels are the categories, in level order, and a level with no
   cases is left out; for a text variable the distinct values are the

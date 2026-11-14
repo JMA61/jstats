@@ -36,7 +36,9 @@ jcorr(
 
   Unquoted variable names within `data`. A
   [`c()`](https://rdrr.io/r/base/c.html) of names, bare or quoted, is
-  read as the names.
+  read as the names. A range of variables in colon notation
+  (`Environment1:Environment5`) names every variable from the first to
+  the last, in the data frame's order.
 
 - method:
 
@@ -216,6 +218,35 @@ jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 #>                 N=97            N=103
 #> 
 #> Note: Spearman p-values are approximate due to tied values in the data.
+#> 
+jcorr(community, Environment1:Environment5)   # a range of variables
+#> Pearson Bivariate Correlations
+#> 
+#> 103 Cases in the 5 Variable Pool; 84 Complete on All
+#> 
+#> Missing data   From 103    %
+#>     Environment1
+#>       Missing     12     11.7
+#>     Environment3
+#>       Missing     12     11.7
+#> -----------------------------
+#> 
+#> Bivariate Correlations (Pearson)
+#>               Environment1    Environment2    Environment3    Environment4    Environment5
+#> ------------  --------------  --------------  --------------  --------------  ------------
+#> Environment1   1
+#> 
+#> Environment2  -.557 (p<.001)   1
+#>               N=91
+#> 
+#> Environment3   .569 (p<.001)  -.567 (p<.001)   1
+#>               N=84            N=91
+#> 
+#> Environment4   .532 (p<.001)  -.586 (p<.001)   .623 (p<.001)   1
+#>               N=91            N=103           N=91
+#> 
+#> Environment5   .408 (p<.001)  -.258 (p=.008)   .407 (p<.001)   .268 (p=.006)   1
+#>               N=91            N=103           N=91            N=103
 #> 
 
 # The data frame may also be given by name

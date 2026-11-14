@@ -19,7 +19,7 @@ count, or dummy registration on it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.285</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.286</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -76,6 +76,10 @@ frame has since been removed.</p></dd>
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>One or more unquoted variable names to register, or a single
 <code>NULL</code> to clear this frame's Likert registrations (see Details).
+A <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code> of names, bare or quoted, is read as the names.
+A range of variables in colon notation
+(<code>Environment1:Environment5</code>) names every variable from the
+first to the last, in the data frame's order.
 The registration applies to numeric variables and to haven-labelled
 variables that hold numbers. Any other type is refused, and none of
 the call's variables is then registered: convert a factor or a text
@@ -133,6 +137,15 @@ than clearing them all).</p></li>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registrations:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
+<span class="r-in"><span>  <span class="fu">jlikert</span><span class="op">(</span><span class="va">community</span>, <span class="va">Environment1</span><span class="op">:</span><span class="va">Environment5</span><span class="op">)</span>   <span class="co"># a range: all five items</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Likert registration set for 'Environment1', 'Environment2', 'Environment3',</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 'Environment4', 'Environment5' in community.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: registrations are stored for this session only.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To keep them across sessions, save the data frame in R format (.rds):</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registrations:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
 <span class="r-in"><span>  <span class="fu">jlikert</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="va">Environment1</span><span class="op">)</span>         <span class="co"># the data frame by name</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Likert registration set for 'Environment1' in community.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Note: this registration is stored for this session only.</span>
@@ -174,9 +187,9 @@ than clearing them all).</p></li>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region          Categorical   4-category                        4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1    Categorical   Likert      User-declared         5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment2    Categorical   Likert      User-declared         5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3    Categorical   Likert                            5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment4    Categorical   Likert                            5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment5    Categorical   Likert                            5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3    Categorical   Likert      User-declared         5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment4    Categorical   Likert      User-declared         5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment5    Categorical   Likert      User-declared         5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> * coded other than 0/1; mean is not a proportion</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 3 SD from mean)</span>
@@ -195,7 +208,8 @@ than clearing them all).</p></li>
 <span class="r-in"><span>  <span class="fu">jlikert</span><span class="op">(</span><span class="va">community</span>, <span class="va">Environment1</span>, remove <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="co"># undo one</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Likert registration removed for 'Environment1' in community.</span>
 <span class="r-in"><span>  <span class="fu">jlikert</span><span class="op">(</span><span class="va">community</span>, <span class="cn">NULL</span><span class="op">)</span>                        <span class="co"># clear the registrations</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Likert registrations cleared for community: Environment2.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Likert registrations cleared for community: Environment2, Environment3,</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Environment4, Environment5.</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

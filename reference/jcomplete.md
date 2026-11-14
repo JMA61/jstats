@@ -60,7 +60,11 @@ jcomplete(
 
 - ...:
 
-  Unquoted variable names to include in the listwise check.
+  Unquoted variable names to include in the listwise check. A
+  [`c()`](https://rdrr.io/r/base/c.html) of names, bare or quoted, is
+  read as the names. A range of variables in colon notation
+  (`Environment1:Environment5`) names every variable from the first to
+  the last, in the data frame's order.
 
 - preview:
 

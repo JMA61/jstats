@@ -15,7 +15,7 @@ Warns when variables may be categorical rather than continuous."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.285</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.286</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -78,7 +78,10 @@ Warns when variables may be categorical rather than continuous.</p>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Unquoted variable names within <code>data</code>. A <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code> of names, bare
-or quoted, is read as the names.</p></dd>
+or quoted, is read as the names.
+A range of variables in colon notation
+(<code>Environment1:Environment5</code>) names every variable from the
+first to the last, in the data frame's order.</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
@@ -249,6 +252,35 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                 N=97            N=103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Note: Spearman p-values are approximate due to tied values in the data.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">jcorr</span><span class="op">(</span><span class="va">community</span>, <span class="va">Environment1</span><span class="op">:</span><span class="va">Environment5</span><span class="op">)</span>   <span class="co"># a range of variables</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Pearson Bivariate Correlations</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 5 Variable Pool; 84 Complete on All</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing data   From 103    %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Environment1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing     12     11.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Environment3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing     12     11.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Bivariate Correlations (Pearson)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               Environment1    Environment2    Environment3    Environment4    Environment5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------------  --------------  --------------  --------------  --------------  ------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1   1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment2  -.557 (p&lt;.001)   1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               N=91</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3   .569 (p&lt;.001)  -.567 (p&lt;.001)   1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               N=84            N=91</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment4   .532 (p&lt;.001)  -.586 (p&lt;.001)   .623 (p&lt;.001)   1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               N=91            N=103           N=91</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment5   .408 (p&lt;.001)  -.258 (p=.008)   .407 (p&lt;.001)   .268 (p=.006)   1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               N=91            N=103           N=91            N=103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The data frame may also be given by name</span></span></span>

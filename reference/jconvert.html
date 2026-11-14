@@ -23,7 +23,7 @@ missing values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.285</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.286</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -86,7 +86,11 @@ missing values.</p>
 frame, as in every data-first function:
 <code>jconvert(d, Income, Education, to = "stata")</code>. When supplied,
 only the listed variables are scanned. Mutually exclusive with
-<code>vars</code>.</p></dd>
+<code>vars</code>.
+A <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code> of names, bare or quoted, is read as the names.
+A range of variables in colon notation
+(<code>Environment1:Environment5</code>) names every variable from the
+first to the last, in the data frame's order.</p></dd>
 
 
 <dt id="arg-to">to<a class="anchor" aria-label="anchor" href="#arg-to"></a></dt>

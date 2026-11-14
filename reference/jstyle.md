@@ -576,10 +576,10 @@ jstyle("report")
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/Rtmp4rVtiv/myjournal.jstyle
+#> Style written to /tmp/Rtmpyc96lJ/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/Rtmp4rVtiv/myapa.jstyle
+#> Style written to /tmp/Rtmpyc96lJ/myapa.jstyle
 #> 
 ```

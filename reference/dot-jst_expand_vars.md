@@ -8,10 +8,12 @@ becomes a variable of its own, in place, in the
 [`c()`](https://rdrr.io/r/base/c.html)'s environment; a quoted item
 stays the string it was, which every list already reads as a name. Only
 a [`c()`](https://rdrr.io/r/base/c.html) whose items are all names or
-strings is opened: a range (`Age:Score`), a helper, or an item computed
-inside the [`c()`](https://rdrr.io/r/base/c.html) keeps the not-found
-stop, as decided. A named item (a misspelled argument, a condition) is
-left to
+strings is opened: a range inside it (`c(Age:Score)`), a helper, or an
+item computed inside the [`c()`](https://rdrr.io/r/base/c.html) keeps
+the not-found stop. A range standing on its own is written out by
+[`.jst_expand_ranges()`](https://jma61.github.io/jstats/reference/dot-jst_expand_ranges.md)
+(Sessions 416 and 426). A named item (a misspelled argument, a
+condition) is left to
 [`.jst_check_named_variables()`](https://jma61.github.io/jstats/reference/dot-jst_check_named_variables.md).
 
 ## Usage

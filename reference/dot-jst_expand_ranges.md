@@ -1,10 +1,12 @@
 # Internal helper: a list of variables with its ranges written out
 
 For a function that reads its variables one by one from the quosures
-(jdesc(), jfreq()): each range `A:B` is replaced by the variables from A
-to B in the data frame's order, each a quosure of its own, so the call
-reads as if every one had been named (Session 416; the (S413) item). The
-range is checked as
+(jdesc() and jfreq() since Session 416; jcorr(), jscreen(), jcomplete(),
+jdeclare_missing(), jconvert(), jdummy(), jnumeric(), jcount() and
+jlikert() since Session 426, ruling R90): each range `A:B` is replaced
+by the variables from A to B in the data frame's order, each a quosure
+of its own, so the call reads as if every one had been named (Session
+416; the (S413) item). The range is checked as
 [`.jst_resolve_varrange()`](https://jma61.github.io/jstats/reference/dot-jst_resolve_varrange.md)
 checks it for jalpha(), jsum(), javg(), jmulti() and jplot(): an
 endpoint that is not a variable takes the not-found stop, and endpoints

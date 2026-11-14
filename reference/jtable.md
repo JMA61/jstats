@@ -304,7 +304,7 @@ t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
              overwrite = TRUE)
 #> Table 1. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> Table written to /tmp/Rtmp4rVtiv/Table2.docx
+#> Table written to /tmp/Rtmpyc96lJ/Table2.docx
 #> 
 
 # Several tables in one file: build each, then give them together
@@ -314,7 +314,7 @@ doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
 #>   2 variables, on a portrait page.
 #> Table 2. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> 2 tables written to /tmp/Rtmp4rVtiv/Tables.docx
+#> 2 tables written to /tmp/Rtmpyc96lJ/Tables.docx
 #> 
 print(doc)
 #> Table 1
@@ -352,7 +352,7 @@ doc2 <- jtable(list(t1, p1), file = file.path(tempdir(), "Report.docx"),
 #>   2 variables, on a portrait page.
 #> Figure 1. Region of residence (N = 103)
 #>   a bar chart, 6 by 4 inches, on a portrait page.
-#> 1 table and 1 figure written to /tmp/Rtmp4rVtiv/Report.docx
+#> 1 table and 1 figure written to /tmp/Rtmpyc96lJ/Report.docx
 #> 
 
 # Keep a result for a later session with base R

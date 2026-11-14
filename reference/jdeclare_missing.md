@@ -57,8 +57,12 @@ jdeclare_missing(
 - ...:
 
   The variable(s) to declare missing values on, as unquoted names (e.g.
-  `Income`, or `MathScore, EnglishScore`). Use either `...` or `vars`,
-  not both. All arguments after the variables must be named.
+  `Income`, or `MathScore, EnglishScore`). A
+  [`c()`](https://rdrr.io/r/base/c.html) of names, bare or quoted, is
+  read as the names. A range of variables in colon notation
+  (`Environment1:Environment5`) names every variable from the first to
+  the last, in the data frame's order. Use either `...` or `vars`, not
+  both. All arguments after the variables must be named.
 
 - codes:
 
@@ -447,6 +451,22 @@ df4 <- jdeclare_missing(clinic, MoodRating, range = c(-99, -51))
 #> 
 #> To change clinic directly, rerun with modify = TRUE:
 #>   jdeclare_missing(clinic, MoodRating, ..., modify = TRUE)
+
+# Several variables at once, as a range of variables: every variable
+# from Environment1 to Environment5, in the data frame's order.
+# SPSS parallel: MISSING VALUES Environment1 TO Environment5 (-99, -98).
+df5 <- jdeclare_missing(community, Environment1:Environment5,
+                    codes = c("Refused" = -99, "Don't know" = -98))
+#> Declared SPSS-style missing values on 5 variables:
+#>   Environment1, Environment2, Environment3, Environment4, Environment5
+#>   -99 ["Refused"]
+#>   -98 ["Don't know"]
+#> 
+#> This call changes community only if you assign the result:
+#>   community <- jdeclare_missing(community, ...)
+#> 
+#> To change community directly, rerun with modify = TRUE:
+#>   jdeclare_missing(community, ..., modify = TRUE)
 
 # Range plus labeled values inside the band, on several variables at
 # once. The same declaration lands on every named column,

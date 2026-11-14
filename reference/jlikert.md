@@ -33,11 +33,14 @@ jlikert(data, ..., remove = FALSE, clear.all = FALSE)
 - ...:
 
   One or more unquoted variable names to register, or a single `NULL` to
-  clear this frame's Likert registrations (see Details). The
-  registration applies to numeric variables and to haven-labelled
-  variables that hold numbers. Any other type is refused, and none of
-  the call's variables is then registered: convert a factor or a text
-  variable to numbers first with
+  clear this frame's Likert registrations (see Details). A
+  [`c()`](https://rdrr.io/r/base/c.html) of names, bare or quoted, is
+  read as the names. A range of variables in colon notation
+  (`Environment1:Environment5`) names every variable from the first to
+  the last, in the data frame's order. The registration applies to
+  numeric variables and to haven-labelled variables that hold numbers.
+  Any other type is refused, and none of the call's variables is then
+  registered: convert a factor or a text variable to numbers first with
   [`jencode`](https://jma61.github.io/jstats/reference/jencode.md).
 
 - remove:
@@ -102,6 +105,15 @@ Clearing mirrors the other registration verbs:
 #> 
 #> Next session, load that file to restore the registrations:
 #>   jload("community.rds")
+  jlikert(community, Environment1:Environment5)   # a range: all five items
+#> Likert registration set for 'Environment1', 'Environment2', 'Environment3',
+#> 'Environment4', 'Environment5' in community.
+#> Note: registrations are stored for this session only.
+#> To keep them across sessions, save the data frame in R format (.rds):
+#>   jsave(community, "community.rds")
+#> 
+#> Next session, load that file to restore the registrations:
+#>   jload("community.rds")
   jlikert(data = community, Environment1)         # the data frame by name
 #> Likert registration set for 'Environment1' in community.
 #> Note: this registration is stored for this session only.
@@ -143,9 +155,9 @@ Clearing mirrors the other registration verbs:
 #> Region          Categorical   4-category                        4
 #> Environment1    Categorical   Likert      User-declared         5
 #> Environment2    Categorical   Likert      User-declared         5
-#> Environment3    Categorical   Likert                            5
-#> Environment4    Categorical   Likert                            5
-#> Environment5    Categorical   Likert                            5
+#> Environment3    Categorical   Likert      User-declared         5
+#> Environment4    Categorical   Likert      User-declared         5
+#> Environment5    Categorical   Likert      User-declared         5
 #> * coded other than 0/1; mean is not a proportion
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)
@@ -164,5 +176,6 @@ Clearing mirrors the other registration verbs:
   jlikert(community, Environment1, remove = TRUE) # undo one
 #> Likert registration removed for 'Environment1' in community.
   jlikert(community, NULL)                        # clear the registrations
-#> Likert registrations cleared for community: Environment2.
+#> Likert registrations cleared for community: Environment2, Environment3,
+#> Environment4, Environment5.
 ```

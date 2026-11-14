@@ -6,8 +6,9 @@ read &quot;c(Age, Score) was not found&quot;. Each item becomes a variable of it
 own, in place, in the c()'s environment; a quoted item stays the
 string it was, which every list already reads as a name. Only a
 c() whose items are all names or strings is opened: a range
-(Age:Score), a helper, or an item computed inside the c()
-keeps the not-found stop, as decided. A named item (a misspelled
+inside it (c(Age:Score)), a helper, or an item computed inside
+the c() keeps the not-found stop. A range standing on its own is
+written out by .jst_expand_ranges() (Sessions 416 and 426). A named item (a misspelled
 argument, a condition) is left to .jst_check_named_variables()."><meta property="og:description" content="Ruling R18 (Session 355; built Session 356): a variable list takes a
 c() of names, bare or quoted – jdesc(d, c(Age, Score)),
 jdesc(d, c(&quot;Age&quot;, &quot;Score&quot;)) – as the tidyverse does, where it
@@ -15,8 +16,9 @@ read &quot;c(Age, Score) was not found&quot;. Each item becomes a variable of it
 own, in place, in the c()'s environment; a quoted item stays the
 string it was, which every list already reads as a name. Only a
 c() whose items are all names or strings is opened: a range
-(Age:Score), a helper, or an item computed inside the c()
-keeps the not-found stop, as decided. A named item (a misspelled
+inside it (c(Age:Score)), a helper, or an item computed inside
+the c() keeps the not-found stop. A range standing on its own is
+written out by .jst_expand_ranges() (Sessions 416 and 426). A named item (a misspelled
 argument, a condition) is left to .jst_check_named_variables()."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -25,7 +27,7 @@ argument, a condition) is left to .jst_check_named_variables()."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.285</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.286</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,8 +61,9 @@ read "c(Age, Score) was not found". Each item becomes a variable of its
 own, in place, in the <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>'s environment; a quoted item stays the
 string it was, which every list already reads as a name. Only a
 <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code> whose items are all names or strings is opened: a range
-(<code>Age:Score</code>), a helper, or an item computed inside the <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>
-keeps the not-found stop, as decided. A named item (a misspelled
+inside it (<code>c(Age:Score)</code>), a helper, or an item computed inside
+the <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code> keeps the not-found stop. A range standing on its own is
+written out by <code><a href="dot-jst_expand_ranges.html">.jst_expand_ranges()</a></code> (Sessions 416 and 426). A named item (a misspelled
 argument, a condition) is left to <code><a href="dot-jst_check_named_variables.html">.jst_check_named_variables()</a></code>.</p>
     </div>
 

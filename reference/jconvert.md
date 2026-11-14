@@ -34,7 +34,11 @@ jconvert(
   Optional unquoted variable names, straight after the data frame, as in
   every data-first function:
   `jconvert(d, Income, Education, to = "stata")`. When supplied, only
-  the listed variables are scanned. Mutually exclusive with `vars`.
+  the listed variables are scanned. Mutually exclusive with `vars`. A
+  [`c()`](https://rdrr.io/r/base/c.html) of names, bare or quoted, is
+  read as the names. A range of variables in colon notation
+  (`Environment1:Environment5`) names every variable from the first to
+  the last, in the data frame's order.
 
 - to:
 

@@ -25,7 +25,7 @@ and date/time variables gracefully.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.285</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.286</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -95,7 +95,10 @@ or a vector.</p></dd>
 <dd><p>Optional unquoted variable names to screen. If omitted,
 all variables in the data frame are screened. None when <code>data</code> is
 a single variable. A <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code> of names, bare
-or quoted, is read as the names.</p></dd>
+or quoted, is read as the names.
+A range of variables in colon notation
+(<code>Environment1:Environment5</code>) names every variable from the
+first to the last, in the data frame's order.</p></dd>
 
 
 <dt id="arg-outlier-sd">outlier.sd<a class="anchor" aria-label="anchor" href="#arg-outlier-sd"></a></dt>
