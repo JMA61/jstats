@@ -729,14 +729,13 @@
                           about = c("the title when the call gives none; {set} is the text the items'",
                                     "labels share, else Multiple-Response Set")),
     columns        = list(kind = "columns", cols = c("n", "percent"),
-                          about = c("the columns, in order: n (those who chose the option), percent (of",
-                                    "everyone who answered)")),
+                          about = "the columns, in order: n (the cases in the category), percent (of N)"),
     stub.label     = list(kind = "text", empty = TRUE, about = "the first column's head"),
     n.label        = list(kind = "text", empty = TRUE, about = "the head of the n column"),
     percent.label  = list(kind = "text", empty = TRUE,
                           about = "the head of the percent column"),
     none.label     = list(kind = "text",
-                          about = "the label of the row of those who answered and chose none"),
+                          about = "the label of the row of cases in none of the categories"),
     choice.note    = list(kind = "choice", choices = c("yes", "no"),
                           about = c("yes: the note says a case can be counted in more than one category,",
                                     "so the percentages sum to more than 100 | no"))
@@ -4144,7 +4143,7 @@
   thou <- key("thousands"); minus <- key("minus")
   pdec <- key("percent.decimals"); lz <- .jst_tbl_lz(key("leading.zero"))
   pct  <- function(x) .jst_tbl_num(x, pdec, thou, lz, minus)
-  .jst_table_no_headings(headings, type, "its options in the order jmulti() gave them")
+  .jst_table_no_headings(headings, type, "its categories in the order jmulti() gave them")
   # jtable() gives each jmulti() result a table of its own (its share key
   # is its own), so a list of two never reaches here.
   if (length(results) != 1L) {
@@ -4168,7 +4167,7 @@
                             markers, key("marks"))
   rows <- lapply(seq_len(nrow(tf)), function(j) {
     it  <- as.character(tf$item[j])
-    lab <- if (identical(tf$kind[j], "none")) key("none.label") else tf$option[j]
+    lab <- if (identical(tf$kind[j], "none")) key("none.label") else tf$category[j]
     raw <- list(n = tf$n[j], percent = tf$percent[j])
     cells <- list(n = .jst_tbl_count(raw$n, thou), percent = pct(raw$percent))
     list(kind = "data", label = lab, indent = 0L,
@@ -6708,8 +6707,8 @@
 #' \code{\link{jalpha}} results -- each item's mean, standard deviation,
 #' corrected item-total correlation and alpha if the item is deleted; and a
 #' multiple-response table from a \code{\link{jmulti}} result -- how many
-#' chose each option of a set of yes/no items, and what percentage of
-#' everyone who answered. A chart -- one \code{\link{jplot}()} drew, or one
+#' cases are in each category of a set of yes/no items, and their
+#' percentage of every case with a value on at least one item. A chart -- one \code{\link{jplot}()} drew, or one
 #' drawn in ggplot2 -- goes into the Word file as a figure (see Charts,
 #' below). The
 #' variables of a descriptives or frequency table go under role headings
@@ -7478,7 +7477,7 @@ print.jst_figure <- function(x, ...) {
       }
     } else if (identical(t, "multiresponse")) {
       paste0("each jmulti() result is a table of its own.\n",
-             "To put more options in one table, name them in one jmulti() ",
+             "To put more items in one table, name them in one jmulti() ",
              "call.")
     } else {
       paste0("each jcorr() result is a table of its own.\n",
@@ -7561,7 +7560,7 @@ print.jst_figure <- function(x, ...) {
                       unname(attr(results[[1L]]$col_categories, "variable")["name"])),
     reliability = if (length(results) == 1L) paste0("1 scale of ", cnt(length(vars), "item"))
       else paste0(length(results), " scales, ", cnt(length(vars), "item")),
-    multiresponse = paste0("1 set of ", cnt(length(vars), "option")))
+    multiresponse = paste0("1 set of ", cnt(length(vars), "item")))
 }
 
 #' Internal helper: the overwrite question, the file, and the report

@@ -8,11 +8,10 @@
 }
 \arguments{
 \item{reg}{A registration object (\code{var_type}, \code{codes},
-\code{labels}, optionally \code{values}).}
+\code{labels}, \code{values}).}
 
 \item{col}{The variable's column: the label source for the non-position
-types, and the reconstruction source for a factor or character
-registration saved without \code{values}.}
+types.}
 }
 \value{
 A named vector in val_labels() form (names are the labels,

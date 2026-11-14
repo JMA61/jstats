@@ -2896,43 +2896,46 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 
 # -- jmulti -------------------------------------------------------------------
 
-#' Multiple-response set: how many chose each option
+#' Multiple-response set: how many cases are in each category
 #'
-#' Tabulates a multiple-response question -- "Which of these services have
-#' you used? Tick all that apply." -- stored, as survey software stores it,
-#' as one yes/no item per option. For each option it counts the people who
-#' chose it and gives the percentage of everyone who answered the
-#' question, so the percentages can sum to more than 100. SPSS calls this a
-#' multiple-response set (MULT RESPONSE, or a CTABLES \code{$} set).
+#' Tabulates a multiple-response set: a question such as "Which of these
+#' services have you used? Tick all that apply.", stored as survey
+#' software stores it, one yes/no item per option -- or records in the
+#' same layout, such as one yes/no item per kind of charge laid at an
+#' arrest. Each item is one category of the set. For each category it
+#' counts the cases in it and gives their percentage of every case with a
+#' value on at least one item, so the percentages can sum to more than
+#' 100. SPSS calls this a multiple-response set (MULT RESPONSE, or a
+#' CTABLES \code{$} set).
 #'
-#' \strong{Who is counted.} N is everyone who answered: a person with an
-#' answer on at least one item. A blank among a person's answers counts as
-#' not chosen -- survey software often writes an unticked box as blank --
-#' and a person blank or declared missing on every item (not asked, or
-#' skipped the question) is left out of N. A "None of these" row counts
-#' those who answered and chose none of the options; it prints only when
-#' anyone did. When the survey had its own "None of these" box, name it
-#' with \code{none =}: it is counted with the others and its row comes
+#' \strong{Who is counted.} N is every case with a value on at least one
+#' item. A blank among a case's values counts as not in that category --
+#' survey software often writes an unticked box as blank -- and a case
+#' blank or declared missing on every item (not asked, or skipped the
+#' question) is left out of N. A "None of these" row counts the cases in
+#' none of the categories; it prints only when there are any. When the
+#' data have their own "None of these" item -- a survey's own box -- name
+#' it with \code{none =}: it is counted with the others and its row comes
 #' last. When no item holds a "No" at all -- a file that writes every
-#' unticked box as blank -- a person who chose nothing cannot be told from
-#' one who was not asked, and a note says so.
+#' unticked box as blank -- a case in none of the categories cannot be
+#' told from one that was not asked, and a note says so.
 #'
-#' \strong{The value counted as chosen} is 1, which LimeSurvey's SPSS
-#' files, Qualtrics and REDCap all write for a ticked box; \code{ticked =}
-#' names another (\code{ticked = "Y"} for LimeSurvey's CSV files). Only
-#' the set's yes/no items belong in the call: an item holding more than
-#' two values stops it, as does a text answer such as an "Other" box -- a
-#' text item among numbers, or, under \code{ticked = "Y"}, an item holding
+#' \strong{The value counted} is 1, which LimeSurvey's SPSS files,
+#' Qualtrics and REDCap all write for a ticked box; \code{ticked =} names
+#' another (\code{ticked = "Y"} for LimeSurvey's CSV files). Only the
+#' set's yes/no items belong in the call: an item holding more than two
+#' values stops it, as does a text answer such as an "Other" box -- a text
+#' item among numbers, or, under \code{ticked = "Y"}, an item holding
 #' text that no other item of the set holds.
 #'
-#' \strong{The order.} The options are ranked by how many chose them, most
-#' first; \code{rank = FALSE} keeps the order of the data frame. Either
-#' way the "None of these" rows come last.
+#' \strong{The order.} The categories are ranked by how many cases are in
+#' each, most first; \code{rank = FALSE} keeps the order of the data
+#' frame. Either way the "None of these" rows come last.
 #'
 #' \strong{The title} of the set is the text its items' labels share --
 #' "Services used" for items labelled "Services used: Counselling" and
-#' "Services used: Housing" -- and each option is named by the rest of its
-#' label. Items whose labels share no text are named by their labels, and
+#' "Services used: Housing" -- and each category is named by the rest of
+#' its label. Items whose labels share no text are named by their labels, and
 #' the set is titled "Multiple-Response Set". Keep the result with \code{<-} to
 #' make a publication table of it with \code{\link{jtable}}.
 #'
@@ -2941,24 +2944,26 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 #'   columns in the data frame's order (\code{Q1_SQ001:Q1_SQ006}, SPSS's
 #'   TO), or both. A \code{c()} of names, bare or quoted, is read as the
 #'   names.
-#' @param none The survey's own "None of these" item, if it had one,
-#'   unquoted or in quotes. NULL (the default) for none.
-#' @param ticked The value an item holds when its option was chosen: 1 (the
-#'   default), or another number or a text value in quotes.
-#' @param rank Logical. TRUE (the default) lists the options by how many
-#'   chose them, most first; FALSE keeps the data frame's order.
+#' @param none The data's own "None of these" item (a survey's own box),
+#'   if they have one, unquoted or in quotes. NULL (the default) for none.
+#' @param ticked The value counted: the value an item holds for a case in
+#'   its category, 1 (the default), or another number or a text value in
+#'   quotes.
+#' @param rank Logical. TRUE (the default) lists the categories by how many
+#'   cases are in each, most first; FALSE keeps the data frame's order.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param variable.id Character or NULL. How the options are named in the
-#'   console: \code{"names"} (the items' names), \code{"labels"} (the text
+#' @param variable.id Character or NULL. How the categories are named in
+#'   the console: \code{"names"} (the items' names), \code{"labels"} (the text
 #'   each item's label adds to what the set's labels share), \code{"both"}
 #'   (\code{"name: label"}), or \code{"legend"} or \code{"legend.bottom"}
 #'   (names, with the labels listed after the table). NULL (the default)
 #'   defers to \code{joutput()}'s \code{variable.id} setting.
 #' @param case.processing.detail Accepted for symmetry with the other
 #'   analysis functions; the Case Processing table here shows the filters
-#'   only, and the Analysis N line says how many answered no item.
+#'   only, and the Analysis N line says how many cases have no value on
+#'   any item.
 #' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
 #'   no title, no note -- and returns the result as every call does;
 #'   errors and warnings still show. \code{TRUE} prints even under
@@ -2966,13 +2971,13 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 #'   the level is silent.
 #'
 #' @return Invisibly, a list of class \code{jst_multi}: \code{table} (the
-#'   rows as printed), \code{rows_raw} (each row's item, label, option
+#'   rows as printed), \code{rows_raw} (each row's item, label, category
 #'   text, kind, count and unrounded percentage), \code{items} (the items,
 #'   the \code{none =} item last), \code{none}, \code{ticked}, \code{rank},
-#'   \code{title} (the text the labels share, or NA), \code{n} (everyone
-#'   who answered), \code{n_excluded} (those who answered no item),
-#'   \code{n_none} (those who answered and chose none), \code{sample_info}
-#'   and \code{data_name}.
+#'   \code{title} (the text the labels share, or NA), \code{n} (every case
+#'   with a value on at least one item), \code{n_excluded} (the cases with
+#'   no value on any item), \code{n_none} (the cases in none of the
+#'   categories), \code{sample_info} and \code{data_name}.
 #'   A result kept with \code{<-} holds the output its call printed -- or
 #'   would have printed, under \code{print = FALSE} or
 #'   \code{joutput("silent")} -- and typing its name, or \code{print()},
@@ -2992,7 +2997,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 #' attr(svc$Financial, "label")   <- "Services used: Financial advice"
 #' jmulti(svc, Counselling:Financial)
 #'
-#' # The options in the data frame's order, named by their labels
+#' # The categories in the data frame's order, named by their labels
 #' jmulti(svc, Counselling:Financial, rank = FALSE, variable.id = "labels")
 #'
 #' # Keep the result to make a publication table of it, or to draw its
@@ -3025,8 +3030,8 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
   .jst_check_flag(rank, "rank")
   if (!(is.numeric(ticked) || is.character(ticked) || is.logical(ticked)) ||
       length(ticked) != 1L || is.na(ticked)) {
-    .jst_stop("`ticked` must be one value: the number or the text a chosen ",
-              "option's item holds, for example:\n  ticked = 1")
+    .jst_stop("`ticked` must be one value: the number or the text to count, ",
+              "for example:\n  ticked = 1")
   }
 
   # Resolve the first argument: explicit data frame, juse default,
@@ -3100,8 +3105,8 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
     u <- unique(vals[[v]][!is.na(vals[[v]])])
     if (length(u) > 2L) {
       .jst_stop(v, " holds ", length(u), " different values, so it is not a ",
-                "yes/no item.\nName only the set's yes/no items, each chosen ",
-                "or not.")
+                "yes/no item.\nName only the set's yes/no items, one per ",
+                "category.")
     }
   }
   is_tick  <- vapply(vals, function(x) !is.na(x) & x == .jst_multi_values(ticked),
@@ -3117,7 +3122,8 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
   pct      <- if (n_base > 0L) 100 * counts / n_base else rep(NA_real_, length(items))
 
   # The sample: the pipeline's chain (the screening layout: its own N line
-  # follows), then the Analysis N with those who answered no item.
+  # follows), then the Analysis N with the cases that have no value on any
+  # item.
   sample_info <- .jst_build_sample_info(
     pipeline_counts = pipeline$pipeline_counts,
     data            = data,
@@ -3130,7 +3136,7 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
   # The N line's counts are bare, as the Case Processing block's are (S238).
   pipe_out <- if (is.null(cps$header_excluded)) 0L else cps$header_excluded
   rider <- c(if (pipe_out > 0L) paste(pipe_out, "Excluded"),
-             if (n_out > 0L) paste(n_out, "answered no item"))
+             if (n_out > 0L) paste(n_out, "with no value on any item"))
   # In the N-line state the screening layout prints nothing, so the line
   # takes the blank line under the title itself.
   if (!isTRUE(cps$render_top)) cat("\n")
@@ -3138,11 +3144,12 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
       if (length(rider)) paste0(" (", paste(rider, collapse = ", "), ")"),
       "\n\n", sep = "")
   if (n_base == 0L) {
-    .jst_stop("no case answered any item of the set, so there is nothing to ",
-              "count.\nEach case is blank or declared missing on every item.")
+    .jst_stop("no case has a value on any item of the set, so there is ",
+              "nothing to count.\nEach case is blank or declared missing on ",
+              "every item.")
   }
 
-  # The title and the option names: the text the labels share, and what
+  # The title and the category names: the text the labels share, and what
   # each label adds to it (R62's lean, Session 414).
   labs  <- vapply(items, function(v) {
     l <- attr(data[[v]], "label", exact = TRUE)
@@ -3154,8 +3161,8 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
     if (is.na(labs[i])) items[i] else .jst_multi_option(labs[i], sh)
   }, character(1))
 
-  # The rows: the options ranked (or in the file's order), the survey's own
-  # None box last, then jstats's row of those who chose none.
+  # The rows: the categories ranked (or in the file's order), the data's
+  # own None item last, then jstats's row of the cases in none of them.
   ord <- seq_along(items)
   opt_i <- setdiff(ord, match(none_name, items))
   if (isTRUE(rank)) opt_i <- opt_i[order(-counts[opt_i], opt_i)]
@@ -3163,14 +3170,14 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
   rows_raw <- data.frame(
     item    = items[ord],
     label   = unname(labs[ord]),
-    option  = opts[ord],
+    category = opts[ord],
     kind    = ifelse(items[ord] %in% none_name, "none_box", "item"),
     n       = as.integer(counts[ord]),
     percent = unname(pct[ord]),
     stringsAsFactors = FALSE, row.names = NULL)
   if (n_none > 0L) {
     rows_raw <- rbind(rows_raw, data.frame(
-      item = NA_character_, label = NA_character_, option = NA_character_,
+      item = NA_character_, label = NA_character_, category = NA_character_,
       kind = "none", n = as.integer(n_none), percent = 100 * n_none / n_base,
       stringsAsFactors = FALSE))
   }
@@ -3181,11 +3188,11 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
     if (identical(rows_raw$kind[i], "none")) return("None of these")
     nm <- rows_raw$item[i]
     if (vlmode %in% c("labels", "both")) {
-      .jst_combine_id(nm, rows_raw$option[i], vlmode, cap = TRUE)
+      .jst_combine_id(nm, rows_raw$category[i], vlmode, cap = TRUE)
     } else nm
   }, character(1))
   title <- if (is.na(sh$title)) "Multiple-Response Set" else sh$title
-  tab <- data.frame(Option = disp, Freq = rows_raw$n,
+  tab <- data.frame(Category = disp, Freq = rows_raw$n,
                     Percent = round(rows_raw$percent, 2),
                     stringsAsFactors = FALSE, row.names = NULL)
   .jst_print_table(tab, caption = title, row.names = FALSE,
@@ -3201,18 +3208,18 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
     cat("\n")
   }
   # No item holds a "No" (R62's lean, Session 414): an unticked box is
-  # blank in every item, so a person who chose nothing is blank on every
-  # item and is out of N, which then counts only those who chose at least
-  # one option.
+  # blank in every item, so a case in none of the categories is blank on
+  # every item and is out of N, which then counts only the cases in at
+  # least one category (the words, Session 425's ruling).
   if (is.null(none_name) &&
       all(vapply(vals, function(x) all(is.na(x) | x == .jst_multi_values(ticked)),
                  logical(1)))) {
     .jst_msg("Note: no item of the set holds any value but ",
-             .jst_multi_ticked_text(ticked), ", the value counted as chosen, ",
-             "so a person who chose nothing is blank on every item and is not ",
-             "in N.\nN counts only those who chose at least one option.\n",
-             "If the survey had its own \"None of these\" box, name it with ",
-             "none = to count everyone who answered.")
+             .jst_multi_ticked_text(ticked), ", the value counted, so a case ",
+             "in none of the categories is blank on every item and is not in ",
+             "N.\nN counts only the cases in at least one category.\n",
+             "If the data have their own \"None of these\" item, name it with ",
+             "none =, and N counts its cases too.")
     cat("\n")
   }
 
@@ -3332,7 +3339,7 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
       .jst_stop(.jst_and_list(tv), " ", .jst_plural(length(tv), "holds", "hold"),
                 " text (\"", seen, "\"), not numbers, and ticked = is ",
                 .jst_multi_ticked_text(ticked), ".\n",
-                "If \"", seen, "\" marks a chosen option, name it with ticked =:\n",
+                "If \"", seen, "\" is the value to count, name it with ticked =:\n",
                 "  ", .jst_call_with(cl, mc, "ticked", seen))
     }
     .jst_stop(.jst_and_list(tv), " ",
@@ -3346,7 +3353,7 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
     .jst_stop(.jst_and_list(nv), " ", .jst_plural(length(nv), "holds", "hold"),
               " numbers, and ticked = is ", .jst_multi_ticked_text(ticked),
               ", which is text.\n",
-              "Give ticked = the value a chosen option's item holds.")
+              "Give ticked = the number to count.")
   }
   invisible(NULL)
 }

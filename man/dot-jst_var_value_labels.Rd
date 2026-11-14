@@ -21,8 +21,8 @@ character variables get synthetic 1..k codes whose ordering mirrors
 \code{.jst_make_dummy_names()}, so they line up with a dummy registration
 built from the same column -- the SAME column: since Session 305 the
 grouped coefficient rows read a factor or character registration's own
-\code{values} instead (via \code{.jst_dummy_category_values()}), because
-the column they had in hand was the post-filter frame's, and a filtered
-out category shifted every label after it onto the wrong row.
+\code{values} instead, because the column they had in hand was the
+post-filter frame's, and a filtered out category shifted every label
+after it onto the wrong row.
 }
 \keyword{internal}

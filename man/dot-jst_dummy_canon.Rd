@@ -4,13 +4,10 @@
 \alias{.jst_dummy_canon}
 \title{Internal helper: a category label made into the end of a dummy's name}
 \usage{
-.jst_dummy_canon(x, ascii = FALSE)
+.jst_dummy_canon(x)
 }
 \arguments{
 \item{x}{Character vector.}
-
-\item{ascii}{TRUE gives the A-to-Z rule, which names stored before
-Session 390 were made by.}
 }
 \value{
 Character vector, the same length.
@@ -23,7 +20,8 @@ Chinese, Japanese or Korean label and an accented one keep their
 letters. The rule kept A to Z and 0 to 9 only, so such a label lost
 every letter and the dummy was named by its code, under a note that
 its value labels were not available. One rule for
-\code{.jst_make_dummy_names()}, its \code{ref =} matching and
-\code{.jst_dummy_category_values()}.
+\code{.jst_make_dummy_names()} and its \code{ref =} matching. (Until
+Session 425 an \code{ascii} argument kept the A-to-Z rule for a
+registration stored before Session 390; ruling R87 took it out.)
 }
 \keyword{internal}

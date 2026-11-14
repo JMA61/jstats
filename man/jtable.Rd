@@ -153,8 +153,8 @@ each group, and the chi-square test; and a reliability table from
 \code{\link{jalpha}} results -- each item's mean, standard deviation,
 corrected item-total correlation and alpha if the item is deleted; and a
 multiple-response table from a \code{\link{jmulti}} result -- how many
-chose each option of a set of yes/no items, and what percentage of
-everyone who answered. A chart -- one \code{\link{jplot}()} drew, or one
+cases are in each category of a set of yes/no items, and their
+percentage of every case with a value on at least one item. A chart -- one \code{\link{jplot}()} drew, or one
 drawn in ggplot2 -- goes into the Word file as a figure (see Charts,
 below). The
 variables of a descriptives or frequency table go under role headings

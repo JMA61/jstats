@@ -2,7 +2,7 @@
 % Please edit documentation in R/descriptives.R
 \name{jmulti}
 \alias{jmulti}
-\title{Multiple-response set: how many chose each option}
+\title{Multiple-response set: how many cases are in each category}
 \usage{
 jmulti(
   data,
@@ -24,21 +24,22 @@ columns in the data frame's order (\code{Q1_SQ001:Q1_SQ006}, SPSS's
 TO), or both. A \code{c()} of names, bare or quoted, is read as the
 names.}
 
-\item{none}{The survey's own "None of these" item, if it had one,
-unquoted or in quotes. NULL (the default) for none.}
+\item{none}{The data's own "None of these" item (a survey's own box),
+if they have one, unquoted or in quotes. NULL (the default) for none.}
 
-\item{ticked}{The value an item holds when its option was chosen: 1 (the
-default), or another number or a text value in quotes.}
+\item{ticked}{The value counted: the value an item holds for a case in
+its category, 1 (the default), or another number or a text value in
+quotes.}
 
-\item{rank}{Logical. TRUE (the default) lists the options by how many
-chose them, most first; FALSE keeps the data frame's order.}
+\item{rank}{Logical. TRUE (the default) lists the categories by how many
+cases are in each, most first; FALSE keeps the data frame's order.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{variable.id}{Character or NULL. How the options are named in the
-console: \code{"names"} (the items' names), \code{"labels"} (the text
+\item{variable.id}{Character or NULL. How the categories are named in
+the console: \code{"names"} (the items' names), \code{"labels"} (the text
 each item's label adds to what the set's labels share), \code{"both"}
 (\code{"name: label"}), or \code{"legend"} or \code{"legend.bottom"}
 (names, with the labels listed after the table). NULL (the default)
@@ -46,7 +47,8 @@ defers to \code{joutput()}'s \code{variable.id} setting.}
 
 \item{case.processing.detail}{Accepted for symmetry with the other
 analysis functions; the Case Processing table here shows the filters
-only, and the Analysis N line says how many answered no item.}
+only, and the Analysis N line says how many cases have no value on
+any item.}
 
 \item{print}{Logical or NULL. \code{FALSE} prints nothing -- no table,
 no title, no note -- and returns the result as every call does;
@@ -56,55 +58,58 @@ the level is silent.}
 }
 \value{
 Invisibly, a list of class \code{jst_multi}: \code{table} (the
-rows as printed), \code{rows_raw} (each row's item, label, option
+rows as printed), \code{rows_raw} (each row's item, label, category
 text, kind, count and unrounded percentage), \code{items} (the items,
 the \code{none =} item last), \code{none}, \code{ticked}, \code{rank},
-\code{title} (the text the labels share, or NA), \code{n} (everyone
-who answered), \code{n_excluded} (those who answered no item),
-\code{n_none} (those who answered and chose none), \code{sample_info}
-and \code{data_name}.
+\code{title} (the text the labels share, or NA), \code{n} (every case
+with a value on at least one item), \code{n_excluded} (the cases with
+no value on any item), \code{n_none} (the cases in none of the
+categories), \code{sample_info} and \code{data_name}.
 A result kept with \code{<-} holds the output its call printed -- or
 would have printed, under \code{print = FALSE} or
 \code{joutput("silent")} -- and typing its name, or \code{print()},
 shows that output again.
 }
 \description{
-Tabulates a multiple-response question -- "Which of these services have
-you used? Tick all that apply." -- stored, as survey software stores it,
-as one yes/no item per option. For each option it counts the people who
-chose it and gives the percentage of everyone who answered the
-question, so the percentages can sum to more than 100. SPSS calls this a
-multiple-response set (MULT RESPONSE, or a CTABLES \code{$} set).
+Tabulates a multiple-response set: a question such as "Which of these
+services have you used? Tick all that apply.", stored as survey
+software stores it, one yes/no item per option -- or records in the
+same layout, such as one yes/no item per kind of charge laid at an
+arrest. Each item is one category of the set. For each category it
+counts the cases in it and gives their percentage of every case with a
+value on at least one item, so the percentages can sum to more than
+100. SPSS calls this a multiple-response set (MULT RESPONSE, or a
+CTABLES \code{$} set).
 }
 \details{
-\strong{Who is counted.} N is everyone who answered: a person with an
-answer on at least one item. A blank among a person's answers counts as
-not chosen -- survey software often writes an unticked box as blank --
-and a person blank or declared missing on every item (not asked, or
-skipped the question) is left out of N. A "None of these" row counts
-those who answered and chose none of the options; it prints only when
-anyone did. When the survey had its own "None of these" box, name it
-with \code{none =}: it is counted with the others and its row comes
+\strong{Who is counted.} N is every case with a value on at least one
+item. A blank among a case's values counts as not in that category --
+survey software often writes an unticked box as blank -- and a case
+blank or declared missing on every item (not asked, or skipped the
+question) is left out of N. A "None of these" row counts the cases in
+none of the categories; it prints only when there are any. When the
+data have their own "None of these" item -- a survey's own box -- name
+it with \code{none =}: it is counted with the others and its row comes
 last. When no item holds a "No" at all -- a file that writes every
-unticked box as blank -- a person who chose nothing cannot be told from
-one who was not asked, and a note says so.
+unticked box as blank -- a case in none of the categories cannot be
+told from one that was not asked, and a note says so.
 
-\strong{The value counted as chosen} is 1, which LimeSurvey's SPSS
-files, Qualtrics and REDCap all write for a ticked box; \code{ticked =}
-names another (\code{ticked = "Y"} for LimeSurvey's CSV files). Only
-the set's yes/no items belong in the call: an item holding more than
-two values stops it, as does a text answer such as an "Other" box -- a
-text item among numbers, or, under \code{ticked = "Y"}, an item holding
+\strong{The value counted} is 1, which LimeSurvey's SPSS files,
+Qualtrics and REDCap all write for a ticked box; \code{ticked =} names
+another (\code{ticked = "Y"} for LimeSurvey's CSV files). Only the
+set's yes/no items belong in the call: an item holding more than two
+values stops it, as does a text answer such as an "Other" box -- a text
+item among numbers, or, under \code{ticked = "Y"}, an item holding
 text that no other item of the set holds.
 
-\strong{The order.} The options are ranked by how many chose them, most
-first; \code{rank = FALSE} keeps the order of the data frame. Either
-way the "None of these" rows come last.
+\strong{The order.} The categories are ranked by how many cases are in
+each, most first; \code{rank = FALSE} keeps the order of the data
+frame. Either way the "None of these" rows come last.
 
 \strong{The title} of the set is the text its items' labels share --
 "Services used" for items labelled "Services used: Counselling" and
-"Services used: Housing" -- and each option is named by the rest of its
-label. Items whose labels share no text are named by their labels, and
+"Services used: Housing" -- and each category is named by the rest of
+its label. Items whose labels share no text are named by their labels, and
 the set is titled "Multiple-Response Set". Keep the result with \code{<-} to
 make a publication table of it with \code{\link{jtable}}.
 }
@@ -122,7 +127,7 @@ attr(svc$LegalAid, "label")    <- "Services used: Legal aid"
 attr(svc$Financial, "label")   <- "Services used: Financial advice"
 jmulti(svc, Counselling:Financial)
 
-# The options in the data frame's order, named by their labels
+# The categories in the data frame's order, named by their labels
 jmulti(svc, Counselling:Financial, rank = FALSE, variable.id = "labels")
 
 # Keep the result to make a publication table of it, or to draw its

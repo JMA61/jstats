@@ -282,9 +282,9 @@ publication table prints: under a style file whose \code{[crosstab]}
 \code{percent.base} is \code{row}, one bar per category of the row
 variable)
 \item \code{jst_multi} (a \code{\link{jmulti}()} result): \code{bar},
-a ranked bar chart -- one horizontal bar per option in the order of
-the result's table, "None of these" last, each bar's percentage of
-everyone who answered at its end
+a ranked bar chart -- one horizontal bar per category in the order
+of the result's table, "None of these" last, each bar's percentage
+of the set's N at its end
 }
 
 The shortcut keyword \code{core} (default) produces a curated default
@@ -383,9 +383,9 @@ so and points you to the data-first form for its items, for example
 \code{jplot(data, Item1)}.
 
 \item \code{jplot(jst_multi)}: the ranked bar chart of a multiple-response set, for a
-\code{jmulti()} result: one bar per option in the order of the result's
-table, "None of these" last, each bar's percentage of everyone who
-answered at its end.
+\code{jmulti()} result: one bar per category in the order of the
+result's table, "None of these" last, each bar's percentage of the
+set's N at its end.
 
 }}
 \examples{

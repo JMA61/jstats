@@ -111,9 +111,9 @@
 #'     \code{percent.base} is \code{row}, one bar per category of the row
 #'     variable)
 #'   \item \code{jst_multi} (a \code{\link{jmulti}()} result): \code{bar},
-#'     a ranked bar chart -- one horizontal bar per option in the order of
-#'     the result's table, "None of these" last, each bar's percentage of
-#'     everyone who answered at its end
+#'     a ranked bar chart -- one horizontal bar per category in the order
+#'     of the result's table, "None of these" last, each bar's percentage
+#'     of the set's N at its end
 #' }
 #'
 #' The shortcut keyword \code{core} (default) produces a curated default
@@ -6075,9 +6075,9 @@ jplot.jst_alpha <- function(x, which = "core", ...) {
 }
 
 #' @describeIn jplot the ranked bar chart of a multiple-response set, for a
-#'   \code{jmulti()} result: one bar per option in the order of the result's
-#'   table, "None of these" last, each bar's percentage of everyone who
-#'   answered at its end.
+#'   \code{jmulti()} result: one bar per category in the order of the
+#'   result's table, "None of these" last, each bar's percentage of the
+#'   set's N at its end.
 #' @export
 #' @importFrom rlang .data
 jplot.jst_multi <- function(x, which = "core", ..., style = NULL) {
@@ -6103,12 +6103,12 @@ jplot.jst_multi <- function(x, which = "core", ..., style = NULL) {
   plots <- list()
   if ("bar" %in% plot_set) {
     # Each bar named as the multiple-response table names its row (ruling
-    # R67: the chart matches its table): the option's text, an item with no
+    # R67: the chart matches its table): the category's text, an item with no
     # label by its name, and jstats's own row by the style's none.label.
     none_label <- .jst_style_key(look$st, "multiresponse", "none.label")
     rows <- data.frame(
       label = ifelse(rr$kind == "none", none_label,
-                     ifelse(is.na(rr$option), rr$item, rr$option)),
+                     ifelse(is.na(rr$category), rr$item, rr$category)),
       percent = rr$percent, n = rr$n, none = rr$kind != "item",
       stringsAsFactors = FALSE)
     p <- .jst_build_ranked(rows, look = look)

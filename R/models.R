@@ -521,9 +521,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' \code{.jst_make_dummy_names()}, so they line up with a dummy registration
 #' built from the same column -- the SAME column: since Session 305 the
 #' grouped coefficient rows read a factor or character registration's own
-#' \code{values} instead (via \code{.jst_dummy_category_values()}), because
-#' the column they had in hand was the post-filter frame's, and a filtered
-#' out category shifted every label after it onto the wrong row.
+#' \code{values} instead, because the column they had in hand was the
+#' post-filter frame's, and a filtered out category shifted every label
+#' after it onto the wrong row.
 #'
 #' @param x A variable (haven-labelled, factor, character, or numeric).
 #'
@@ -555,10 +555,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' \code{.jst_var_value_labels()}.
 #'
 #' @param reg A registration object (\code{var_type}, \code{codes},
-#'   \code{labels}, optionally \code{values}).
+#'   \code{labels}, \code{values}).
 #' @param col The variable's column: the label source for the non-position
-#'   types, and the reconstruction source for a factor or character
-#'   registration saved without \code{values}.
+#'   types.
 #'
 #' @return A named vector in val_labels() form (names are the labels,
 #'   values the codes), or NULL.
@@ -567,7 +566,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 .jst_reg_value_labels <- function(reg, col) {
   if (identical(reg$var_type, "factor") ||
       identical(reg$var_type, "character")) {
-    vals <- .jst_dummy_category_values(reg, col)
+    vals <- reg$values
     keep <- !is.na(vals)
     return(stats::setNames(reg$codes[keep], vals[keep]))
   }
@@ -684,7 +683,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # its value label, NA where it has none.
     if (identical(reg$var_type, "factor") ||
         identical(reg$var_type, "character")) {
-      cv    <- .jst_dummy_category_values(reg, col)
+      cv    <- reg$values
       codes <- as.character(cv[idx[ord]])
       vals  <- rep(NA_character_, length(codes))
     } else {
@@ -795,7 +794,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     pos_space <- identical(reg$var_type, "factor") ||
                  identical(reg$var_type, "character")
     present <- if (pos_space) {
-      vals <- .jst_dummy_category_values(reg, full)
+      vals <- reg$values
       !is.na(vals) & vals %in%
         as.character(if (is.character(col)) .jst_label_blanks(col) else col)
     } else {

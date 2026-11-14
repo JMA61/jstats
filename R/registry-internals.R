@@ -1570,77 +1570,16 @@
 #' letters. The rule kept A to Z and 0 to 9 only, so such a label lost
 #' every letter and the dummy was named by its code, under a note that
 #' its value labels were not available. One rule for
-#' \code{.jst_make_dummy_names()}, its \code{ref =} matching and
-#' \code{.jst_dummy_category_values()}.
+#' \code{.jst_make_dummy_names()} and its \code{ref =} matching. (Until
+#' Session 425 an \code{ascii} argument kept the A-to-Z rule for a
+#' registration stored before Session 390; ruling R87 took it out.)
 #' @param x Character vector.
-#' @param ascii TRUE gives the A-to-Z rule, which names stored before
-#'   Session 390 were made by.
 #' @return Character vector, the same length.
 #' @keywords internal
-.jst_dummy_canon <- function(x, ascii = FALSE) {
-  out <- if (ascii) gsub("[^A-Za-z0-9]+", "_", x)
-         else gsub("[^\\p{L}\\p{M}\\p{N}]+", "_", x, perl = TRUE)
+.jst_dummy_canon <- function(x) {
+  out <- gsub("[^\\p{L}\\p{M}\\p{N}]+", "_", x, perl = TRUE)
   gsub("^_+|_+$", "", out)
 }
-
-#' Internal helper: the category values behind a dummy registration
-#'
-#' Returns the raw category value each registration code stands for, in
-#' code order. Registrations built since Session 305 carry them as the
-#' \code{values} field, which is returned as stored. A registration
-#' saved by an earlier version (a jdummy() card in an older .rds file)
-#' has no such field, so the values are reconstructed. For a factor or
-#' character variable the codes are POSITION indices 1..k, and the
-#' reconstruction cannot simply re-sort the column: a category absent
-#' from the frame in hand -- filtered out, or not in this file -- would
-#' shift every later position onto the wrong code. Instead each candidate
-#' value in the column is canonicalized exactly as
-#' \code{.jst_make_dummy_names()} builds a dummy name and matched against
-#' the registration's stored labels, which pins each value to the code it
-#' was registered under. A registered category with no matching value in
-#' the column is left NA, so its dummy comes out all zero, as an absent
-#' numeric code does. For numeric, haven-labelled and logical variables
-#' the codes are the values themselves.
-#'
-#' @param reg A registration object (\code{var_name}, \code{var_type},
-#'   \code{codes}, \code{labels}, optionally \code{values}).
-#' @param col The variable's column, used only for the reconstruction.
-#' @return A vector the length of \code{reg$codes}: character for factor
-#'   and character registrations, numeric otherwise.
-#' @keywords internal
-.jst_dummy_category_values <- function(reg, col) {
-  if (!is.null(reg$values)) return(reg$values)
-  if (!identical(reg$var_type, "factor") &&
-      !identical(reg$var_type, "character")) {
-    return(reg$codes)
-  }
-  cand <- if (is.factor(col)) {
-    levels(droplevels(col))
-  } else {
-    col_chr <- as.character(col)
-    sort(unique(col_chr[!is.na(col_chr) & nzchar(col_chr)]))
-  }
-  # The same canonicalization and anti-stutter steps as
-  # .jst_make_dummy_names(); a value whose canonical form is empty fell
-  # back to its code there, which cannot be recovered here and stays NA.
-  # A registration stored before Session 390 holds names made by the
-  # A-to-Z rule, so a value not found by today's form is looked for by
-  # that one.
-  prefix <- paste0(reg$var_name, "_")
-  named  <- function(canon) {
-    ifelse(nzchar(canon),
-           ifelse(startsWith(canon, prefix), canon, paste0(prefix, canon)),
-           NA_character_)
-  }
-  hit    <- match(named(.jst_dummy_canon(cand)), reg$labels)
-  old    <- is.na(hit)
-  hit[old] <- match(named(.jst_dummy_canon(cand[old], ascii = TRUE)),
-                    reg$labels)
-  values <- rep(NA_character_, length(reg$codes))
-  values[hit[!is.na(hit)]] <- cand[!is.na(hit)]
-  values
-}
-
 
 #' Internal helper: expand a single registration into dummy columns
 #'
@@ -1684,7 +1623,7 @@
     col_chr <- as.character(if (is.character(col)) .jst_label_blanks(col)
                             else col)
     is_miss <- is.na(col_chr)
-    cat_vals <- .jst_dummy_category_values(reg, col)
+    cat_vals <- reg$values
     # A blank text cell is a category since Session 340, and a registration
     # made since then lists it. One made BEFORE (a card restored from an
     # older .rds file) does not, and for it a blank cell stays what it was
