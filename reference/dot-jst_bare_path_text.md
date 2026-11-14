@@ -1,0 +1,50 @@
+# Internal helper: a file name with a dash or a slash typed without quotes
+
+Session 429 (Jeff: "Let's keep the quotes and the fix you've
+mentioned"). R reads a file name typed without its quotes before jstats
+sees it, and one holding a dash or a slash as arithmetic –
+jload(my-survey) as my minus survey, jload(Data/wave1) as Data divided
+by wave1 – so it stopped with "object 'my' not found";
+.jst_free_text_arg() reads a bare word only. An argument that is such a
+tree – names and numbers joined only by - and / – holding a name that is
+no object gets the same pointer: the name as typed, put back together
+without the spaces R's deparse() adds, and the call with it in quotes. A
+tree whose every name is an object is left to R, as a name holding a
+value is, and so is any other expression. A name holding a space, or
+starting with a digit, stops R while it reads the line, before any
+function runs (the guides' Troubleshooting).
+
+## Usage
+
+``` r
+.jst_bare_path_text(e)
+
+.jst_bare_path_stop(sub, env, cl, mc, arg, fn)
+```
+
+## Arguments
+
+- e, sub:
+
+  The argument as typed.
+
+- env:
+
+  The caller's environment.
+
+- cl, mc:
+
+  The call as typed and the matched call.
+
+- arg:
+
+  Character(1); the argument's name.
+
+- fn:
+
+  Character(1); the user-facing function's name.
+
+## Value
+
+`.jst_bare_path_text()`: Character(1), or NULL for any other expression.
+`.jst_bare_path_stop()`: invisible NULL, or a stop.

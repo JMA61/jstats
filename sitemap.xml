@@ -35,6 +35,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_auto_plot_type.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_bake_registrations.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_bare_code_words.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_bare_path_text.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_bare_words.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_beta_legend_inputs.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_beta_legends.html</loc></url>
@@ -72,6 +73,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_case_category.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_category_layers.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_category_predictions.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_chart_save_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_check_analysis_var.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_check_args.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_check_cat_clash.html</loc></url>
@@ -657,7 +659,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_resolve_width.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_result_label_gaps.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_result_noun.html</loc></url>
-<url><loc>https://jma61.github.io/jstats/reference/dot-jst_result_save_stop.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_result_save_file.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_result_saved_text.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_result_value_labels.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_return_plots.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_role_asserted_numeric.html</loc></url>

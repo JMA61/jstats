@@ -16,6 +16,11 @@ is searched first. If a full file path is provided, it is used directly.
 The data frame is automatically named after the file (without the
 extension). Use the `name` argument to specify a different name.
 
+A saved result or a table that
+[`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) kept in
+an `.rds` file is loaded the same way, under the file's name:
+`jsave(m1)` writes `m1.rds`, and `jload("m1")` brings `m1` back.
+
 ## Usage
 
 ``` r
@@ -57,7 +62,8 @@ jload(
   Logical. If `TRUE`, automatically calls
   [`juse()`](https://jma61.github.io/jstats/reference/juse.md) on the
   loaded data frame to set it as the default for jstats functions.
-  Default is `FALSE`.
+  Default is `FALSE`. A saved result cannot be the default, so
+  `use = TRUE` stops on one.
 
 - overwrite:
 
@@ -188,12 +194,13 @@ jload(
 ## Value
 
 Invisibly returns `NULL`; jload() is called for its side effects. The
-loaded data frame is placed in the calling environment under the file's
-name (or `name`), and any classification registrations saved with an
-.rds file are restored for that name. Loading a file that carries none
-clears any registrations set this session under that name, with a note
-saying so. Do not assign the result: `x <- jload("mydata.rds")` binds
-only `NULL`, while the data frame still arrives under its own name.
+loaded data frame, or saved result, is placed in the calling environment
+under the file's name (or `name`), and any classification registrations
+saved with an .rds file are restored for that name. Loading a file that
+carries none clears any registrations set this session under that name,
+with a note saying so. Do not assign the result:
+`x <- jload("mydata.rds")` binds only `NULL`, while the data frame still
+arrives under its own name.
 
 ## Details
 
@@ -321,6 +328,16 @@ supported extension, and more than one match (two extensions, or the
 same file in both locations) is an error that asks for the extension. If
 nothing matches on disk, a bare name falls back to a shipped example
 dataset of that name (see below).
+
+**Saved results and tables:** An `.rds` file holding a saved result or a
+table [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md)
+built, as [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md)
+writes one, is loaded under the file's name, or `name`, behind the same
+question as a data frame, and one line says what it is and the jstats
+version that made it. Typing its name shows its output again.
+`use = TRUE`, `check.missing`, `preserve.declarations` and
+`missing.notice` are for data frames, and stop on such a file. A name
+with a dot inside it, `jload("model.1")`, finds `model.1.rds`.
 
 **Auto-naming:** The data frame name is derived from the filename by
 stripping the extension. If the resulting name starts with a digit
@@ -456,6 +473,9 @@ jload("community.rds")
 
 # Extension omitted -- jload searches for a matching file automatically
 jload("community")
+
+# A result saved with jsave(m1), read back as m1
+jload("m1")
 
 # The example files shipped with jstats, read by name
 jload("community_spss.sav")

@@ -134,10 +134,12 @@ package's GitHub repository.
 
 - [`jload`](https://jma61.github.io/jstats/reference/jload.md) – load
   data from `.rds`, `.sav`, `.dta`, `.sas7bdat`, `.xpt`, `.xlsx`,
-  `.xls`, or `.csv`
+  `.xls`, or `.csv`, or a result or a table saved with
+  [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md)
 
 - [`jsave`](https://jma61.github.io/jstats/reference/jsave.md) – save a
-  data frame, with format inferred from the file extension
+  data frame, with format inferred from the file extension, or a saved
+  result or a table in R format (`.rds`)
 
 - [`jdata_dir`](https://jma61.github.io/jstats/reference/jdata_dir.md) –
   return the configured data folder

@@ -11,7 +11,11 @@ directory. If a data folder is configured with
 joptions(data.dir = ...), that folder is searched first. If a
 full file path is provided, it is used directly.
 The data frame is automatically named after the file (without the
-extension). Use the name argument to specify a different name."><meta property="og:description" content="jload() reads a data file and assigns it as a data frame in your
+extension). Use the name argument to specify a different name.
+A saved result or a table that jsave() kept in an
+.rds file is loaded the same way, under the file's name:
+jsave(m1) writes m1.rds, and jload(&quot;m1&quot;) brings
+m1 back."><meta property="og:description" content="jload() reads a data file and assigns it as a data frame in your
 environment. Supports SPSS (.sav), Stata (.dta), SAS
 (.sas7bdat, .xpt), Excel (.xlsx, .xls),
 CSV (.csv), and R's native .rds format.
@@ -23,7 +27,11 @@ directory. If a data folder is configured with
 joptions(data.dir = ...), that folder is searched first. If a
 full file path is provided, it is used directly.
 The data frame is automatically named after the file (without the
-extension). Use the name argument to specify a different name."></head><body>
+extension). Use the name argument to specify a different name.
+A saved result or a table that jsave() kept in an
+.rds file is loaded the same way, under the file's name:
+jsave(m1) writes m1.rds, and jload(&quot;m1&quot;) brings
+m1 back."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -31,7 +39,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.287</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.288</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,7 +61,7 @@ extension). Use the name argument to specify a different name."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Load a data file into R</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.287/R/io.R" class="external-link"><code>R/io.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/io.R" class="external-link"><code>R/io.R</code></a></small>
       <div class="d-none name"><code>jload.Rd</code></div>
     </div>
 
@@ -71,6 +79,10 @@ directory. If a data folder is configured with
 full file path is provided, it is used directly.</p>
 <p>The data frame is automatically named after the file (without the
 extension). Use the <code>name</code> argument to specify a different name.</p>
+<p>A saved result or a table that <code><a href="jsave.html">jsave()</a></code> kept in an
+<code>.rds</code> file is loaded the same way, under the file's name:
+<code>jsave(m1)</code> writes <code>m1.rds</code>, and <code>jload("m1")</code> brings
+<code>m1</code> back.</p>
     </div>
 
     <div class="section level2">
@@ -113,7 +125,8 @@ in your environment. If omitted, the name is derived from the filename.</p></dd>
 <dt id="arg-use">use<a class="anchor" aria-label="anchor" href="#arg-use"></a></dt>
 <dd><p>Logical. If <code>TRUE</code>, automatically calls <code><a href="juse.html">juse()</a></code> on
 the loaded data frame to set it as the default for jstats
-functions. Default is <code>FALSE</code>.</p></dd>
+functions. Default is <code>FALSE</code>. A saved result cannot be the
+default, so <code>use = TRUE</code> stops on one.</p></dd>
 
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>
@@ -249,7 +262,8 @@ typed, in place of R's own "unused argument".</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Invisibly returns <code>NULL</code>; jload() is called for its side
-effects. The loaded data frame is placed in the calling environment
+effects. The loaded data frame, or saved result, is placed in the
+calling environment
 under the file's name (or <code>name</code>), and any classification
 registrations saved with an .rds file are restored for that name.
 Loading a file that carries none clears any registrations set this
@@ -373,6 +387,15 @@ supported extension, and more than one match (two extensions, or the
 same file in both locations) is an error that asks for the extension.
 If nothing matches on disk, a bare name falls back to a shipped example
 dataset of that name (see below).</p>
+<p><strong>Saved results and tables:</strong>
+An <code>.rds</code> file holding a saved result or a table <code><a href="jtable.html">jtable()</a></code>
+built, as <code><a href="jsave.html">jsave()</a></code> writes one, is loaded under the file's
+name, or <code>name</code>, behind the same question as a data frame, and one
+line says what it is and the jstats version that made it. Typing its
+name shows its output again. <code>use = TRUE</code>, <code>check.missing</code>,
+<code>preserve.declarations</code> and <code>missing.notice</code> are for data
+frames, and stop on such a file. A name with a dot inside it,
+<code>jload("model.1")</code>, finds <code>model.1.rds</code>.</p>
 <p><strong>Auto-naming:</strong>
 The data frame name is derived from the filename by stripping the
 extension. If the resulting name starts with a digit (which R does not
@@ -497,6 +520,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Extension omitted -- jload searches for a matching file automatically</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A result saved with jsave(m1), read back as m1</span></span></span>
+<span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"m1"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The example files shipped with jstats, read by name</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community_spss.sav"</span><span class="op">)</span></span></span>

@@ -82,7 +82,7 @@ Read and write SPSS, Stata, SAS, Excel, and CSV data.
 - [`jload()`](https://jma61.github.io/jstats/reference/jload.md) : Load
   a data file into R
 - [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) : Save
-  a data frame to a file
+  a data frame, a result or a table to a file
 - [`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md) :
   Convert missing-value declarations between formats
 - [`jdata_dir()`](https://jma61.github.io/jstats/reference/jdata_dir.md)

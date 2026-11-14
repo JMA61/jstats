@@ -265,9 +265,13 @@ run the analysis again.
 analysis without printing it and makes its table; errors and warnings
 still show.
 
-**Keeping a result for a later session.** A saved result is an R object,
-which base R keeps in a file of its own: `saveRDS(m1, "m1.rds")`, then
-in a later session `m1 <- readRDS("m1.rds")`.
+**Keeping a result for a later session.**
+[`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) keeps a
+saved result, or a table, in a file of its own: `jsave(m1)` writes
+`m1.rds`, in the data folder when one is set, and in a later session
+[`jload`](https://jma61.github.io/jstats/reference/jload.md)`("m1")`
+reads it back as `m1`. The file is R's own `.rds` format, which base R's
+[`readRDS()`](https://rdrr.io/r/base/readRDS.html) also reads.
 
 ## See also
 
@@ -304,7 +308,7 @@ t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
              overwrite = TRUE)
 #> Table 1. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> Table written to /tmp/Rtmp3k8ub2/Table2.docx
+#> Table written to /tmp/RtmpWVNkeo/Table2.docx
 #> 
 
 # Several tables in one file: build each, then give them together
@@ -314,7 +318,7 @@ doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
 #>   2 variables, on a portrait page.
 #> Table 2. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> 2 tables written to /tmp/Rtmp3k8ub2/Tables.docx
+#> 2 tables written to /tmp/RtmpWVNkeo/Tables.docx
 #> 
 print(doc)
 #> Table 1
@@ -352,11 +356,17 @@ doc2 <- jtable(list(t1, p1), file = file.path(tempdir(), "Report.docx"),
 #>   2 variables, on a portrait page.
 #> Figure 1. Region of residence (N = 103)
 #>   a bar chart, 6 by 4 inches, on a portrait page.
-#> 1 table and 1 figure written to /tmp/Rtmp3k8ub2/Report.docx
+#> 1 table and 1 figure written to /tmp/RtmpWVNkeo/Report.docx
 #> 
 
-# Keep a result for a later session with base R
+# Keep a result for a later session
 path <- file.path(tempdir(), "m1.rds")
-saveRDS(m1, path)
-m1 <- readRDS(path)
+jsave(m1, path, overwrite = TRUE)
+#> Saved m1 to /tmp/RtmpWVNkeo/m1.rds
+#> (R format; a jlm() result)
+#> To load it in a later session:
+#>   jload("/tmp/RtmpWVNkeo/m1")
+jload(path, overwrite = TRUE)
+#> Loading m1 ...
+#> Loaded m1 (R format; a jlm() result made by jstats 0.9.288)
 ```

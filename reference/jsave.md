@@ -1,4 +1,4 @@
-# Save a data frame to a file
+# Save a data frame, a result or a table to a file
 
 `jsave()` writes a data frame to a file. Supports SPSS (`.sav`), Stata
 (`.dta`), SAS interchange (`.xpt`), Excel (`.xlsx`), CSV (`.csv`), and
@@ -22,6 +22,16 @@ literally.
 If the `data` argument is omitted, the default data frame set by
 [`juse()`](https://jma61.github.io/jstats/reference/juse.md) is used.
 
+A saved result – what an analysis function returns, kept with `<-` – or
+a table [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md)
+built is saved in R format (`.rds`), the one format that can hold it,
+and its file name may be left out: `jsave(m1)` writes `m1.rds`, in the
+data folder when one is set, and
+[`jload`](https://jma61.github.io/jstats/reference/jload.md)`("m1")`
+reads it back in a later session. A chart is not saved:
+[`jtable()`](https://jma61.github.io/jstats/reference/jtable.md) writes
+it to a Word file, and the line that drew it draws it again.
+
 ## Usage
 
 ``` r
@@ -39,14 +49,21 @@ jsave(
 
 - data:
 
-  A data frame (unquoted). If omitted, uses the default set by
+  A data frame (unquoted), a saved result, or a table
+  [`jtable()`](https://jma61.github.io/jstats/reference/jtable.md)
+  built. If omitted, uses the default data frame set by
   [`juse()`](https://jma61.github.io/jstats/reference/juse.md).
 
 - file:
 
   Character string. The filename with extension (e.g. `"mydata.sav"`) or
   a full file path. Use forward slashes in file paths. If the extension
-  is omitted, `.rds` is used and added to the filename.
+  is omitted, `.rds` is used and added to the filename. For a saved
+  result or a built table the file name may be left out, and the file is
+  named for the object (`jsave(m1)` writes `m1.rds`); a name given with
+  no extension, or with an ending that is no file format's
+  (`"model.1"`), gets `.rds`, and another format stops, since only R
+  format holds one.
 
 - overwrite:
 
@@ -59,27 +76,27 @@ jsave(
 
 - preserve.declarations:
 
-  Logical. If `TRUE` (the default), missing-value declarations are
-  written as they stand; formats that cannot store them (notably Excel
-  and CSV) drop the metadata, and SPSS-style codes such as -99 then read
-  back as ordinary numbers, while a missing-value form that .sav, .dta,
-  or .xpt cannot represent stops the save before anything is written. If
-  `FALSE`, every declared missing value – an SPSS-style code, or a
-  Stata-style or SAS-style marker – is made plain NA before writing, in
-  the file only (the data frame is not changed), and a note gives the
-  number of cells. This happens before the .sav, .dta, and .xpt checks,
-  so a form those formats cannot represent no longer stops the save.
-  Mirrors the `preserve.declarations` argument of
+  Logical, for a data frame. If `TRUE` (the default), missing-value
+  declarations are written as they stand; formats that cannot store them
+  (notably Excel and CSV) drop the metadata, and SPSS-style codes such
+  as -99 then read back as ordinary numbers, while a missing-value form
+  that .sav, .dta, or .xpt cannot represent stops the save before
+  anything is written. If `FALSE`, every declared missing value – an
+  SPSS-style code, or a Stata-style or SAS-style marker – is made plain
+  NA before writing, in the file only (the data frame is not changed),
+  and a note gives the number of cells. This happens before the .sav,
+  .dta, and .xpt checks, so a form those formats cannot represent no
+  longer stops the save. Mirrors the `preserve.declarations` argument of
   [`jload`](https://jma61.github.io/jstats/reference/jload.md). The
   haven package and its documentation call these user-defined missing
   values.
 
 - clean.names:
 
-  Logical. For `.sav`, `.dta` and `.xpt`. If `FALSE` (the default), a
-  variable name the format cannot hold stops the save, listing every
-  such name, why, and the name it would be given. If `TRUE`, those names
-  are changed in the file only, the way
+  Logical, for a data frame. For `.sav`, `.dta` and `.xpt`. If `FALSE`
+  (the default), a variable name the format cannot hold stops the save,
+  listing every such name, why, and the name it would be given. If
+  `TRUE`, those names are changed in the file only, the way
   [`jload`](https://jma61.github.io/jstats/reference/jload.md) changes
   names R cannot use; the data frame keeps its own names, each old name
   becomes the variable's label in the file where it has none, and a note
@@ -209,12 +226,20 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/Rtmp3k8ub2/community.sav
+#> Saved community to /tmp/RtmpWVNkeo/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/Rtmp3k8ub2/community.sav
+#> Saved community to /tmp/RtmpWVNkeo/community.sav
 #> (SPSS format; 103 cases, 15 variables)
+
+# A saved result, kept for a later session in R format
+m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
+jsave(m1, file.path(tempdir(), "m1.rds"), overwrite = TRUE)
+#> Saved m1 to /tmp/RtmpWVNkeo/m1.rds
+#> (R format; a jlm() result)
+#> To load it in a later session:
+#>   jload("/tmp/RtmpWVNkeo/m1")
 
 if (FALSE) { # \dontrun{
 # The file extension determines the format ---
@@ -227,6 +252,12 @@ jsave(community, "community.rds")         # R format
 # Using juse() default
 juse(community)
 jsave("community.sav")
+
+# A saved result: the file is named for it, m1.rds, and jload() reads it
+# back in a later session
+m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
+jsave(m1)
+jload("m1")
 
 # Full file path
 jsave(community, "C:/Output/community.sav")
