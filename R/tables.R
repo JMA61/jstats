@@ -8029,7 +8029,9 @@ print.jst_figure <- function(x, ...) {
 #' A style holds a table's look and a journal's or a report's conventions:
 #' the font, the caption's form, the rules, the decimals, and for each
 #' table type its columns and labels. \code{jstyle()} lists the styles
-#' jstats can find; \code{jstyle("myjournal")} checks a style file and
+#' jstats can find and the folders it looks in, and, when no style
+#' folder is set, gives the line that sets one in your Documents folder;
+#' \code{jstyle("myjournal")} checks a style file and
 #' prints every setting the style gives, marking each one it takes from
 #' another style; and \code{jstyle("apa", save.as = "myjournal")} saves a
 #' copy as a style file, myjournal.jstyle, every setting written out with
@@ -8274,9 +8276,44 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
          "To open it, paste the folder's path into File Explorer's address ",
          "bar, or into Finder's Go > Go to Folder:\n",
          "  ", dir, "\n",
-         "To keep your styles in a folder you can see, set one, then save ",
-         "the copy again:\n",
-         "  joptions(style.dir = \"", .jst_dq_escape(visible), "\")")
+         "To keep your styles in your Documents folder instead, run this ",
+         "line, then save the copy again:\n",
+         .jst_style_visible_line(visible))
+}
+
+#' Internal helper: the lines jstyle()'s list ends on with no style folder
+#'
+#' The (S427) item, built Session 427 in Jeff's wording ("Option 2"): with
+#' no style folder set, a copy jstyle(save.as =) saves goes into the hidden
+#' jstats folder, so the list of styles ends on the line that sets a folder
+#' in Documents, the one the note under such a copy gives
+#' (\code{.jst_style_hidden_note()}) -- the line the guides' Keeping your
+#' styles page sends readers to, shown without a copy being saved.
+#'
+#' @param visible The folder the last line sets
+#'   (\code{.jst_style_visible_dir()}).
+#' @return Character(1), two sentences and the line, newline-separated.
+#' @keywords internal
+.jst_style_unset_text <- function(visible = .jst_style_visible_dir()) {
+  paste0("No style folder is set, so jstyle() saves copies in your jstats ",
+         "folder, which is hidden.\n",
+         "To keep them in your Documents folder instead, run:\n",
+         .jst_style_visible_line(visible))
+}
+
+#' Internal helper: the line that sets the visible style folder
+#'
+#' \code{joptions(style.dir = "<Documents>/jstats styles")}, two spaces in,
+#' the path's quotation marks escaped and the path whole on one line, so it
+#' runs as printed: the last line of the jstats-folder note and of
+#' jstyle()'s list when no style folder is set (Session 427; one home for
+#' the two).
+#'
+#' @param visible The folder (\code{.jst_style_visible_dir()}).
+#' @return Character(1).
+#' @keywords internal
+.jst_style_visible_line <- function(visible = .jst_style_visible_dir()) {
+  paste0("  joptions(style.dir = \"", .jst_dq_escape(visible), "\")")
 }
 
 #' Internal helper: the visible style folder the jstats-folder note names
@@ -8772,6 +8809,16 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
                         if (!dir.exists(dirs[[i]])) ", not created yet", ")"))
   }
   cat("\n")
+  # No style folder set (the (S427) item; Jeff's wording, Session 427): a
+  # copy jstyle(save.as =) saves goes into the hidden jstats folder, so the
+  # list ends on the line that sets a folder in Documents -- the line the
+  # note under such a copy gives, here without a copy being saved, for the
+  # guides' Keeping your styles page.
+  if (is.null(getOption(".jst_options_style_dir",
+                        .jst_options_defaults$style.dir))) {
+    .jst_msg_out(.jst_style_unset_text())
+    cat("\n")
+  }
   # A file of a built-in's name is left out of the list above (Session 407).
   for (b in names(.jst_style_builtin())) {
     note <- .jst_style_shadowed_note(b, .jst_style_shadowed(b))

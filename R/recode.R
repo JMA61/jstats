@@ -7621,13 +7621,19 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     # Session 352 the wrapped text was indented here and the emitter broke
     # its lines again, mid-phrase. Prose lines are wrapped once, at their
     # indent, by the emitter; the runnable lines pass whole.
-    lines <- vapply(seq_along(build_err_raw), function(i) {
-      m <- sub("^jdeclare_missing\\(\\): ", "", build_err_raw[[i]])
-      m <- paste0("  ", names(build_err_raw)[i], ":\n    ",
-                  gsub("\n", "\n    ", m, fixed = TRUE))
+    # Variables whose refusals are word for word the same share ONE block,
+    # headed by all their names in the call's order, as the confirmation's
+    # blocks group variables (Session 427, the (S426) convention-menu item:
+    # with no convention selected the choose-first menu had printed once
+    # under each variable without a declaration of its own). The blocks
+    # keep the order of each one's first variable.
+    raw  <- sub("^jdeclare_missing\\(\\): ", "", unname(build_err_raw))
+    lines <- vapply(unique(raw), function(k) {
+      m <- paste0("  ", paste(names(build_err_raw)[raw == k], collapse = ", "),
+                  ":\n    ", gsub("\n", "\n    ", k, fixed = TRUE))
       # A blank line inside the refusal stays blank, not four spaces.
       gsub("(?m)^ +$", "", m, perl = TRUE)
-    }, character(1))
+    }, character(1), USE.NAMES = FALSE)
     .jst_stop("cannot declare on ", length(build_err), " of ", n_targets,
               " variables; no variable was changed:\n",
               paste(lines, collapse = "\n"),

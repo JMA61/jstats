@@ -47,7 +47,9 @@ the style, or the path of the file written.
 A style holds a table's look and a journal's or a report's conventions:
 the font, the caption's form, the rules, the decimals, and for each
 table type its columns and labels. \code{jstyle()} lists the styles
-jstats can find; \code{jstyle("myjournal")} checks a style file and
+jstats can find and the folders it looks in, and, when no style
+folder is set, gives the line that sets one in your Documents folder;
+\code{jstyle("myjournal")} checks a style file and
 prints every setting the style gives, marking each one it takes from
 another style; and \code{jstyle("apa", save.as = "myjournal")} saves a
 copy as a style file, myjournal.jstyle, every setting written out with
