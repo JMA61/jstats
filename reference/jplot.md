@@ -588,7 +588,7 @@ p1 <- jplot(community, Region)
 jtable(p1, file = file.path(tempdir(), "Figure1.docx"), overwrite = TRUE)
 #> Figure 1. Region of residence (N = 103)
 #>   a bar chart, 6 by 4 inches, on a portrait page.
-#> Figure written to /tmp/Rtmpaw8PAM/Figure1.docx
+#> Figure written to /tmp/Rtmp3k8ub2/Figure1.docx
 #> 
 
 # The report style's look
