@@ -27,7 +27,7 @@ written in a style file as the letter itself; this page names it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.284</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.285</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -611,7 +611,7 @@ fit.rows = r2, n
 <dd><p>the title when the call gives none; {set} is the text the items' labels share, else Multiple-Response Set. Takes any text. In apa: <code>{set}</code>.</p></dd>
 
 <dt><code>columns</code></dt>
-<dd><p>the columns, in order: n (those who chose the option), percent (of everyone who answered). Takes one or more of n, percent, in order, separated by commas. In apa: <code>n, percent</code>.</p></dd>
+<dd><p>the columns, in order: n (the cases in the category), percent (of N). Takes one or more of n, percent, in order, separated by commas. In apa: <code>n, percent</code>.</p></dd>
 
 <dt><code>stub.label</code></dt>
 <dd><p>the first column's head. Takes any text, or nothing. In apa: <code>Category</code>.</p></dd>
@@ -623,7 +623,7 @@ fit.rows = r2, n
 <dd><p>the head of the percent column. Takes any text, or nothing. In apa: <code>%</code>.</p></dd>
 
 <dt><code>none.label</code></dt>
-<dd><p>the label of the row of those who answered and chose none. Takes any text. In apa: <code>None of these</code>.</p></dd>
+<dd><p>the label of the row of cases in none of the categories. Takes any text. In apa: <code>None of these</code>.</p></dd>
 
 <dt><code>choice.note</code></dt>
 <dd><p>yes: the note says a case can be counted in more than one category, so the percentages sum to more than 100 | no. Takes one of yes | no. In apa: <code>yes</code>.</p></dd>

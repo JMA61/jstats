@@ -1,10 +1,12 @@
-# Multiple-response set: how many chose each option
+# Multiple-response set: how many cases are in each category
 
-Tabulates a multiple-response question – "Which of these services have
-you used? Tick all that apply." – stored, as survey software stores it,
-as one yes/no item per option. For each option it counts the people who
-chose it and gives the percentage of everyone who answered the question,
-so the percentages can sum to more than 100. SPSS calls this a
+Tabulates a multiple-response set: a question such as "Which of these
+services have you used? Tick all that apply.", stored as survey software
+stores it, one yes/no item per option – or records in the same layout,
+such as one yes/no item per kind of charge laid at an arrest. Each item
+is one category of the set. For each category it counts the cases in it
+and gives their percentage of every case with a value on at least one
+item, so the percentages can sum to more than 100. SPSS calls this a
 multiple-response set (MULT RESPONSE, or a CTABLES `$` set).
 
 ## Usage
@@ -38,18 +40,18 @@ jmulti(
 
 - none:
 
-  The survey's own "None of these" item, if it had one, unquoted or in
-  quotes. NULL (the default) for none.
+  The data's own "None of these" item (a survey's own box), if they have
+  one, unquoted or in quotes. NULL (the default) for none.
 
 - ticked:
 
-  The value an item holds when its option was chosen: 1 (the default),
-  or another number or a text value in quotes.
+  The value counted: the value an item holds for a case in its category,
+  1 (the default), or another number or a text value in quotes.
 
 - rank:
 
-  Logical. TRUE (the default) lists the options by how many chose them,
-  most first; FALSE keeps the data frame's order.
+  Logical. TRUE (the default) lists the categories by how many cases are
+  in each, most first; FALSE keeps the data frame's order.
 
 - subset:
 
@@ -59,9 +61,9 @@ jmulti(
 
 - variable.id:
 
-  Character or NULL. How the options are named in the console: `"names"`
-  (the items' names), `"labels"` (the text each item's label adds to
-  what the set's labels share), `"both"` (`"name: label"`), or
+  Character or NULL. How the categories are named in the console:
+  `"names"` (the items' names), `"labels"` (the text each item's label
+  adds to what the set's labels share), `"both"` (`"name: label"`), or
   `"legend"` or `"legend.bottom"` (names, with the labels listed after
   the table). NULL (the default) defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
@@ -71,7 +73,7 @@ jmulti(
 
   Accepted for symmetry with the other analysis functions; the Case
   Processing table here shows the filters only, and the Analysis N line
-  says how many answered no item.
+  says how many cases have no value on any item.
 
 - print:
 
@@ -83,45 +85,45 @@ jmulti(
 ## Value
 
 Invisibly, a list of class `jst_multi`: `table` (the rows as printed),
-`rows_raw` (each row's item, label, option text, kind, count and
+`rows_raw` (each row's item, label, category text, kind, count and
 unrounded percentage), `items` (the items, the `none =` item last),
 `none`, `ticked`, `rank`, `title` (the text the labels share, or NA),
-`n` (everyone who answered), `n_excluded` (those who answered no item),
-`n_none` (those who answered and chose none), `sample_info` and
-`data_name`. A result kept with `<-` holds the output its call printed –
-or would have printed, under `print = FALSE` or `joutput("silent")` –
-and typing its name, or [`print()`](https://rdrr.io/r/base/print.html),
-shows that output again.
+`n` (every case with a value on at least one item), `n_excluded` (the
+cases with no value on any item), `n_none` (the cases in none of the
+categories), `sample_info` and `data_name`. A result kept with `<-`
+holds the output its call printed – or would have printed, under
+`print = FALSE` or `joutput("silent")` – and typing its name, or
+[`print()`](https://rdrr.io/r/base/print.html), shows that output again.
 
 ## Details
 
-**Who is counted.** N is everyone who answered: a person with an answer
-on at least one item. A blank among a person's answers counts as not
-chosen – survey software often writes an unticked box as blank – and a
-person blank or declared missing on every item (not asked, or skipped
-the question) is left out of N. A "None of these" row counts those who
-answered and chose none of the options; it prints only when anyone did.
-When the survey had its own "None of these" box, name it with `none =`:
+**Who is counted.** N is every case with a value on at least one item. A
+blank among a case's values counts as not in that category – survey
+software often writes an unticked box as blank – and a case blank or
+declared missing on every item (not asked, or skipped the question) is
+left out of N. A "None of these" row counts the cases in none of the
+categories; it prints only when there are any. When the data have their
+own "None of these" item – a survey's own box – name it with `none =`:
 it is counted with the others and its row comes last. When no item holds
-a "No" at all – a file that writes every unticked box as blank – a
-person who chose nothing cannot be told from one who was not asked, and
-a note says so.
+a "No" at all – a file that writes every unticked box as blank – a case
+in none of the categories cannot be told from one that was not asked,
+and a note says so.
 
-**The value counted as chosen** is 1, which LimeSurvey's SPSS files,
-Qualtrics and REDCap all write for a ticked box; `ticked =` names
-another (`ticked = "Y"` for LimeSurvey's CSV files). Only the set's
-yes/no items belong in the call: an item holding more than two values
-stops it, as does a text answer such as an "Other" box – a text item
-among numbers, or, under `ticked = "Y"`, an item holding text that no
-other item of the set holds.
+**The value counted** is 1, which LimeSurvey's SPSS files, Qualtrics and
+REDCap all write for a ticked box; `ticked =` names another
+(`ticked = "Y"` for LimeSurvey's CSV files). Only the set's yes/no items
+belong in the call: an item holding more than two values stops it, as
+does a text answer such as an "Other" box – a text item among numbers,
+or, under `ticked = "Y"`, an item holding text that no other item of the
+set holds.
 
-**The order.** The options are ranked by how many chose them, most
-first; `rank = FALSE` keeps the order of the data frame. Either way the
-"None of these" rows come last.
+**The order.** The categories are ranked by how many cases are in each,
+most first; `rank = FALSE` keeps the order of the data frame. Either way
+the "None of these" rows come last.
 
 **The title** of the set is the text its items' labels share – "Services
 used" for items labelled "Services used: Counselling" and "Services
-used: Housing" – and each option is named by the rest of its label.
+used: Housing" – and each category is named by the rest of its label.
 Items whose labels share no text are named by their labels, and the set
 is titled "Multiple-Response Set". Keep the result with `<-` to make a
 publication table of it with
@@ -154,7 +156,7 @@ attr(svc$Financial, "label")   <- "Services used: Financial advice"
 jmulti(svc, Counselling:Financial)
 #> Multiple Response
 #> 
-#> Analysis N: 9 (1 answered no item)
+#> Analysis N: 9 (1 with no value on any item)
 #> 
 #> Services used
 #>                Freq  Percent
@@ -166,11 +168,11 @@ jmulti(svc, Counselling:Financial)
 #> None of these    3    33.33
 #> 
 
-# The options in the data frame's order, named by their labels
+# The categories in the data frame's order, named by their labels
 jmulti(svc, Counselling:Financial, rank = FALSE, variable.id = "labels")
 #> Multiple Response
 #> 
-#> Analysis N: 9 (1 answered no item)
+#> Analysis N: 9 (1 with no value on any item)
 #> 
 #> Services used
 #>                   Freq  Percent
@@ -187,7 +189,7 @@ jmulti(svc, Counselling:Financial, rank = FALSE, variable.id = "labels")
 m <- jmulti(svc, Counselling:Financial, print = FALSE)
 t1 <- jtable(m)
 #> Table 1. Services used (N = 9)
-#>   1 set of 4 options, on a portrait page.
+#>   1 set of 4 items, on a portrait page.
 #> The table was made in R; no Word file was asked for.
 #> 
 jplot(m)

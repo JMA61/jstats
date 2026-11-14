@@ -878,9 +878,9 @@ prints the marks as typed.
 
 - `columns`:
 
-  the columns, in order: n (those who chose the option), percent (of
-  everyone who answered). Takes one or more of n, percent, in order,
-  separated by commas. In apa: `n, percent`.
+  the columns, in order: n (the cases in the category), percent (of N).
+  Takes one or more of n, percent, in order, separated by commas. In
+  apa: `n, percent`.
 
 - `stub.label`:
 
@@ -898,7 +898,7 @@ prints the marks as typed.
 
 - `none.label`:
 
-  the label of the row of those who answered and chose none. Takes any
+  the label of the row of cases in none of the categories. Takes any
   text. In apa: `None of these`.
 
 - `choice.note`:

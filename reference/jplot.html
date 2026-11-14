@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.284</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.285</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -347,9 +347,9 @@ publication table prints: under a style file whose <code>[crosstab]</code>
 <code>percent.base</code> is <code>row</code>, one bar per category of the row
 variable)</p></li>
 <li><p><code>jst_multi</code> (a <code><a href="jmulti.html">jmulti()</a></code> result): <code>bar</code>,
-a ranked bar chart – one horizontal bar per option in the order of
-the result's table, "None of these" last, each bar's percentage of
-everyone who answered at its end</p></li>
+a ranked bar chart – one horizontal bar per category in the order
+of the result's table, "None of these" last, each bar's percentage
+of the set's N at its end</p></li>
 </ul><p>The shortcut keyword <code>core</code> (default) produces a curated default
 set for the class; <code>all</code> produces every plot the class supports.</p>
 <p>For a <code>jst_lm</code> result, <code>effects</code> draws one plot per variable
@@ -428,9 +428,9 @@ band illustrating the homoskedasticity assumption), <code>none</code> (no band).
 so and points you to the data-first form for its items, for example
 <code>jplot(data, Item1)</code>.</p></li>
 <li><p><code>jplot(jst_multi)</code>: the ranked bar chart of a multiple-response set, for a
-<code><a href="jmulti.html">jmulti()</a></code> result: one bar per option in the order of the result's
-table, "None of these" last, each bar's percentage of everyone who
-answered at its end.</p></li>
+<code><a href="jmulti.html">jmulti()</a></code> result: one bar per category in the order of the
+result's table, "None of these" last, each bar's percentage of the
+set's N at its end.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -561,7 +561,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu"><a href="jtable.html">jtable</a></span><span class="op">(</span><span class="va">p1</span>, file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Figure1.docx"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Figure 1. Region of residence (N = 103)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   a bar chart, 6 by 4 inches, on a portrait page.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Figure written to /tmp/RtmpJ90FB7/Figure1.docx</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Figure written to /tmp/Rtmp4rVtiv/Figure1.docx</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The report style's look</span></span></span>

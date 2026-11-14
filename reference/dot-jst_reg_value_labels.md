@@ -19,14 +19,11 @@ The other types read the column's value labels through
 
 - reg:
 
-  A registration object (`var_type`, `codes`, `labels`, optionally
-  `values`).
+  A registration object (`var_type`, `codes`, `labels`, `values`).
 
 - col:
 
-  The variable's column: the label source for the non-position types,
-  and the reconstruction source for a factor or character registration
-  saved without `values`.
+  The variable's column: the label source for the non-position types.
 
 ## Value
 

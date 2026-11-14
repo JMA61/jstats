@@ -198,13 +198,14 @@ a reliability table from
 each item's mean, standard deviation, corrected item-total correlation
 and alpha if the item is deleted; and a multiple-response table from a
 [`jmulti`](https://jma61.github.io/jstats/reference/jmulti.md) result –
-how many chose each option of a set of yes/no items, and what percentage
-of everyone who answered. A chart – one
-[`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) drew, or
-one drawn in ggplot2 – goes into the Word file as a figure (see Charts,
-below). The variables of a descriptives or frequency table go under role
-headings when `headings` names them, and each specific note's variables
-are marked when `markers` names them. A filter the analysis applied
+how many cases are in each category of a set of yes/no items, and their
+percentage of every case with a value on at least one item. A chart –
+one [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) drew,
+or one drawn in ggplot2 – goes into the Word file as a figure (see
+Charts, below). The variables of a descriptives or frequency table go
+under role headings when `headings` names them, and each specific note's
+variables are marked when `markers` names them. A filter the analysis
+applied
 ([`jsubset`](https://jma61.github.io/jstats/reference/jsubset.md),
 `subset =`) is named in the general note.
 
@@ -303,7 +304,7 @@ t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
              overwrite = TRUE)
 #> Table 1. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> Table written to /tmp/RtmpJ90FB7/Table2.docx
+#> Table written to /tmp/Rtmp4rVtiv/Table2.docx
 #> 
 
 # Several tables in one file: build each, then give them together
@@ -313,7 +314,7 @@ doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
 #>   2 variables, on a portrait page.
 #> Table 2. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> 2 tables written to /tmp/RtmpJ90FB7/Tables.docx
+#> 2 tables written to /tmp/Rtmp4rVtiv/Tables.docx
 #> 
 print(doc)
 #> Table 1
@@ -351,7 +352,7 @@ doc2 <- jtable(list(t1, p1), file = file.path(tempdir(), "Report.docx"),
 #>   2 variables, on a portrait page.
 #> Figure 1. Region of residence (N = 103)
 #>   a bar chart, 6 by 4 inches, on a portrait page.
-#> 1 table and 1 figure written to /tmp/RtmpJ90FB7/Report.docx
+#> 1 table and 1 figure written to /tmp/Rtmp4rVtiv/Report.docx
 #> 
 
 # Keep a result for a later session with base R

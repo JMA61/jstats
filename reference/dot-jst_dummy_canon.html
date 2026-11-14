@@ -6,16 +6,18 @@ Chinese, Japanese or Korean label and an accented one keep their
 letters. The rule kept A to Z and 0 to 9 only, so such a label lost
 every letter and the dummy was named by its code, under a note that
 its value labels were not available. One rule for
-.jst_make_dummy_names(), its ref = matching and
-.jst_dummy_category_values()."><meta property="og:description" content="Session 390 (the non-English probe): every run of characters that are
+.jst_make_dummy_names() and its ref = matching. (Until
+Session 425 an ascii argument kept the A-to-Z rule for a
+registration stored before Session 390; ruling R87 took it out.)"><meta property="og:description" content="Session 390 (the non-English probe): every run of characters that are
 not letters, combining marks or digits becomes one underscore, and the
 underscores at either end are dropped – letters of ANY script, so a
 Chinese, Japanese or Korean label and an accented one keep their
 letters. The rule kept A to Z and 0 to 9 only, so such a label lost
 every letter and the dummy was named by its code, under a note that
 its value labels were not available. One rule for
-.jst_make_dummy_names(), its ref = matching and
-.jst_dummy_category_values()."></head><body>
+.jst_make_dummy_names() and its ref = matching. (Until
+Session 425 an ascii argument kept the A-to-Z rule for a
+registration stored before Session 390; ruling R87 took it out.)"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -23,7 +25,7 @@ its value labels were not available. One rule for
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.284</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.285</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,13 +59,14 @@ Chinese, Japanese or Korean label and an accented one keep their
 letters. The rule kept A to Z and 0 to 9 only, so such a label lost
 every letter and the dummy was named by its code, under a note that
 its value labels were not available. One rule for
-<code><a href="dot-jst_make_dummy_names.html">.jst_make_dummy_names()</a></code>, its <code>ref =</code> matching and
-<code><a href="dot-jst_dummy_category_values.html">.jst_dummy_category_values()</a></code>.</p>
+<code><a href="dot-jst_make_dummy_names.html">.jst_make_dummy_names()</a></code> and its <code>ref =</code> matching. (Until
+Session 425 an <code>ascii</code> argument kept the A-to-Z rule for a
+registration stored before Session 390; ruling R87 took it out.)</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_dummy_canon</span><span class="op">(</span><span class="va">x</span>, ascii <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_dummy_canon</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -72,11 +75,6 @@ its value labels were not available. One rule for
 
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>Character vector.</p></dd>
-
-
-<dt id="arg-ascii">ascii<a class="anchor" aria-label="anchor" href="#arg-ascii"></a></dt>
-<dd><p>TRUE gives the A-to-Z rule, which names stored before
-Session 390 were made by.</p></dd>
 
 </dl></div>
     <div class="section level2">

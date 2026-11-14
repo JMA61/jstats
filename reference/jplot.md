@@ -331,9 +331,9 @@ Valid plot names by class (for the result-object form):
 
 - `jst_multi` (a
   [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md)
-  result): `bar`, a ranked bar chart – one horizontal bar per option in
-  the order of the result's table, "None of these" last, each bar's
-  percentage of everyone who answered at its end
+  result): `bar`, a ranked bar chart – one horizontal bar per category
+  in the order of the result's table, "None of these" last, each bar's
+  percentage of the set's N at its end
 
 The shortcut keyword `core` (default) produces a curated default set for
 the class; `all` produces every plot the class supports.
@@ -455,9 +455,8 @@ the homoskedasticity assumption), `none` (no band).
 
 - `jplot(jst_multi)`: the ranked bar chart of a multiple-response set,
   for a [`jmulti()`](https://jma61.github.io/jstats/reference/jmulti.md)
-  result: one bar per option in the order of the result's table, "None
-  of these" last, each bar's percentage of everyone who answered at its
-  end.
+  result: one bar per category in the order of the result's table, "None
+  of these" last, each bar's percentage of the set's N at its end.
 
 ## See also
 
@@ -589,7 +588,7 @@ p1 <- jplot(community, Region)
 jtable(p1, file = file.path(tempdir(), "Figure1.docx"), overwrite = TRUE)
 #> Figure 1. Region of residence (N = 103)
 #>   a bar chart, 6 by 4 inches, on a portrait page.
-#> Figure written to /tmp/RtmpJ90FB7/Figure1.docx
+#> Figure written to /tmp/Rtmp4rVtiv/Figure1.docx
 #> 
 
 # The report style's look

@@ -7,14 +7,15 @@ Chinese, Japanese or Korean label and an accented one keep their
 letters. The rule kept A to Z and 0 to 9 only, so such a label lost
 every letter and the dummy was named by its code, under a note that its
 value labels were not available. One rule for
-[`.jst_make_dummy_names()`](https://jma61.github.io/jstats/reference/dot-jst_make_dummy_names.md),
-its `ref =` matching and
-[`.jst_dummy_category_values()`](https://jma61.github.io/jstats/reference/dot-jst_dummy_category_values.md).
+[`.jst_make_dummy_names()`](https://jma61.github.io/jstats/reference/dot-jst_make_dummy_names.md)
+and its `ref =` matching. (Until Session 425 an `ascii` argument kept
+the A-to-Z rule for a registration stored before Session 390; ruling R87
+took it out.)
 
 ## Usage
 
 ``` r
-.jst_dummy_canon(x, ascii = FALSE)
+.jst_dummy_canon(x)
 ```
 
 ## Arguments
@@ -22,11 +23,6 @@ its `ref =` matching and
 - x:
 
   Character vector.
-
-- ascii:
-
-  TRUE gives the A-to-Z rule, which names stored before Session 390 were
-  made by.
 
 ## Value
 
