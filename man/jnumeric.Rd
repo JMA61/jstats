@@ -20,8 +20,12 @@ builds one is refused, with the two lines that name it first. The
 \code{NULL} and \code{remove = TRUE} forms work on a name whose data
 frame has since been removed.}
 
-\item{...}{One or more unquoted variable names to register. The
-registration applies to numeric variables and to haven-labelled
+\item{...}{One or more unquoted variable names to register.
+A \code{c()} of names, bare or quoted, is read as the names.
+A range of variables in colon notation
+(\code{Environment1:Environment5}) names every variable from the
+first to the last, in the data frame's order.
+The registration applies to numeric variables and to haven-labelled
 variables that hold numbers. Any other type is refused, and none of
 the call's variables is then registered: convert a factor or a text
 variable to numbers first with \code{\link{jencode}}.}

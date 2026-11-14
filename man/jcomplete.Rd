@@ -30,7 +30,11 @@ its name given to something that is not a data frame; \code{on} is
 refused there, since the setting cannot be checked without its
 dataset. Call with no arguments to check the current status.}
 
-\item{...}{Unquoted variable names to include in the listwise check.}
+\item{...}{Unquoted variable names to include in the listwise check.
+A \code{c()} of names, bare or quoted, is read as the names.
+A range of variables in colon notation
+(\code{Environment1:Environment5}) names every variable from the
+first to the last, in the data frame's order.}
 
 \item{preview}{Logical. If \code{TRUE}, open a viewer (RStudio data tab)
 showing the rows the listwise filter will drop, with a leading

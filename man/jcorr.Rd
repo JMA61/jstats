@@ -24,7 +24,10 @@ jcorr(
 \item{data}{A data frame.}
 
 \item{...}{Unquoted variable names within \code{data}. A \code{c()} of names, bare
-or quoted, is read as the names.}
+or quoted, is read as the names.
+A range of variables in colon notation
+(\code{Environment1:Environment5}) names every variable from the
+first to the last, in the data frame's order.}
 
 \item{method}{Character. Correlation method: "pearson" (default),
 "spearman", or "kendall".}
@@ -129,6 +132,7 @@ followed by variable labels (if present), then the matrix.
 # With explicit data frame
 jcorr(community, Income, Age, WellbeingScore)
 jcorr(community, Income, Age, WellbeingScore, method = "spearman")
+jcorr(community, Environment1:Environment5)   # a range of variables
 
 # The data frame may also be given by name
 jcorr(data = community, Income, Age, WellbeingScore)

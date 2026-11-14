@@ -23,6 +23,9 @@
 #' @param data A data frame.
 #' @param ... Unquoted variable names within \code{data}. A \code{c()} of names, bare
 #'   or quoted, is read as the names.
+#'   A range of variables in colon notation
+#'   (\code{Environment1:Environment5}) names every variable from the
+#'   first to the last, in the data frame's order.
 #' @param method Character. Correlation method: "pearson" (default),
 #'   "spearman", or "kendall".
 #' @param subset An optional unquoted logical expression (e.g.
@@ -85,6 +88,7 @@
 #' # With explicit data frame
 #' jcorr(community, Income, Age, WellbeingScore)
 #' jcorr(community, Income, Age, WellbeingScore, method = "spearman")
+#' jcorr(community, Environment1:Environment5)   # a range of variables
 #'
 #' # The data frame may also be given by name
 #' jcorr(data = community, Income, Age, WellbeingScore)
@@ -173,6 +177,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     class(variables) <- "quosures"
   }
   variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
+  # A range, A:B, is every variable from A to B (Session 426, ruling
+  # R90), as jdesc(), jfreq() and jalpha() read one.
+  variables <- .jst_expand_ranges(variables, data, "jcorr", .jst_data_name,
+                                  default_used = .jst_default_used)
 
   variable_names <- vapply(variables, rlang::quo_name, character(1))
 

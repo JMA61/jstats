@@ -25,8 +25,12 @@ subset, is refused, with the two lines that name it first. For the
 same reason \code{jdummy(data, NULL)} and \code{remove = TRUE} work
 on a name whose data frame has since been removed.}
 
-\item{...}{One or more unquoted variable names to register. The variable
-may be haven-labelled, numeric, logical, character, or a factor: for a
+\item{...}{One or more unquoted variable names to register.
+A \code{c()} of names, bare or quoted, is read as the names.
+A range of variables in colon notation
+(\code{Environment1:Environment5}) names every variable from the
+first to the last, in the data frame's order.
+The variable may be haven-labelled, numeric, logical, character, or a factor: for a
 factor the levels are the categories, in level order, and a level with
 no cases is left out; for a text variable the distinct values are the
 categories, in alphabetical order, and cells with no text (empty, or

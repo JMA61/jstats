@@ -101,7 +101,9 @@
 #' Internal helper: a list of variables with its ranges written out
 #'
 #' For a function that reads its variables one by one from the quosures
-#' (jdesc(), jfreq()): each range \code{A:B} is replaced by the variables
+#' (jdesc() and jfreq() since Session 416; jcorr(), jscreen(), jcomplete(),
+#' jdeclare_missing(), jconvert(), jdummy(), jnumeric(), jcount() and
+#' jlikert() since Session 426, ruling R90): each range \code{A:B} is replaced by the variables
 #' from A to B in the data frame's order, each a quosure of its own, so the
 #' call reads as if every one had been named (Session 416; the (S413)
 #' item). The range is checked as \code{.jst_resolve_varrange()} checks it
@@ -145,6 +147,23 @@
   names(out) <- nms
   class(out) <- class(quos_list)
   out
+}
+
+#' Internal helper: whether an expression is a range of variables
+#'
+#' \code{A:B} with a name at each end, as a variable list takes it
+#' (Session 426, ruling R90). Used where the input stands in the data
+#' frame's place -- the resolver's lines when no data frame is named, and
+#' ruling R23's check of the line it offers -- so a range there is read as
+#' the call's variables, as a name is. A range of numbers (\code{1:3}) is
+#' not one.
+#'
+#' @param e An expression.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_is_var_range <- function(e) {
+  is.call(e) && identical(e[[1L]], as.name(":")) && length(e) == 3L &&
+    is.symbol(e[[2L]]) && is.symbol(e[[3L]])
 }
 
 

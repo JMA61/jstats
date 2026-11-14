@@ -2197,8 +2197,9 @@
 #' own, in place, in the \code{c()}'s environment; a quoted item stays the
 #' string it was, which every list already reads as a name. Only a
 #' \code{c()} whose items are all names or strings is opened: a range
-#' (\code{Age:Score}), a helper, or an item computed inside the \code{c()}
-#' keeps the not-found stop, as decided. A named item (a misspelled
+#' inside it (\code{c(Age:Score)}), a helper, or an item computed inside
+#' the \code{c()} keeps the not-found stop. A range standing on its own is
+#' written out by \code{.jst_expand_ranges()} (Sessions 416 and 426). A named item (a misspelled
 #' argument, a condition) is left to \code{.jst_check_named_variables()}.
 #'
 #' @param quos The captured variable list, after any \code{juse()}
@@ -2989,8 +2990,15 @@
   if (!is.symbol(fr)) return(FALSE)
   d <- tryCatch(get(as.character(fr), envir = envir), error = function(e) NULL)
   if (!is.data.frame(d)) return(FALSE)
-  v <- vapply(vars_dots, function(e) if (is.symbol(e)) as.character(e) else "",
-              character(1))
+  # A range is every variable from one end to the other (Session 426).
+  v <- unlist(lapply(vars_dots, function(e) {
+    if (is.symbol(e)) return(as.character(e))
+    if (.jst_is_var_range(e)) {
+      ij <- match(c(as.character(e[[2L]]), as.character(e[[3L]])), names(d))
+      if (!anyNA(ij) && ij[1L] <= ij[2L]) return(names(d)[ij[1L]:ij[2L]])
+    }
+    ""
+  }))
   if (!is.null(a$vars)) {
     vv <- tryCatch(eval(a$vars, baseenv()), error = function(e) NULL)
     if (is.character(vv)) v <- c(v, vv)
@@ -3510,9 +3518,17 @@
     }
     # The one data frame in the workspace that has the variable is named
     # in the lines, so they run as printed (Session 356, ruling R18); with
-    # none or several, the placeholder stays.
-    fr <- if (is.symbol(data_sub))
-      .jst_frame_holding(data_str, envir) else NULL
+    # none or several, the placeholder stays. A range of variables (Session
+    # 426, ruling R90) is read as a name is -- the data frame holding both
+    # its ends, the whole call kept -- where it had MyData and the range
+    # alone: jdeclare_missing(MyData, Environment1:Environment3) dropped
+    # codes = and would have stopped again.
+    is_rng <- .jst_is_var_range(data_sub)
+    fr <- if (is.symbol(data_sub)) {
+      .jst_frame_holding(data_str, envir)
+    } else if (is_rng) {
+      .jst_frame_holding(all.vars(data_sub), envir)
+    } else NULL
     if (is.null(fr)) fr <- "MyData"
     line1 <- paste0(fn_name, "(", fr, ", ", data_str, ")")
     line2 <- paste0(fn_name, "(", data_str, ")")
@@ -3524,7 +3540,7 @@
     # data frame goes in front of the call as typed -- the one in the
     # workspace holding every variable the call names -- and the second
     # route is the call as typed.
-    if (is.symbol(data_sub)) {
+    if (is.symbol(data_sub) || is_rng) {
       ucl <- tryCatch(.jst_caller_call(), error = function(e) NULL)
       if (!is.null(ucl)) {
         it <- as.list(ucl)
@@ -3570,7 +3586,7 @@
     # Only where the line names a data frame of the workspace: with MyData
     # the name may be a data frame's typed wrong, and "'dta' not found."
     # says so where ruling R22's lead would not.
-    if (is.symbol(data_sub) && !identical(fr, "MyData")) {
+    if ((is.symbol(data_sub) || is_rng) && !identical(fr, "MyData")) {
       gap <- .jst_call_gap(fn_name, offered, envir)
       if (!is.null(gap)) {
         .jst_gap_stop(fn_name, gap,

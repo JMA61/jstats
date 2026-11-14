@@ -1057,6 +1057,10 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #'   refused there, since the setting cannot be checked without its
 #'   dataset. Call with no arguments to check the current status.
 #' @param ... Unquoted variable names to include in the listwise check.
+#'   A \code{c()} of names, bare or quoted, is read as the names.
+#'   A range of variables in colon notation
+#'   (\code{Environment1:Environment5}) names every variable from the
+#'   first to the last, in the data frame's order.
 #' @param clear.all Logical. If \code{TRUE}, clears the jcomplete setting
 #'   on every dataset; use on its own, \code{jcomplete(clear.all = TRUE)}.
 #'   This is the same grammar as \code{jsubset()} and the registration
@@ -1493,6 +1497,11 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     class(variables) <- "quosures"
   }
   variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
+  # A range, A:B, is every variable from A to B (Session 426, ruling
+  # R90), as jdesc(), jfreq() and jalpha() read one.
+  variables <- .jst_expand_ranges(variables, data, "jcomplete",
+                                  .jst_data_name,
+                                  default_used = .jst_default_used)
 
   variable_names <- vapply(variables, rlang::quo_name, character(1))
 
@@ -1701,8 +1710,12 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #'   subset, is refused, with the two lines that name it first. For the
 #'   same reason \code{jdummy(data, NULL)} and \code{remove = TRUE} work
 #'   on a name whose data frame has since been removed.
-#' @param ... One or more unquoted variable names to register. The variable
-#'   may be haven-labelled, numeric, logical, character, or a factor: for a
+#' @param ... One or more unquoted variable names to register.
+#'   A \code{c()} of names, bare or quoted, is read as the names.
+#'   A range of variables in colon notation
+#'   (\code{Environment1:Environment5}) names every variable from the
+#'   first to the last, in the data frame's order.
+#'   The variable may be haven-labelled, numeric, logical, character, or a factor: for a
 #'   factor the levels are the categories, in level order, and a level with
 #'   no cases is left out; for a text variable the distinct values are the
 #'   categories, in alphabetical order, and cells with no text (empty, or
@@ -1943,6 +1956,10 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
     class(variables) <- "quosures"
   }
   variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
+  # A range, A:B, is every variable from A to B (Session 426, ruling
+  # R90), as jdesc(), jfreq() and jalpha() read one.
+  variables <- .jst_expand_ranges(variables, data, "jdummy", .jst_data_name,
+                                  default_used = .jst_default_used)
   var_names <- if (length(variables) > 0L) {
     unname(vapply(variables, rlang::quo_name, character(1)))
   } else {
@@ -2264,6 +2281,10 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
     class(variables) <- "quosures"
   }
   variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
+  # A range, A:B, is every variable from A to B (Session 426, ruling
+  # R90), as jdesc(), jfreq() and jalpha() read one.
+  variables <- .jst_expand_ranges(variables, data, fn, data_name,
+                                  default_used = default_used)
   # jnumeric(data, NULL): clear this frame's numeric registrations (mirrors
   # jdummy(data, NULL); the lone NULL sits in the variable slot).
   if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
@@ -2309,8 +2330,12 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
 #'   builds one is refused, with the two lines that name it first. The
 #'   \code{NULL} and \code{remove = TRUE} forms work on a name whose data
 #'   frame has since been removed.
-#' @param ... One or more unquoted variable names to register. The
-#'   registration applies to numeric variables and to haven-labelled
+#' @param ... One or more unquoted variable names to register.
+#'   A \code{c()} of names, bare or quoted, is read as the names.
+#'   A range of variables in colon notation
+#'   (\code{Environment1:Environment5}) names every variable from the
+#'   first to the last, in the data frame's order.
+#'   The registration applies to numeric variables and to haven-labelled
 #'   variables that hold numbers. Any other type is refused, and none of
 #'   the call's variables is then registered: convert a factor or a text
 #'   variable to numbers first with \code{\link{jencode}}.
@@ -2377,8 +2402,12 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #'   builds one is refused, with the two lines that name it first. The
 #'   \code{NULL} and \code{remove = TRUE} forms work on a name whose data
 #'   frame has since been removed.
-#' @param ... One or more unquoted variable names to register. The
-#'   registration applies to numeric variables and to haven-labelled
+#' @param ... One or more unquoted variable names to register.
+#'   A \code{c()} of names, bare or quoted, is read as the names.
+#'   A range of variables in colon notation
+#'   (\code{Environment1:Environment5}) names every variable from the
+#'   first to the last, in the data frame's order.
+#'   The registration applies to numeric variables and to haven-labelled
 #'   variables that hold numbers. Any other type is refused, and none of
 #'   the call's variables is then registered: convert a factor or a text
 #'   variable to numbers first with \code{\link{jencode}}.
@@ -2448,6 +2477,10 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #'   frame has since been removed.
 #' @param ... One or more unquoted variable names to register, or a single
 #'   \code{NULL} to clear this frame's Likert registrations (see Details).
+#'   A \code{c()} of names, bare or quoted, is read as the names.
+#'   A range of variables in colon notation
+#'   (\code{Environment1:Environment5}) names every variable from the
+#'   first to the last, in the data frame's order.
 #'   The registration applies to numeric variables and to haven-labelled
 #'   variables that hold numbers. Any other type is refused, and none of
 #'   the call's variables is then registered: convert a factor or a text
@@ -2472,6 +2505,7 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #' @return Invisibly NULL. Called for its side effect on the session registry.
 #' @examples
 #'   jlikert(community, Environment1, Environment2)  # declare two Likert items
+#'   jlikert(community, Environment1:Environment5)   # a range: all five items
 #'   jlikert(data = community, Environment1)         # the data frame by name
 #'   juse(community); jlikert(Environment1); juse(NULL)  # or the juse() default
 #'   jscreen(community)                              # Sub-class shows "Likert"

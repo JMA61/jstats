@@ -20,8 +20,12 @@ jdeclare_missing(
 \item{data}{A data frame containing the variable(s).}
 
 \item{...}{The variable(s) to declare missing values on, as unquoted
-names (e.g. \code{Income}, or \code{MathScore, EnglishScore}). Use
-either \code{...} or \code{vars}, not both. All arguments after
+names (e.g. \code{Income}, or \code{MathScore, EnglishScore}).
+A \code{c()} of names, bare or quoted, is read as the names.
+A range of variables in colon notation
+(\code{Environment1:Environment5}) names every variable from the
+first to the last, in the data frame's order.
+Use either \code{...} or \code{vars}, not both. All arguments after
 the variables must be named.}
 
 \item{codes}{The values to declare as missing: numbers, or on a text
@@ -353,6 +357,12 @@ juse(NULL)
 # A missing-value RANGE: every value from -99 through -51 is missing.
 # SPSS parallel: MISSING VALUES MoodRating (-99 THRU -51).
 df4 <- jdeclare_missing(clinic, MoodRating, range = c(-99, -51))
+
+# Several variables at once, as a range of variables: every variable
+# from Environment1 to Environment5, in the data frame's order.
+# SPSS parallel: MISSING VALUES Environment1 TO Environment5 (-99, -98).
+df5 <- jdeclare_missing(community, Environment1:Environment5,
+                    codes = c("Refused" = -99, "Don't know" = -98))
 
 # Range plus labeled values inside the band, on several variables at
 # once. The same declaration lands on every named column,

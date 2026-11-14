@@ -16,6 +16,10 @@ frame has since been removed.}
 
 \item{...}{One or more unquoted variable names to register, or a single
 \code{NULL} to clear this frame's Likert registrations (see Details).
+A \code{c()} of names, bare or quoted, is read as the names.
+A range of variables in colon notation
+(\code{Environment1:Environment5}) names every variable from the
+first to the last, in the data frame's order.
 The registration applies to numeric variables and to haven-labelled
 variables that hold numbers. Any other type is refused, and none of
 the call's variables is then registered: convert a factor or a text
@@ -66,6 +70,7 @@ than clearing them all).
 }
 \examples{
   jlikert(community, Environment1, Environment2)  # declare two Likert items
+  jlikert(community, Environment1:Environment5)   # a range: all five items
   jlikert(data = community, Environment1)         # the data frame by name
   juse(community); jlikert(Environment1); juse(NULL)  # or the juse() default
   jscreen(community)                              # Sub-class shows "Likert"

@@ -28,7 +28,9 @@ The list, each range written out.
 }
 \description{
 For a function that reads its variables one by one from the quosures
-(jdesc(), jfreq()): each range \code{A:B} is replaced by the variables
+(jdesc() and jfreq() since Session 416; jcorr(), jscreen(), jcomplete(),
+jdeclare_missing(), jconvert(), jdummy(), jnumeric(), jcount() and
+jlikert() since Session 426, ruling R90): each range \code{A:B} is replaced by the variables
 from A to B in the data frame's order, each a quosure of its own, so the
 call reads as if every one had been named (Session 416; the (S413)
 item). The range is checked as \code{.jst_resolve_varrange()} checks it

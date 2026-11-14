@@ -20,7 +20,11 @@ jconvert(
 frame, as in every data-first function:
 \code{jconvert(d, Income, Education, to = "stata")}. When supplied,
 only the listed variables are scanned. Mutually exclusive with
-\code{vars}.}
+\code{vars}.
+A \code{c()} of names, bare or quoted, is read as the names.
+A range of variables in colon notation
+(\code{Environment1:Environment5}) names every variable from the
+first to the last, in the data frame's order.}
 
 \item{to}{One of \code{"baseR"}, \code{"spss"}, \code{"stata"}, or
 \code{"sas"} (any capitalization is accepted), always named:

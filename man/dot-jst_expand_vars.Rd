@@ -21,8 +21,9 @@ read "c(Age, Score) was not found". Each item becomes a variable of its
 own, in place, in the \code{c()}'s environment; a quoted item stays the
 string it was, which every list already reads as a name. Only a
 \code{c()} whose items are all names or strings is opened: a range
-(\code{Age:Score}), a helper, or an item computed inside the \code{c()}
-keeps the not-found stop, as decided. A named item (a misspelled
+inside it (\code{c(Age:Score)}), a helper, or an item computed inside
+the \code{c()} keeps the not-found stop. A range standing on its own is
+written out by \code{.jst_expand_ranges()} (Sessions 416 and 426). A named item (a misspelled
 argument, a condition) is left to \code{.jst_check_named_variables()}.
 }
 \keyword{internal}

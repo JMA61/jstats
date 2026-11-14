@@ -2043,6 +2043,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'   all variables in the data frame are screened. None when \code{data} is
 #'   a single variable. A \code{c()} of names, bare
 #'   or quoted, is read as the names.
+#'   A range of variables in colon notation
+#'   (\code{Environment1:Environment5}) names every variable from the
+#'   first to the last, in the data frame's order.
 #' @param outlier.sd Numeric. Number of standard deviations from the mean
 #'   to flag as potential outliers (Numeric-class variables only). Default
 #'   is 3.
@@ -2238,6 +2241,10 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     class(variables) <- "quosures"
   }
   variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
+  # A range, A:B, is every variable from A to B (Session 426, ruling
+  # R90), as jdesc(), jfreq() and jalpha() read one.
+  variables <- .jst_expand_ranges(variables, data, "jscreen", .jst_data_name,
+                                  default_used = .jst_default_used)
 
   if (length(variables) > 0) {
     var_names <- vapply(variables, rlang::quo_name, character(1))

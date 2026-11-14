@@ -26,7 +26,10 @@ or a vector.}
 \item{...}{Optional unquoted variable names to screen. If omitted,
 all variables in the data frame are screened. None when \code{data} is
 a single variable. A \code{c()} of names, bare
-or quoted, is read as the names.}
+or quoted, is read as the names.
+A range of variables in colon notation
+(\code{Environment1:Environment5}) names every variable from the
+first to the last, in the data frame's order.}
 
 \item{outlier.sd}{Numeric. Number of standard deviations from the mean
 to flag as potential outliers (Numeric-class variables only). Default
