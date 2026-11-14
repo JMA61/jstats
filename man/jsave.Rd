@@ -2,7 +2,7 @@
 % Please edit documentation in R/io.R
 \name{jsave}
 \alias{jsave}
-\title{Save a data frame to a file}
+\title{Save a data frame, a result or a table to a file}
 \usage{
 jsave(
   data,
@@ -14,13 +14,19 @@ jsave(
 )
 }
 \arguments{
-\item{data}{A data frame (unquoted). If omitted, uses the default set by
+\item{data}{A data frame (unquoted), a saved result, or a table
+\code{jtable()} built. If omitted, uses the default data frame set by
 \code{juse()}.}
 
 \item{file}{Character string. The filename with extension (e.g.
 \code{"mydata.sav"}) or a full file path. Use forward slashes in
 file paths. If the extension is omitted, \code{.rds} is used and
-added to the filename.}
+added to the filename. For a saved result or a built table the file
+name may be left out, and the file is named for the object
+(\code{jsave(m1)} writes \code{m1.rds}); a name given with no
+extension, or with an ending that is no file format's
+(\code{"model.1"}), gets \code{.rds}, and another format stops, since
+only R format holds one.}
 
 \item{overwrite}{Logical. If \code{TRUE}, overwrites an existing file
 without prompting. If \code{FALSE} (default), prompts for confirmation
@@ -30,9 +36,10 @@ error. In a script, state it explicitly:
 the file already exists and the script was run by pasting or with
 RStudio's Run button, the call stops with an error.}
 
-\item{preserve.declarations}{Logical. If \code{TRUE} (the default),
-missing-value declarations are written as they stand; formats that
-cannot store them (notably Excel and CSV) drop the metadata, and
+\item{preserve.declarations}{Logical, for a data frame. If \code{TRUE}
+(the default), missing-value declarations are written as they stand;
+formats that cannot store them (notably Excel and CSV) drop the
+metadata, and
 SPSS-style codes such as -99 then read back as ordinary numbers, while
 a missing-value form that .sav, .dta, or .xpt cannot represent stops
 the save before anything is written. If \code{FALSE}, every declared
@@ -45,7 +52,8 @@ formats cannot represent no longer stops the save. Mirrors the
 haven package and its documentation call these user-defined missing
 values.}
 
-\item{clean.names}{Logical. For \code{.sav}, \code{.dta} and \code{.xpt}.
+\item{clean.names}{Logical, for a data frame. For \code{.sav},
+\code{.dta} and \code{.xpt}.
 If \code{FALSE} (the default), a variable name the format cannot hold
 stops the save, listing every such name, why, and the name it would be
 given. If \code{TRUE}, those names are changed in the file only, the
@@ -80,6 +88,14 @@ are taken literally.
 
 If the \code{data} argument is omitted, the default data frame set by
 \code{juse()} is used.
+
+A saved result -- what an analysis function returns, kept with
+\code{<-} -- or a table \code{\link{jtable}()} built is saved in R
+format (\code{.rds}), the one format that can hold it, and its file name
+may be left out: \code{jsave(m1)} writes \code{m1.rds}, in the data
+folder when one is set, and \code{\link{jload}("m1")} reads it back in a
+later session. A chart is not saved: \code{\link{jtable}()} writes it to
+a Word file, and the line that drew it draws it again.
 }
 \details{
 \strong{File paths:}
@@ -176,6 +192,10 @@ jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
 
+# A saved result, kept for a later session in R format
+m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
+jsave(m1, file.path(tempdir(), "m1.rds"), overwrite = TRUE)
+
 \dontrun{
 # The file extension determines the format ---
 # the same data frame can be saved in any supported format
@@ -187,6 +207,12 @@ jsave(community, "community.rds")         # R format
 # Using juse() default
 juse(community)
 jsave("community.sav")
+
+# A saved result: the file is named for it, m1.rds, and jload() reads it
+# back in a later session
+m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
+jsave(m1)
+jload("m1")
 
 # Full file path
 jsave(community, "C:/Output/community.sav")

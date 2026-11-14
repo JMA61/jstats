@@ -6771,10 +6771,11 @@
 #' d))} runs the analysis without printing it and makes its table; errors
 #' and warnings still show.
 #'
-#' \strong{Keeping a result for a later session.} A saved result is an R
-#' object, which base R keeps in a file of its own:
-#' \code{saveRDS(m1, "m1.rds")}, then in a later session
-#' \code{m1 <- readRDS("m1.rds")}.
+#' \strong{Keeping a result for a later session.} \code{\link{jsave}()}
+#' keeps a saved result, or a table, in a file of its own: \code{jsave(m1)}
+#' writes \code{m1.rds}, in the data folder when one is set, and in a later
+#' session \code{\link{jload}("m1")} reads it back as \code{m1}. The file is
+#' R's own \code{.rds} format, which base R's \code{readRDS()} also reads.
 #'
 #' @param x A saved result -- what an analysis function returns, kept with
 #'   \code{<-} -- or a list of them that share one table: a list of
@@ -6884,10 +6885,10 @@
 #' doc2 <- jtable(list(t1, p1), file = file.path(tempdir(), "Report.docx"),
 #'                overwrite = TRUE)
 #'
-#' # Keep a result for a later session with base R
+#' # Keep a result for a later session
 #' path <- file.path(tempdir(), "m1.rds")
-#' saveRDS(m1, path)
-#' m1 <- readRDS(path)
+#' jsave(m1, path, overwrite = TRUE)
+#' jload(path, overwrite = TRUE)
 #'
 #' @export
 jtable <- function(x, headings = NULL, markers = NULL, title = NULL,

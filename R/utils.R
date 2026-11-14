@@ -113,9 +113,11 @@
 #' \itemize{
 #'   \item \code{\link{jload}} -- load data from \code{.rds},
 #'     \code{.sav}, \code{.dta}, \code{.sas7bdat}, \code{.xpt},
-#'     \code{.xlsx}, \code{.xls}, or \code{.csv}
+#'     \code{.xlsx}, \code{.xls}, or \code{.csv}, or a result or a table
+#'     saved with \code{jsave()}
 #'   \item \code{\link{jsave}} -- save a data frame, with format
-#'     inferred from the file extension
+#'     inferred from the file extension, or a saved result or a table in
+#'     R format (\code{.rds})
 #'   \item \code{\link{jdata_dir}} -- return the configured data folder
 #' }
 #'
@@ -883,7 +885,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' emission (console print, AGENTS.md block, SKILL.md) so a saved copy can
 #' be recognized as stale after a package update.
 #' @keywords internal
-.jst_orientation_version <- "3.12"
+.jst_orientation_version <- "3.13"
 
 #' Internal helper: the installed jstats version as a string
 #'
@@ -1019,7 +1021,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
     "  moving data to other software or to plain base-R form, and is never a",
     "  prerequisite for analysis in jstats, which reads labelled data directly.",
     "  Save data across sessions with `jsave()`, and a kept result or table",
-    "  with base R's `saveRDS()` (read it back with `readRDS()`).",
+    "  the same way: `jsave(m1)` writes m1.rds, which `jload(\"m1\")` reads back.",
     "",
     "- Publication tables come from `jtable()` on kept results:",
     "  `jtable(m1, file = \"Table1.docx\")` writes a Word file. One call makes",

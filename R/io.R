@@ -22,6 +22,11 @@
 #' The data frame is automatically named after the file (without the
 #' extension). Use the \code{name} argument to specify a different name.
 #'
+#' A saved result or a table that \code{\link{jsave}()} kept in an
+#' \code{.rds} file is loaded the same way, under the file's name:
+#' \code{jsave(m1)} writes \code{m1.rds}, and \code{jload("m1")} brings
+#' \code{m1} back.
+#'
 #' @param file Character string. The filename (e.g. \code{"mydata.sav"}) or
 #'   a full file path (e.g. \code{"C:/Projects/mydata.sav"}). Use forward
 #'   slashes in file paths. If the extension is omitted, \code{jload()}
@@ -30,7 +35,8 @@
 #'   in your environment. If omitted, the name is derived from the filename.
 #' @param use Logical. If \code{TRUE}, automatically calls \code{juse()} on
 #'   the loaded data frame to set it as the default for jstats
-#'   functions. Default is \code{FALSE}.
+#'   functions. Default is \code{FALSE}. A saved result cannot be the
+#'   default, so \code{use = TRUE} stops on one.
 #' @param overwrite Logical. If \code{TRUE}, overwrites an existing object
 #'   with the same name without prompting. If \code{FALSE} (default),
 #'   prompts for confirmation in interactive sessions. In non-interactive
@@ -112,7 +118,8 @@
 #'   notification. See \code{?joutput} for the full toggle behavior.
 #'
 #' @return Invisibly returns \code{NULL}; jload() is called for its side
-#'   effects. The loaded data frame is placed in the calling environment
+#'   effects. The loaded data frame, or saved result, is placed in the
+#'   calling environment
 #'   under the file's name (or \code{name}), and any classification
 #'   registrations saved with an .rds file are restored for that name.
 #'   Loading a file that carries none clears any registrations set this
@@ -250,6 +257,16 @@
 #' If nothing matches on disk, a bare name falls back to a shipped example
 #' dataset of that name (see below).
 #'
+#' \strong{Saved results and tables:}
+#' An \code{.rds} file holding a saved result or a table \code{jtable()}
+#' built, as \code{\link{jsave}()} writes one, is loaded under the file's
+#' name, or \code{name}, behind the same question as a data frame, and one
+#' line says what it is and the jstats version that made it. Typing its
+#' name shows its output again. \code{use = TRUE}, \code{check.missing},
+#' \code{preserve.declarations} and \code{missing.notice} are for data
+#' frames, and stop on such a file. A name with a dot inside it,
+#' \code{jload("model.1")}, finds \code{model.1.rds}.
+#'
 #' \strong{Auto-naming:}
 #' The data frame name is derived from the filename by stripping the
 #' extension. If the resulting name starts with a digit (which R does not
@@ -378,6 +395,9 @@
 #' # Extension omitted -- jload searches for a matching file automatically
 #' jload("community")
 #'
+#' # A result saved with jsave(m1), read back as m1
+#' jload("m1")
+#'
 #' # The example files shipped with jstats, read by name
 #' jload("community_spss.sav")
 #' jload("community_excel.xlsx", package = TRUE)   # even beside a local copy
@@ -497,6 +517,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                 "A file name goes in quotes:\n",
                 "  jload(\"", as.character(file_sub), "\")")
     }
+    # A name holding a dash or a slash, jload(my-survey) or
+    # jload(Data/wave1), which R reads as arithmetic (Session 429): the same
+    # pointer, where R said "object 'my' not found".
+    .jst_bare_path_stop(file_sub, parent.frame(), sys.call(), match.call(),
+                        "file", "jload")
     .jst_jload_file_value(file_sub, file)
   }
   # The name a loaded data frame is given, and a sheet name, typed bare
@@ -561,6 +586,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Supported extensions --------------------------------------------------
   supported_ext <- c("sav", "dta", "csv", "rds", "sas7bdat", "xpt",
                      "xlsx", "xls", "rdata", "rda")
+
+  # A name with a dot inside it -- model.1, wave.2 -- reads as an extension
+  # jload() does not know (Session 429: jsave(model.1) saves a result as
+  # model.1.rds, and jload("model.1") reads it back). When a file of that
+  # whole name with a supported extension is there, the name is the file's
+  # name, and the search below finds it; otherwise the unsupported
+  # extension's stop stands.
+  if (!isTRUE(package) && !ext %in% c(supported_ext, "") &&
+      length(.jst_search_no_extension(file, has_dir)) > 0L) {
+    ext <- ""
+  }
 
   # --- Handle .RData/.rda redirect -------------------------------------------
   if (ext %in% c("rdata", "rda")) {
@@ -1022,11 +1058,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # load needs the read itself: an .rds file holding something other than a
   # data frame, or a reader's own error.
   if (ask) {
+    # What the session holds under the name, in the way to keep it (Session
+    # 429): a saved result or a table can hold it now, as well as a data
+    # frame.
+    held_now <- get0(obj_name, envir = target_env, inherits = FALSE)
+    held_kind <- if (is.data.frame(held_now)) "data frame" else
+      if (inherits(held_now, c("jst_table", "jst_tables"))) "table" else
+      if (!is.null(.jst_result_noun(held_now))) "result" else "object"
     ok <- .jst_confirm(
       paste0("'", obj_name, "' already exists in your environment.\n",
              "Overwrite? (y/n): "),
-      paste0("To keep the ", obj_name, " data frame, load the file under ",
-             "another name with name =.\n", .jst_txt_add_overwrite)
+      paste0("To keep the ", obj_name, " ", held_kind, ", load the file ",
+             "under another name with name =.\n", .jst_txt_add_overwrite)
     )
     if (!ok) {
       .jst_msg("Load cancelled.")
@@ -1159,16 +1202,43 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # Ensure result is a data frame
   if (!is.data.frame(df)) {
-    # A saved result or a built table (Session 406): read back with base
-    # R, in a line that runs.
+    # A saved result or a built table (Session 429, reversing Session 406's
+    # stop, which gave base R's readRDS() line; Jeff: "Let's reverse the
+    # decision"): loaded under the file's name, or name =, as a data frame
+    # is, behind the same question, and said in one line -- what it is, and
+    # the jstats version that made it. Nothing a data frame's load does
+    # after the read applies: no names to clean, no declarations, no
+    # registrations, no scan. use = TRUE and an input only a data frame
+    # takes stop, before anything is assigned, with the call without them.
     if (ext == "rds" && !is.null(.jst_result_noun(df))) {
-      shown <- sub("^\\./", "", gsub("\\", "/", resolved_path, fixed = TRUE))
-      obj   <- tools::file_path_sans_ext(basename(shown))
-      if (!identical(make.names(obj), obj)) obj <- "result"
-      .jst_stop(basename(shown), " holds ", .jst_result_noun(df),
-                ", not a data frame.\n",
-                "jload() loads data frames; read it back with base R:\n",
-                "  ", obj, " <- readRDS(\"", shown, "\")")
+      noun <- .jst_result_noun(df)
+      held <- paste0(basename(resolved_path), " holds ", noun, ".\n")
+      if (isTRUE(use)) {
+        .jst_stop("use = TRUE makes a data frame the default.\n", held,
+                  "To load it, leave out use = TRUE:\n", line_for())
+      }
+      only <- c(if (!missing(check.missing)) "check.missing =",
+                if (!missing(preserve.declarations)) "preserve.declarations =",
+                if (!missing(missing.notice)) "missing.notice =")
+      if (length(only)) {
+        one <- length(only) == 1L
+        .jst_stop(.jst_and_list(only), if (one) " is" else " are",
+                  " only for a data frame.\n", held,
+                  "To load it, leave ", if (one) paste0("out ", only) else
+                    "them out", ":\n", line_for())
+      }
+      if (replaced) {
+        .jst_replaced_note(obj_name)
+        .jst_note_fired <- TRUE
+      }
+      assign(obj_name, df, envir = target_env)
+      made <- attr(df, "jstats_version", exact = TRUE)
+      if (.jst_note_fired) say("")
+      say("Loaded ", obj_name, " (", .jst_format_label(ext), "; ", noun,
+          if (is.character(made) && length(made) == 1L && !is.na(made)) {
+            paste0(" made by jstats ", made)
+          }, ")")
+      return(invisible(NULL))
     }
     if (ext == "rds") {
       .jst_stop(
@@ -6819,7 +6889,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 }
 
 
-#' Save a data frame to a file
+#' Save a data frame, a result or a table to a file
 #'
 #' @description
 #' \code{jsave()} writes a data frame to a file. Supports SPSS (\code{.sav}),
@@ -6841,12 +6911,26 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' If the \code{data} argument is omitted, the default data frame set by
 #' \code{juse()} is used.
 #'
-#' @param data A data frame (unquoted). If omitted, uses the default set by
+#' A saved result -- what an analysis function returns, kept with
+#' \code{<-} -- or a table \code{\link{jtable}()} built is saved in R
+#' format (\code{.rds}), the one format that can hold it, and its file name
+#' may be left out: \code{jsave(m1)} writes \code{m1.rds}, in the data
+#' folder when one is set, and \code{\link{jload}("m1")} reads it back in a
+#' later session. A chart is not saved: \code{\link{jtable}()} writes it to
+#' a Word file, and the line that drew it draws it again.
+#'
+#' @param data A data frame (unquoted), a saved result, or a table
+#'   \code{jtable()} built. If omitted, uses the default data frame set by
 #'   \code{juse()}.
 #' @param file Character string. The filename with extension (e.g.
 #'   \code{"mydata.sav"}) or a full file path. Use forward slashes in
 #'   file paths. If the extension is omitted, \code{.rds} is used and
-#'   added to the filename.
+#'   added to the filename. For a saved result or a built table the file
+#'   name may be left out, and the file is named for the object
+#'   (\code{jsave(m1)} writes \code{m1.rds}); a name given with no
+#'   extension, or with an ending that is no file format's
+#'   (\code{"model.1"}), gets \code{.rds}, and another format stops, since
+#'   only R format holds one.
 #' @param overwrite Logical. If \code{TRUE}, overwrites an existing file
 #'   without prompting. If \code{FALSE} (default), prompts for confirmation
 #'   in interactive sessions. In non-interactive sessions, stops with an
@@ -6854,9 +6938,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \code{jsave(mydata, "mydata.rds", overwrite = TRUE)}. Otherwise, if
 #'   the file already exists and the script was run by pasting or with
 #'   RStudio's Run button, the call stops with an error.
-#' @param preserve.declarations Logical. If \code{TRUE} (the default),
-#'   missing-value declarations are written as they stand; formats that
-#'   cannot store them (notably Excel and CSV) drop the metadata, and
+#' @param preserve.declarations Logical, for a data frame. If \code{TRUE}
+#'   (the default), missing-value declarations are written as they stand;
+#'   formats that cannot store them (notably Excel and CSV) drop the
+#'   metadata, and
 #'   SPSS-style codes such as -99 then read back as ordinary numbers, while
 #'   a missing-value form that .sav, .dta, or .xpt cannot represent stops
 #'   the save before anything is written. If \code{FALSE}, every declared
@@ -6868,7 +6953,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \code{preserve.declarations} argument of \code{\link{jload}}. The
 #'   haven package and its documentation call these user-defined missing
 #'   values.
-#' @param clean.names Logical. For \code{.sav}, \code{.dta} and \code{.xpt}.
+#' @param clean.names Logical, for a data frame. For \code{.sav},
+#'   \code{.dta} and \code{.xpt}.
 #'   If \code{FALSE} (the default), a variable name the format cannot hold
 #'   stops the save, listing every such name, why, and the name it would be
 #'   given. If \code{TRUE}, those names are changed in the file only, the
@@ -6977,6 +7063,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' jsave(data = community, file.path(tempdir(), "community.sav"),
 #'       overwrite = TRUE)                   # the data frame given by name
 #'
+#' # A saved result, kept for a later session in R format
+#' m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
+#' jsave(m1, file.path(tempdir(), "m1.rds"), overwrite = TRUE)
+#'
 #' \dontrun{
 #' # The file extension determines the format ---
 #' # the same data frame can be saved in any supported format
@@ -6988,6 +7078,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' # Using juse() default
 #' juse(community)
 #' jsave("community.sav")
+#'
+#' # A saved result: the file is named for it, m1.rds, and jload() reads it
+#' # back in a later session
+#' m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
+#' jsave(m1)
+#' jload("m1")
 #'
 #' # Full file path
 #' jsave(community, "C:/Output/community.sav")
@@ -7044,6 +7140,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # dedicated message for that case.
   data_sub <- substitute(data)
   pre_eval <- NULL
+  # A saved result or a built table, kept by the branch below (Session 429);
+  # NULL for a data frame, whose path through the function is unchanged.
+  res_val  <- NULL
   # The four stops below end on an example call on a line of its own, the
   # one data frame in the workspace named (Session 368, Fix Slate 15;
   # .jst_jsave_example_lines()), where each gave "e.g. jsave(MyData,
@@ -7096,17 +7195,35 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
       .jst_stop("'", data_str, "' is NULL.\n",
                 .jst_jsave_example_lines(match.call(), parent.frame()))
     }
-    # A saved result or a built table (Session 406): jsave() keeps data
-    # frames, and base R keeps any other R object, so the stop gives
-    # saveRDS() and readRDS() as lines that run.
+    # A saved result or a built table (Session 429, reversing Session 406's
+    # stop, which gave base R's saveRDS() and readRDS() lines; Jeff: "Let's
+    # reverse the decision"). jsave() keeps it in R format (.rds), the one
+    # format that holds any R object, the file named for the object when
+    # the call names none -- jsave(m1) writes m1.rds -- and jload("m1")
+    # reads it back. The checks that can refuse the call run first, before
+    # anything is written (.jst_result_save_file()); the file then takes the
+    # data frame's path below -- the data folder, the question, the write --
+    # past the data frame's own steps, and its own Saved lines.
     if (!is.null(.jst_result_noun(val))) {
-      .jst_result_save_stop(data_sub, val,
-                            if (missing(file)) NULL
-                            else tryCatch(file, error = function(e) NULL))
+      res <- .jst_result_save_file(
+        data_sub, val,
+        file_sub  = if (missing(file)) NULL else substitute(file),
+        file_fn   = if (missing(file)) NULL else function() file,
+        env       = parent.frame(), cl = sys.call(), mc = match.call(),
+        overwrite = overwrite,
+        data_only = c(if (!missing(preserve.declarations))
+                        "preserve.declarations =",
+                      if (!missing(clean.names)) "clean.names ="))
+      res_val <- val
+      file    <- res$file
     }
+    # A chart (Session 429): a picture's file belongs in Word, and a chart
+    # saved as an R object can fail to draw after ggplot2 is updated, so
+    # jsave() refuses it, with the line that writes it to a Word file.
+    if (inherits(val, "ggplot")) .jst_chart_save_stop(data_sub)
     # The resolver's sentence for the same input (S334 item, Session 351):
     # "'z' is a integer" pasted an article before the class.
-    if (!is.data.frame(val) && !is.character(val)) {
+    if (is.null(res_val) && !is.data.frame(val) && !is.character(val)) {
       data_str   <- paste(deparse(data_sub), collapse = "")
       .jst_stop("'", data_str, "' is not a data frame.\n",
                 .jst_jsave_example_lines(match.call(), parent.frame()))
@@ -7153,6 +7270,13 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
                            match.call(), "file", "a file name", "jsave")
       }
     }
+    # A name holding a dash or a slash typed without its quotes --
+    # jsave(d, my-data.sav), jsave(d, out/d.sav) -- which R reads as a
+    # subtraction or a division (Session 429; Jeff: "keep the quotes and the
+    # fix you've mentioned"): the same pointer, where R said "object 'my'
+    # not found".
+    .jst_bare_path_stop(file_sub, parent.frame(), sys.call(), match.call(),
+                        "file", "jsave")
   }
 
   # --- Pre-check: no data frame and no file, no default ---------------------
@@ -7183,80 +7307,92 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     }
   }
 
-  # --- Resolve first argument -----------------------------------------------
-  arg1 <- .jst_resolve_first_arg(
-    data_sub      = data_sub,
-    data_missing  = missing(data),
-    fn_name       = "jsave",
-    envir         = parent.frame(),
-    accept_vector = FALSE,
-    pre_eval      = pre_eval
-  )
+  # --- The data frame: the resolver and the file name (Session 429: a saved
+  # result or a built table, kept by the branch above, skips them) ---------
+  if (is.null(res_val)) {
+    # --- Resolve first argument -----------------------------------------------
+    arg1 <- .jst_resolve_first_arg(
+      data_sub      = data_sub,
+      data_missing  = missing(data),
+      fn_name       = "jsave",
+      envir         = parent.frame(),
+      accept_vector = FALSE,
+      pre_eval      = pre_eval
+    )
 
-  data      <- arg1$data
-  data_name <- arg1$name
+    data      <- arg1$data
+    data_name <- arg1$name
 
-  # The data as the printed lines name it (Session 352; the S351 item). An
-  # expression given as the data -- jsave(oc86["X"], "oc86.sav") -- is
-  # never pasted into a line to run: the pre-flight refusals pasted it
-  # whole, into jsave(oc86["X"], "oc86["X"].rds"), which does not parse,
-  # and into jconvert(oc86["X"], ..., modify = TRUE), which stops. Their
-  # lines name mydata, and each block of them opens on "mydata <- ...",
-  # the S339 form (.jst_expr_assign_lines()). A place (lst$d) keeps its
-  # lines, which .jst_place_lines() makes run; its file is named by its
-  # last part (.jst_data_file_stem()).
-  data_kind <- if (identical(arg1$mode, "explicit")) {
-    .jst_data_arg_kind(data_sub)
-  } else "name"
-  code_name <- if (identical(data_kind, "expression")) "mydata" else data_name
-  code_stem <- .jst_data_file_stem(
-    if (identical(arg1$mode, "explicit")) data_sub else NULL, data_name)
-  expr_lines <- function(msg) {
-    if (!identical(data_kind, "expression")) return(msg)
-    .jst_expr_assign_lines(msg, .jst_term_text(data_sub))
-  }
-
-  # If data was omitted (e.g. jsave("file.rds")), route the captured first
-  # argument into the file slot.
-  if (arg1$mode == "symbol_with_default") {
-    if (!missing(file)) {
-      .jst_stop("when the data frame is omitted, every input must be named.\n",
-                "Name them, for example:\n",
-                "  jsave(file = \"mydata.sav\", overwrite = TRUE)",
-                fn = "jsave")
+    # The data as the printed lines name it (Session 352; the S351 item). An
+    # expression given as the data -- jsave(oc86["X"], "oc86.sav") -- is
+    # never pasted into a line to run: the pre-flight refusals pasted it
+    # whole, into jsave(oc86["X"], "oc86["X"].rds"), which does not parse,
+    # and into jconvert(oc86["X"], ..., modify = TRUE), which stops. Their
+    # lines name mydata, and each block of them opens on "mydata <- ...",
+    # the S339 form (.jst_expr_assign_lines()). A place (lst$d) keeps its
+    # lines, which .jst_place_lines() makes run; its file is named by its
+    # last part (.jst_data_file_stem()).
+    data_kind <- if (identical(arg1$mode, "explicit")) {
+      .jst_data_arg_kind(data_sub)
+    } else "name"
+    code_name <- if (identical(data_kind, "expression")) "mydata" else data_name
+    code_stem <- .jst_data_file_stem(
+      if (identical(arg1$mode, "explicit")) data_sub else NULL, data_name)
+    expr_lines <- function(msg) {
+      if (!identical(data_kind, "expression")) return(msg)
+      .jst_expr_assign_lines(msg, .jst_term_text(data_sub))
     }
-    file <- if (!is.null(pre_eval)) pre_eval$value else
-              eval(arg1$first_arg_sub, envir = parent.frame())
-  }
 
-  # --- Validate data is a data frame -----------------------------------------
-  if (!is.data.frame(data)) {
-    .jst_stop(
-      "Only data frames can be saved. '", data_name, "' is not a data frame."
-    )
-  }
+    # If data was omitted (e.g. jsave("file.rds")), route the captured first
+    # argument into the file slot.
+    if (arg1$mode == "symbol_with_default") {
+      if (!missing(file)) {
+        .jst_stop("when the data frame is omitted, every input must be named.\n",
+                  "Name them, for example:\n",
+                  "  jsave(file = \"mydata.sav\", overwrite = TRUE)",
+                  fn = "jsave")
+      }
+      file <- if (!is.null(pre_eval)) pre_eval$value else
+                eval(arg1$first_arg_sub, envir = parent.frame())
+    }
 
-  # --- Validate file argument ------------------------------------------------
-  # The example call on a line of its own, naming the data frame being saved
-  # (Session 368, Fix Slate 15), where it sat after "e.g." on the sentence's
-  # line and named MyData. With clean.names = TRUE when the data frame holds
-  # a name SPSS refuses (Session 389, Fix Slate 28): jsave(d, "mydata.sav")
-  # stopped on that name when run.
-  if (missing(file) || !is.character(file) || length(file) != 1 ||
-      nchar(trimws(file)) == 0) {
-    .jst_stop(
-      expr_lines(paste0("Provide a filename with extension, for example:\n",
-                        "  jsave(", code_name, ", \"mydata.sav\"",
-                        .jst_example_clean_names(data, "mydata.sav"), ")")),
-      "\n",
-      "Supported formats:\n",
-      "  .sav       SPSS\n",
-      "  .dta       Stata\n",
-      "  .xpt       SAS interchange\n",
-      "  .xlsx      Excel\n",
-      "  .csv       Comma-separated values\n",
-      "  .rds       R"
-    )
+    # --- Validate data is a data frame -----------------------------------------
+    if (!is.data.frame(data)) {
+      .jst_stop(
+        "Only data frames can be saved. '", data_name, "' is not a data frame."
+      )
+    }
+
+    # --- Validate file argument ------------------------------------------------
+    # The example call on a line of its own, naming the data frame being saved
+    # (Session 368, Fix Slate 15), where it sat after "e.g." on the sentence's
+    # line and named MyData. With clean.names = TRUE when the data frame holds
+    # a name SPSS refuses (Session 389, Fix Slate 28): jsave(d, "mydata.sav")
+    # stopped on that name when run.
+    if (missing(file) || !is.character(file) || length(file) != 1 ||
+        nchar(trimws(file)) == 0) {
+      .jst_stop(
+        expr_lines(paste0("Provide a filename with extension, for example:\n",
+                          "  jsave(", code_name, ", \"mydata.sav\"",
+                          .jst_example_clean_names(data, "mydata.sav"), ")")),
+        "\n",
+        "Supported formats:\n",
+        "  .sav       SPSS\n",
+        "  .dta       Stata\n",
+        "  .xpt       SAS interchange\n",
+        "  .xlsx      Excel\n",
+        "  .csv       Comma-separated values\n",
+        "  .rds       R"
+      )
+    }
+  } else {
+    # What the shared steps below read: the object, named as the data
+    # frame is, and no expression's lines (the result's stops are its own).
+    data       <- res_val
+    data_name  <- res$name
+    code_name  <- res$name
+    data_kind  <- "name"
+    expr_lines <- function(msg) msg
   }
   # A path typed with single backslashes (S343; Session 351): checked
   # before the folder is looked for and before a file is written. Not
@@ -7744,7 +7880,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # card describes the file's contents, the session notebook is untouched,
   # and the pruned names surface as a note with the loss notes below.
   reg_dropped <- character(0)
-  if (ext == "rds") {
+  if (ext == "rds" && is.null(res_val)) {
     bake_result <- .jst_bake_registrations(data, data_name)
     data        <- bake_result$data
     reg_dropped <- bake_result$dropped
@@ -7893,6 +8029,12 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   if (length(loss_notes) > 0) .jst_msg(paste(loss_notes, collapse = "\n\n"))
 
   # --- Confirmation message --------------------------------------------------
+  # A saved result or a built table (Session 429): what was saved and where,
+  # what it is, and the line that loads it back.
+  if (!is.null(res_val)) {
+    .jst_msg(.jst_result_saved_text(res, out_path))
+    return(invisible(NULL))
+  }
   # Two lines (S230): the parenthetical (format, cases, variables) is the
   # verification payload and gets its own flush-left line regardless of
   # path length, so it is never hostage to a long path's console wrap.
@@ -8127,9 +8269,9 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE, ...) {
 
 #' Internal helper: what a saved result or a built table is, in words
 #'
-#' For the stops of jsave() and jload() given one (Session 406): "a jlm()
-#' result", "a table jtable() built", "a set of tables jtable() put
-#' together".
+#' For jsave() and jload() (Session 406; since Session 429 they save and
+#' load one): "a jlm() result", "a table jtable() built", "a set of tables
+#' jtable() put together".
 #'
 #' @param x Any object.
 #' @return Character(1), or NULL for anything else.
@@ -8141,35 +8283,177 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE, ...) {
   if (is.na(fn)) NULL else paste0("a ", fn, " result")
 }
 
-#' Internal helper: jsave() given a saved result or a built table
+#' Internal helper: the file a saved result or a built table is saved in
 #'
-#' Session 406 (the (Session 128) item, decided at Capability Slate T's
-#' build 5: no jstats verb, since base R keeps any R object): jsave()
-#' saves data frames, so it stops, and gives the base R lines that keep the
-#' object and read it back -- named as typed, the file the call gave with
-#' .rds in place of its extension, else the object's name with .rds; a
-#' built table first gets the line that writes it to Word.
+#' Session 429 (reversing Session 406's stop, which gave base R's saveRDS()
+#' and readRDS() lines; Jeff: "Let's reverse the decision and incorporate
+#' the rest of your ideas"). jsave() keeps a saved result -- what an
+#' analysis function returns -- or a table jtable() built in R format
+#' (.rds), the one format that holds any R object. The file name is
+#' optional: jsave(m1) names the file for the object, m1.rds (a place,
+#' lst$m1, for its last part); a name with no extension gets .rds, as a
+#' data frame's does, and so does one whose ending is no file format's
+#' (model.1, so that jload("model.1") finds model.1.rds). The checks run
+#' before anything is written, in this order, each a stop whose line runs:
+#' \itemize{
+#'   \item a file name typed without its quotes: ruling R18's pointer
+#'     (.jst_free_text_arg(), .jst_bare_path_stop());
+#'   \item a file name that is not text;
+#'   \item an object with no name of its own -- a result made in the call,
+#'     a place reached by position -- and no file name: the call with one;
+#'   \item another file format: only R format holds one, with the save in
+#'     R format -- a table, or a .docx file named, first offered the
+#'     jtable() line that writes Word;
+#'   \item an input only a data frame takes (preserve.declarations =,
+#'     clean.names =): the call without it.
+#' }
 #'
 #' @param data_sub The data argument as typed.
-#' @param val Its value.
-#' @param file The call's file, or NULL.
+#' @param val Its value, a saved result or a built table.
+#' @param file_sub The file argument as typed, or NULL.
+#' @param file_fn A function forcing the file argument, or NULL; called
+#'   only after the unquoted-name checks, so a bare word never reaches R.
+#' @param env The caller's environment.
+#' @param cl,mc The call as typed and the matched call.
+#' @param overwrite The call's overwrite =.
+#' @param data_only The data-frame inputs the call gave, as "name =".
+#' @return A list: \code{file} (the name to save under, ending .rds),
+#'   \code{name} (what the Saved line calls it), \code{noun} (what it is,
+#'   in words) and \code{load} (the line that loads it back).
 #' @keywords internal
-.jst_result_save_stop <- function(data_sub, val, file = NULL) {
-  shown <- paste(deparse(data_sub, width.cutoff = 500L), collapse = " ")
-  lhs   <- if (is.symbol(data_sub)) shown else "result"
-  rds   <- if (is.character(file) && length(file) == 1L && !is.na(file) &&
-               nzchar(trimws(file))) {
-    paste0(tools::file_path_sans_ext(gsub("\\", "/", file, fixed = TRUE)), ".rds")
-  } else paste0(lhs, ".rds")
-  word <- if (inherits(val, c("jst_table", "jst_tables"))) {
-    paste0("To write it to a Word file:\n",
-           "  jtable(", shown, ", file = \"",
-           tools::file_path_sans_ext(basename(rds)), ".docx\")\n")
+.jst_result_save_file <- function(data_sub, val, file_sub, file_fn, env, cl,
+                                  mc, overwrite, data_only) {
+  kind  <- .jst_data_arg_kind(data_sub)
+  noun  <- .jst_result_noun(val)
+  table <- inherits(val, c("jst_table", "jst_tables"))
+  shown <- if (is.symbol(data_sub)) as.character(data_sub) else
+    paste(deparse(data_sub, width.cutoff = 500L), collapse = " ")
+  if (!is.null(file_sub)) {
+    .jst_free_text_arg(file_sub, env, cl, mc, "file", "a file name", "jsave")
+    .jst_bare_path_stop(file_sub, env, cl, mc, "file", "jsave")
   }
-  .jst_stop("'", shown, "' is ", .jst_result_noun(val), ", not a data frame.\n",
-            word,
-            "To keep it for a later session, save it with base R:\n",
-            "  saveRDS(", shown, ", \"", rds, "\")\n",
-            "Then read it back with:\n",
-            "  ", lhs, " <- readRDS(\"", rds, "\")", fn = "jsave")
+  file <- if (is.null(file_fn)) NULL else file_fn()
+  # The object's own name, the file's stem when the call names no file: a
+  # name, or a place's last part (lst$m1, lst[["m1"]]).
+  stem <- NULL
+  if (identical(kind, "name")) {
+    stem <- shown
+  } else if (identical(kind, "place") && length(data_sub) == 3L) {
+    h <- as.character(data_sub[[1L]]); rhs <- data_sub[[3L]]
+    last <- if (h %in% c("$", "@") && (is.symbol(rhs) || is.character(rhs))) {
+      as.character(rhs)
+    } else if (h == "[[" && is.character(rhs) && length(rhs) == 1L) rhs
+    if (length(last) == 1L && .jst_name_valid_r(last)) stem <- last
+  }
+  # The data as a line names it: an expression keeps its text, so each line
+  # offered with it runs, the analysis made again inside the call.
+  arg_text  <- if (identical(kind, "expression")) .jst_term_text(data_sub) else shown
+  save_line <- function(f) {
+    paste0("  jsave(", arg_text,
+           if (!is.null(f)) paste0(", \"", .jst_dq_escape(f), "\""),
+           if (isTRUE(overwrite)) ", overwrite = TRUE", ")")
+  }
+  if (!is.null(file) && (!is.character(file) || length(file) != 1L ||
+                         is.na(file) || !nzchar(trimws(file)))) {
+    .jst_stop("the file name goes in quotes, for example:\n",
+              save_line(paste0(if (is.null(stem)) "result" else stem, ".rds")),
+              fn = "jsave")
+  }
+  if (is.null(file) && is.null(stem)) {
+    .jst_stop(if (identical(kind, "expression")) {
+                paste0("a ", if (table) "table" else "result",
+                       " made in the call has no name to give its file.\n")
+              } else paste0("'", shown, "' has no name to give its file.\n"),
+              "Name the file, for example:\n",
+              save_line(if (table) "table.rds" else "result.rds"), fn = "jsave")
+  }
+  typed <- file
+  if (!is.null(file)) {
+    .jst_check_path_chars(file)
+    ext   <- tolower(tools::file_ext(file))
+    other <- c("sav", "dta", "csv", "xpt", "xlsx", "xls", "sas7bdat", "docx",
+               "doc", "pdf", "txt", "html", "json", "rdata", "rda")
+    if (ext %in% other) {
+      base <- tools::file_path_sans_ext(file)
+      docx <- if (ext == "docx") file else paste0(base, ".docx")
+      word <- if (table || ext == "docx") {
+        paste0(if (table) "To write it to a Word file:\n" else
+                 "To make its table in a Word file:\n",
+               "  jtable(", arg_text, ", file = \"", .jst_dq_escape(docx),
+               "\")\n")
+      }
+      .jst_stop("only R format (.rds) can hold ", noun, ".\n",
+                word,
+                if (is.null(word)) "To save it:\n" else "To save it in R format:\n",
+                save_line(paste0(base, ".rds")), fn = "jsave")
+    }
+    if (ext != "rds") file <- paste0(file, ".rds")
+  } else {
+    file <- paste0(stem, ".rds")
+  }
+  if (length(data_only)) {
+    one <- length(data_only) == 1L
+    .jst_stop(.jst_and_list(data_only), if (one) " is" else " are",
+              " only for a data frame.\n",
+              if (identical(kind, "expression")) {
+                paste0("The call made ", noun, ".\n")
+              } else paste0("'", shown, "' is ", noun, ".\n"),
+              "To save it, leave ", if (one) paste0("out ", data_only) else
+                "them out", ":\n",
+              save_line(typed), fn = "jsave")
+  }
+  # The line that loads it back: the file as saved, without .rds -- jload()
+  # finds it -- and name = when jload() would name the object otherwise.
+  load_stem <- sub("\\.[Rr][Dd][Ss]$", "", gsub("\\", "/", file, fixed = TRUE))
+  loads_as  <- .jst_clean_object_name(tools::file_path_sans_ext(basename(file)))
+  load <- paste0("  jload(\"", .jst_dq_escape(load_stem), "\"",
+                 if (identical(kind, "name") && !identical(loads_as, shown)) {
+                   paste0(", name = \"", .jst_dq_escape(shown), "\"")
+                 }, ")")
+  list(file = file,
+       name = if (identical(kind, "expression")) {
+         if (table) "the table" else "the result"
+       } else shown,
+       noun = noun, load = load)
+}
+
+#' Internal helper: the lines jsave() prints after saving a result
+#'
+#' Session 429: the data frame's two lines in the form of a result -- what
+#' was saved and where, then what it is, R format and the result named by
+#' the function that made it -- and the line that loads it back.
+#'
+#' @param res The list .jst_result_save_file() returned.
+#' @param out_path The path written.
+#' @return Character(1).
+#' @keywords internal
+.jst_result_saved_text <- function(res, out_path) {
+  paste0("Saved ", res$name, " to ", .jst_norm_path(out_path), "\n",
+         "(", .jst_format_label("rds"), "; ", res$noun, ")\n",
+         "To load it in a later session:\n", res$load)
+}
+
+#' Internal helper: jsave() given a chart
+#'
+#' Session 429 (Claude's recommendation, okayed with the build): a chart
+#' kept with <- -- jplot()'s, or one drawn in ggplot2 -- is not saved. Its
+#' place is a Word file, through jtable() as a figure, and a chart kept as
+#' an R object holds its data and can fail to draw after ggplot2 is
+#' updated, while the line that drew it draws it again.
+#'
+#' @param data_sub The data argument as typed.
+#' @keywords internal
+.jst_chart_save_stop <- function(data_sub) {
+  expr <- identical(.jst_data_arg_kind(data_sub), "expression")
+  arg  <- if (expr) .jst_term_text(data_sub) else
+    paste(deparse(data_sub, width.cutoff = 500L), collapse = " ")
+  stem <- if (is.symbol(data_sub) && .jst_name_valid_r(as.character(data_sub))) {
+    as.character(data_sub)
+  } else "chart"
+  .jst_stop(if (expr) "the call made a chart" else paste0("'", arg, "' is a chart"),
+            ", which jsave() does not save.\n",
+            "To write it to a Word file:\n",
+            "  jtable(", arg, ", file = \"", stem, ".docx\")\n",
+            "In a later session, run the line that drew it again.",
+            fn = "jsave")
 }

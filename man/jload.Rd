@@ -33,7 +33,8 @@ in your environment. If omitted, the name is derived from the filename.}
 
 \item{use}{Logical. If \code{TRUE}, automatically calls \code{juse()} on
 the loaded data frame to set it as the default for jstats
-functions. Default is \code{FALSE}.}
+functions. Default is \code{FALSE}. A saved result cannot be the
+default, so \code{use = TRUE} stops on one.}
 
 \item{overwrite}{Logical. If \code{TRUE}, overwrites an existing object
 with the same name without prompting. If \code{FALSE} (default),
@@ -143,7 +144,8 @@ typed, in place of R's own "unused argument".}
 }
 \value{
 Invisibly returns \code{NULL}; jload() is called for its side
-effects. The loaded data frame is placed in the calling environment
+effects. The loaded data frame, or saved result, is placed in the
+calling environment
 under the file's name (or \code{name}), and any classification
 registrations saved with an .rds file are restored for that name.
 Loading a file that carries none clears any registrations set this
@@ -168,6 +170,11 @@ full file path is provided, it is used directly.
 
 The data frame is automatically named after the file (without the
 extension). Use the \code{name} argument to specify a different name.
+
+A saved result or a table that \code{\link{jsave}()} kept in an
+\code{.rds} file is loaded the same way, under the file's name:
+\code{jsave(m1)} writes \code{m1.rds}, and \code{jload("m1")} brings
+\code{m1} back.
 }
 \details{
 \strong{File paths:}
@@ -299,6 +306,16 @@ same file in both locations) is an error that asks for the extension.
 If nothing matches on disk, a bare name falls back to a shipped example
 dataset of that name (see below).
 
+\strong{Saved results and tables:}
+An \code{.rds} file holding a saved result or a table \code{jtable()}
+built, as \code{\link{jsave}()} writes one, is loaded under the file's
+name, or \code{name}, behind the same question as a data frame, and one
+line says what it is and the jstats version that made it. Typing its
+name shows its output again. \code{use = TRUE}, \code{check.missing},
+\code{preserve.declarations} and \code{missing.notice} are for data
+frames, and stop on such a file. A name with a dot inside it,
+\code{jload("model.1")}, finds \code{model.1.rds}.
+
 \strong{Auto-naming:}
 The data frame name is derived from the filename by stripping the
 extension. If the resulting name starts with a digit (which R does not
@@ -426,6 +443,9 @@ jload("community.rds")
 
 # Extension omitted -- jload searches for a matching file automatically
 jload("community")
+
+# A result saved with jsave(m1), read back as m1
+jload("m1")
 
 # The example files shipped with jstats, read by name
 jload("community_spss.sav")

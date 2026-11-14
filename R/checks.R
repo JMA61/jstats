@@ -2593,6 +2593,63 @@
   .jst_stop(word, " is not in quotes.\n", second, "\n", "  ", line, fn = fn)
 }
 
+#' Internal helper: a file name with a dash or a slash typed without quotes
+#'
+#' Session 429 (Jeff: "Let's keep the quotes and the fix you've
+#' mentioned"). R reads a file name typed without its quotes before jstats
+#' sees it, and one holding a dash or a slash as arithmetic --
+#' jload(my-survey) as my minus survey, jload(Data/wave1) as Data divided
+#' by wave1 -- so it stopped with "object 'my' not found";
+#' .jst_free_text_arg() reads a bare word only. An argument that is such a
+#' tree -- names and numbers joined only by - and / -- holding a name that
+#' is no object gets the same pointer: the name as typed, put back together
+#' without the spaces R's deparse() adds, and the call with it in quotes. A
+#' tree whose every name is an object is left to R, as a name holding a
+#' value is, and so is any other expression. A name holding a space, or
+#' starting with a digit, stops R while it reads the line, before any
+#' function runs (the guides' Troubleshooting).
+#'
+#' @param e,sub The argument as typed.
+#' @param env The caller's environment.
+#' @param cl,mc The call as typed and the matched call.
+#' @param arg Character(1); the argument's name.
+#' @param fn Character(1); the user-facing function's name.
+#' @return \code{.jst_bare_path_text()}: Character(1), or NULL for any
+#'   other expression. \code{.jst_bare_path_stop()}: invisible NULL, or a
+#'   stop.
+#' @keywords internal
+.jst_bare_path_text <- function(e) {
+  if (is.symbol(e)) return(as.character(e))
+  if (is.numeric(e) && length(e) == 1L && !is.na(e)) {
+    return(format(e, scientific = FALSE, trim = TRUE))
+  }
+  if (!is.call(e) || !is.symbol(e[[1L]])) return(NULL)
+  op <- as.character(e[[1L]])
+  if (!op %in% c("-", "/")) return(NULL)
+  parts <- lapply(as.list(e)[-1L], .jst_bare_path_text)
+  if (any(vapply(parts, is.null, logical(1)))) return(NULL)
+  if (length(parts) == 2L) return(paste0(parts[[1L]], op, parts[[2L]]))
+  if (length(parts) == 1L && op == "-") return(paste0("-", parts[[1L]]))
+  NULL
+}
+
+#' @rdname dot-jst_bare_path_text
+#' @keywords internal
+.jst_bare_path_stop <- function(sub, env, cl, mc, arg, fn) {
+  if (!is.call(sub)) return(invisible(NULL))
+  word <- .jst_bare_path_text(sub)
+  if (is.null(word)) return(invisible(NULL))
+  nm <- all.vars(sub)
+  if (!length(nm) || all(vapply(nm, exists, logical(1), envir = env))) {
+    return(invisible(NULL))
+  }
+  named_in_call <- !is.null(names(cl)) && arg %in% names(cl)
+  line   <- .jst_call_with(cl, mc, arg, word)
+  second <- if (named_in_call) paste0(arg, " = takes a file name in quotes:") else
+    "A file name goes in quotes:"
+  .jst_stop(word, " is not in quotes.\n", second, "\n", "  ", line, fn = fn)
+}
+
 #' Internal helper: resolve which data frame to use when none is explicitly given
 #'
 #' Looks up the data frame name set by \code{juse()} via the

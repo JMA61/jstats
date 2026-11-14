@@ -13,8 +13,8 @@
 Character(1), or NULL for anything else.
 }
 \description{
-For the stops of jsave() and jload() given one (Session 406): "a jlm()
-result", "a table jtable() built", "a set of tables jtable() put
-together".
+For jsave() and jload() (Session 406; since Session 429 they save and
+load one): "a jlm() result", "a table jtable() built", "a set of tables
+jtable() put together".
 }
 \keyword{internal}

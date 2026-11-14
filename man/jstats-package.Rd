@@ -120,9 +120,11 @@ others)
 \itemize{
 \item \code{\link{jload}} -- load data from \code{.rds},
 \code{.sav}, \code{.dta}, \code{.sas7bdat}, \code{.xpt},
-\code{.xlsx}, \code{.xls}, or \code{.csv}
+\code{.xlsx}, \code{.xls}, or \code{.csv}, or a result or a table
+saved with \code{jsave()}
 \item \code{\link{jsave}} -- save a data frame, with format
-inferred from the file extension
+inferred from the file extension, or a saved result or a table in
+R format (\code{.rds})
 \item \code{\link{jdata_dir}} -- return the configured data folder
 }
 
