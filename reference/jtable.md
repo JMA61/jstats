@@ -313,7 +313,7 @@ t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
              overwrite = TRUE)
 #> Table 1. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> Table written to /tmp/RtmpuRsxQm/Table2.docx
+#> Table written to /tmp/Rtmp0Av7uP/Table2.docx
 #> 
 
 # Several tables in one file: build each, then give them together
@@ -323,7 +323,7 @@ doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
 #>   2 variables, on a portrait page.
 #> Table 2. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> 2 tables written to /tmp/RtmpuRsxQm/Tables.docx
+#> 2 tables written to /tmp/Rtmp0Av7uP/Tables.docx
 #> 
 print(doc)
 #> Table 1
@@ -361,16 +361,16 @@ doc2 <- jtable(list(t1, p1), file = file.path(tempdir(), "Report.docx"),
 #>   2 variables, on a portrait page.
 #> Figure 1. Region of residence (N = 103)
 #>   a bar chart, 6 by 4 inches, on a portrait page.
-#> 1 table and 1 figure written to /tmp/RtmpuRsxQm/Report.docx
+#> 1 table and 1 figure written to /tmp/Rtmp0Av7uP/Report.docx
 #> 
 
 # Keep a result for a later session
 path <- file.path(tempdir(), "m1.rds")
 jsave(m1, path, overwrite = TRUE)
-#> Saved m1 to /tmp/RtmpuRsxQm/m1.rds
+#> Saved m1 to /tmp/Rtmp0Av7uP/m1.rds
 #> (R format; a jlm() result)
 #> To load it in a later session:
-#>   jload("/tmp/RtmpuRsxQm/m1")
+#>   jload("/tmp/Rtmp0Av7uP/m1")
 jload(path, overwrite = TRUE)
 #> Loading m1 ...
 #> Loaded m1 (R format; a jlm() result made by jstats 0.9.289)
