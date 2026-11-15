@@ -1,7 +1,44 @@
+# jstats 0.9.289
+
+Thank you for trying jstats. Here is what is new since 0.9.287.
+
+* **Save a result in a file.** `jsave()` now saves a result, or a table
+  made with `jtable()`, in a file named for it, and `jload()` brings it
+  back in a later session, ready for `jtable()`:
+  `jsave(m1)`
+  `jload("m1")`
+  In `jload()` the name goes in quotes, since it names a file. A chart is
+  not saved this way: write it to Word with `jtable()`, or run the line
+  that drew it again.
+* **A Word file's name without .docx.** `jtable(m1, file = "Table1")` now
+  writes Table1.docx, where it stopped and asked for the extension. A name
+  ending in another format's extension, such as Table1.pdf, stops with the
+  call written with .docx.
+* **A file that is open in Word or Excel.** On Windows, when the file
+  `jtable()` or `jsave()` would replace is open in another program, it now
+  stops before asking to replace it, and says which program to close it
+  in, without R's warning.
+* **A range in `jrelabel()`.** A range labels each variable in it, as
+  `c(Environment1, Environment2, Environment3)` does:
+  `jrelabel(d, Environment1:Environment3, labels = "1=Strongly disagree; 5=Strongly agree", modify = TRUE)`
+  Where only one variable goes, as in `jrecode()` or after `by =`, a range
+  now stops and names the variables it holds, where it said the range was
+  not found.
+* **A file name typed without quotes.** `jload(my-survey)` now says to put
+  the name in quotes, where R stopped with "object 'my' not found", and
+  `jload(m1)`, for a result already in your workspace, gives the line that
+  loads it from its file.
+
+When something you typed before now stops, its message says what to type
+instead.
+
+Problems or suggestions: tell me, or open an issue at
+https://github.com/jma61/jstats/issues.
+
 # jstats 0.9.287
 
-Thank you for trying jstats. Here is what is new since 0.9.267, the first
-release with tables and charts for publication.
+Here is what is new since 0.9.267. This is the first release with tables
+and charts for publication.
 
 * **Tables for publication, in Word.** Keep a result with `<-` and give it
   to `jtable()`, which makes an APA-style table and can write it to a Word
@@ -78,9 +115,6 @@ release with tables and charts for publication.
 
 When something you typed before now stops, its message says what to type
 instead.
-
-Problems or suggestions: tell me, or open an issue at
-https://github.com/jma61/jstats/issues.
 
 # jstats 0.9.267
 
