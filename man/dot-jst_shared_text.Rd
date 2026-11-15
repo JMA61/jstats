@@ -28,6 +28,11 @@ remedy for a formula term jstats cannot use as written.}
 first argument that is not a data frame.}
 \item{\code{.jst_txt_vars_quoted}}{the stop for vars = that does not
 hold names in quotes.}
+\item{\code{.jst_txt_file_in_quotes}}{the lead of jload()'s stops
+for a file argument that is not a file name: nothing given, a value
+that is not text, a data frame or a saved result given as an
+expression (Session 430: "Provide a filename" until then, which did
+not say the name goes in quotes).}
 \item{\code{.jst_txt_add_overwrite}}{the way to replace, under the way
 to keep, in the stop the overwrite question gives when its answer is
 not y or n -- jload(), jsave(), jcopy() -- and in jsave()'s stop

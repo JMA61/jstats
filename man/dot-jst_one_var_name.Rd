@@ -4,7 +4,14 @@
 \alias{.jst_one_var_name}
 \title{Internal helper: the one variable a single-variable slot names}
 \usage{
-.jst_one_var_name(sub, fn, slot = "after the data frame")
+.jst_one_var_name(
+  sub,
+  fn,
+  slot = "after the data frame",
+  data = NULL,
+  data_name = NULL,
+  default_used = FALSE
+)
 }
 \arguments{
 \item{sub}{The slot as typed (\code{substitute()}), or a quosure.}
@@ -13,6 +20,11 @@
 
 \item{slot}{Character(1); how the sentence names the slot:
 "after the data frame" (the default), or "by =".}
+
+\item{data}{The data frame, or NULL; a range is read against it.}
+
+\item{data_name, default_used}{For a range's not-found sentence, as
+\code{.jst_resolve_varrange()} takes them.}
 }
 \value{
 Character(1), the name.
@@ -26,5 +38,16 @@ the thirteen other slots took it (ruling R18, Session 355; built Session
 or a \code{c()} of one; a \code{c()} of several stops, naming them, since
 the function takes one. Anything else is deparsed as before and meets
 the not-found check.
+}
+\details{
+A range of variables, \code{A:B} (Session 430, the (S429) range item), is
+read as every variable list reads one since ruling R90, when the caller
+passes its data frame: every variable from A to B in the data frame's
+order, the range's own stops kept (an end not found, the ends the wrong
+way round). A range that names one variable gives its name; one that
+names several gets the slot's one-variable stop, which says what the
+range names. A range inside \code{c()}, and a range with no data frame
+given, are deparsed as before and meet the not-found check, as ruling
+R90 keeps a range inside \code{c()} in every variable list.
 }
 \keyword{internal}

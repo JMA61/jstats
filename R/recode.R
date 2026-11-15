@@ -75,10 +75,22 @@
 #' builds its list of names behaves the same when the list holds one name;
 #' \code{c(Q1)} after the data frame is the one-variable form.
 #'
+#' A range of variables names them too, every variable from the first to
+#' the last in the data frame's order:
+#' \preformatted{
+#' jrelabel(MyData, Q1:Q3,
+#'          labels = "1=Never; 2=Sometimes; 3=Often", modify = TRUE)
+#' }
+#' A range goes after the data frame by itself -- not inside a
+#' \code{c()}, as in every variable list, and not in \code{vars =}, which
+#' takes names in quotes.
+#'
 #' @param data A data frame containing the variable.
 #' @param var The variable to label (unquoted, e.g. \code{StatusR}; a
-#'   quoted name is accepted), or a \code{c()} of two or more for the list
-#'   form (see the section below).
+#'   quoted name is accepted), or, for the list form (see the section
+#'   below), a \code{c()} of two or more or a range of variables,
+#'   \code{Q1:Q5} -- every variable from Q1 to Q5 in the data frame's
+#'   order.
 #' @param labels Optional. A quoted string specifying value labels using the
 #'   format \code{"code=Label Text"} with rules separated by semicolons.
 #'   Accepted on haven-labelled, plain numeric, and logical variables only.
@@ -242,6 +254,20 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
   }
   .jst_check_flag(modify, "modify")
 
+  # A range of variables in the slot, A:B (Session 430, the (S429) range
+  # item): every variable from A to B in the data frame's order, as every
+  # variable list reads one since ruling R90 -- a range inside c() kept on
+  # the not-found stop, as R90 keeps it in every list. The slot is written
+  # out as the c() of its names -- several of them the list form, one the
+  # one-variable form, as c(Q1) is -- and the line the missing modify = TRUE
+  # offers names the range as typed.
+  slot_typed <- slot
+  slot_rng   <- .jst_slot_range_names(slot, data, data_name, default_used)
+  if (!is.null(slot_rng)) {
+    slot <- if (length(slot_rng) == 1L) as.name(slot_rng)
+            else as.call(c(as.name("c"), lapply(slot_rng, as.name)))
+  }
+
   # Variables listed one after another, as the data-first functions take
   # them -- jrelabel(d, Q1, Q2, Q3, labels = ...) -- where jrelabel() takes
   # one, or a c() (Session 378). Read before anything is evaluated: Q2 was
@@ -250,6 +276,15 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
   # the data frame's variables, other than the variable itself, is taken
   # as such a variable (ruling R18: the data frame's variable, never a
   # separate object with the same name).
+  # An unnamed name after the variable that is neither a variable of the
+  # data frame nor an object (Session 430): it was bound to var.label, and R
+  # stopped in its own words when var.label was read, "object 'Q5' not
+  # found". The not-found sentence, as for any variable.
+  lost <- .jst_relabel_lost_names(cl, data, data_sub_expr, slot_typed,
+                                  parent.frame())
+  if (length(lost) > 0L) {
+    .jst_check_vars(data, lost, data_name, default_used = default_used)
+  }
   extra <- .jst_relabel_extra_vars(cl, data, data_sub_expr, slot)
   if (length(extra) > 0L) {
     first <- .jst_relabel_slot_names(slot)
@@ -296,6 +331,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
     # How the offered lines name the variables: as the call gave them.
     vtxt <- if (vars_given) {
       paste0("vars = ", .jst_term_text(vars_sub))
+    } else if (!is.null(slot_rng)) {
+      .jst_term_text(slot_typed)
     } else {
       .jst_relabel_c(target_vars)
     }
@@ -557,6 +594,38 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
     nm <- as.character(a)
     if (!nzchar(nm) || !nm %in% names(data)) next
     if (identical(a, data_sub) || identical(a, slot)) next
+    out <- c(out, nm)
+  }
+  unique(out)
+}
+
+#' Internal helper: names after jrelabel()'s variable that are found nowhere
+#'
+#' The unnamed arguments of the call, other than the data frame and the
+#' variable slot, that are bare names neither of the data frame's variables
+#' nor of any object R can find from the caller (Session 430):
+#' \code{jrelabel(d, Q1, Q5, labels = ...)} gives Q5, which R had bound to
+#' var.label and stopped on, "object 'Q5' not found". Read from the call
+#' as typed, so nothing is evaluated.
+#'
+#' @param cl The call (\code{sys.call()}).
+#' @param data The data frame.
+#' @param data_sub The data argument as typed.
+#' @param slot The variable slot as typed, or NULL.
+#' @param env The caller's environment.
+#' @return Character.
+#' @keywords internal
+.jst_relabel_lost_names <- function(cl, data, data_sub, slot, env) {
+  args <- as.list(cl)[-1L]
+  an   <- names(args)
+  if (is.null(an)) an <- rep("", length(args))
+  out <- character(0)
+  for (a in args[!nzchar(an)]) {
+    if (!is.symbol(a)) next
+    nm <- as.character(a)
+    if (!nzchar(nm) || nm %in% names(data)) next
+    if (identical(a, data_sub) || identical(a, slot)) next
+    if (exists(nm, envir = env)) next
     out <- c(out, nm)
   }
   unique(out)
@@ -1629,15 +1698,23 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
 
   data           <- arg1$data
   .jst_data_name <- arg1$name
+  # A range, A:B, is read against the data frame (Session 430, the (S429)
+  # range item): one variable is its name, several the one-variable stop,
+  # where "Q1:Q3 was not found" had printed.
+  dflt <- arg1$mode %in% c("default", "symbol_with_default")
 
   if (arg1$mode == "symbol_with_default") {
     if (!var_missing) {
       .jst_named_args_stop(fn, arg1, data, .jst_data_name, call, "map")
     }
-    var_name <- .jst_one_var_name(arg1$first_arg_sub, fn)   # R18, S356
+    var_name <- .jst_one_var_name(arg1$first_arg_sub, fn,   # R18, S356
+                                  data = data, data_name = .jst_data_name,
+                                  default_used = dflt)
   } else {
     var_name <- if (var_missing) "" else
-      .jst_one_var_name(var_sub, fn)                        # R18, S356
+      .jst_one_var_name(var_sub, fn,                        # R18, S356
+                        data = data, data_name = .jst_data_name,
+                        default_used = dflt)
   }
 
   if (!is.data.frame(data)) {
@@ -1875,7 +1952,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
 #'
 #' @param data     A data frame containing the original variable.
 #' @param orig.var The variable to recode (unquoted, e.g. \code{AgeGroup};
-#'   a quoted name is accepted).
+#'   a quoted name is accepted). One variable: a range such as
+#'   \code{Q1:Q3} that names several stops, saying which.
 #' @param map      A quoted string specifying the recode rules, using the
 #'   format \code{"old=new"} with rules separated by semicolons. Multiple old
 #'   values mapping to the same new value are separated by commas on the left
@@ -4666,7 +4744,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
 #' @param data A data frame containing the variable to encode. Can be
 #'   omitted if a default data frame has been set with \code{juse()}.
 #' @param var The text or factor variable to encode (unquoted name; a
-#'   quoted name is accepted).
+#'   quoted name is accepted). One variable: a range such as
+#'   \code{Q1:Q3} that names several stops, saying which.
 #'   Character variables and factors are accepted; numeric, logical, and
 #'   date/time variables are refused with a message naming the right tool
 #'   (for numeric variables, that is \code{jrecode()}).
@@ -9954,6 +10033,23 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
                                  dot_names = character(0), as_c = FALSE,
                                  force = NULL) {
   if (is.null(vars_sub)) return(invisible(NULL))
+  # A range, vars = A:B (Session 430, the (S429) range item): R read it as
+  # arithmetic on objects of those names and stopped in its own words,
+  # "object 'A' not found". The list after the data frame takes a range
+  # (ruling R90), so the call is rebuilt with it there, once the range's
+  # own stops have had their say (an end not found, the ends the wrong way
+  # round). A range of numbers is not a range of variables, and is
+  # evaluated as before.
+  if (.jst_is_var_range(vars_sub) && is.data.frame(data)) {
+    .jst_resolve_varrange(list(rlang::new_quosure(vars_sub, env = env)),
+                          data, fn, data_name)
+    ln <- .jst_vars_dots_line(mc, fn, unique(c(dot_names,
+                                               .jst_term_text(vars_sub))),
+                              as_c, force)
+    .jst_stop("vars = takes names in quotes.\nTo name a range of variables, ",
+              "put it ", if (ln$framed) "after the data frame:" else "first:",
+              "\n", ln$pre, ln$line, fn = fn)
+  }
   syms <- if (is.symbol(vars_sub)) {
     list(vars_sub)
   } else if (is.call(vars_sub) && identical(vars_sub[[1L]], as.name("c")) &&

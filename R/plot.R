@@ -688,13 +688,19 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   variable_names <- .ranges$var_names
   by_quo         <- rlang::enquo(by)
   has_by         <- !rlang::quo_is_null(by_quo)
-  by_name        <- if (has_by) .jst_one_var_name(by_quo, "jplot", "by =") else NULL
+  by_name        <- if (has_by) .jst_one_var_name(by_quo, "jplot", "by =",
+                                                  data = data,
+                                                  data_name = .jst_data_name,
+                                                  default_used = .jst_default_used) else NULL
   # facet = (Capability Slate C3, Session 378): one panel per group of the
   # variable named, an alternative to by = when the groups are many. Read as
   # by = is, bare or in quotes, one variable.
   facet_quo      <- rlang::enquo(facet)
   has_facet      <- !rlang::quo_is_null(facet_quo)
-  facet_name     <- if (has_facet) .jst_one_var_name(facet_quo, "jplot", "facet =") else NULL
+  facet_name     <- if (has_facet) .jst_one_var_name(facet_quo, "jplot", "facet =",
+                                                     data = data,
+                                                     data_name = .jst_data_name,
+                                                     default_used = .jst_default_used) else NULL
 
   n_vars <- length(variable_names)
   # A chart of the parts of a whole -- a pie, a donut, a 100% stacked bar

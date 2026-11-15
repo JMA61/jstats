@@ -11,7 +11,8 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL, ...)
 omitted if a default data frame has been set with \code{juse()}.}
 
 \item{var}{The text or factor variable to encode (unquoted name; a
-quoted name is accepted).
+quoted name is accepted). One variable: a range such as
+\code{Q1:Q3} that names several stops, saying which.
 Character variables and factors are accepted; numeric, logical, and
 date/time variables are refused with a message naming the right tool
 (for numeric variables, that is \code{jrecode()}).}

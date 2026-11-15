@@ -10,7 +10,8 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL, ...)
 \item{data}{A data frame containing the original variable.}
 
 \item{orig.var}{The variable to recode (unquoted, e.g. \code{AgeGroup};
-a quoted name is accepted).}
+a quoted name is accepted). One variable: a range such as
+\code{Q1:Q3} that names several stops, saying which.}
 
 \item{map}{A quoted string specifying the recode rules, using the
 format \code{"old=new"} with rules separated by semicolons. Multiple old

@@ -262,7 +262,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # Check all variables exist before any processing
   check_names <- variable_names
   if (!rlang::quo_is_null(by_quo)) {
-    check_names <- c(check_names, .jst_one_var_name(by_quo, "jdesc", "by ="))
+    check_names <- c(check_names, .jst_one_var_name(by_quo, "jdesc", "by =",
+                                                    data = data,
+                                                    data_name = .jst_data_name,
+                                                    default_used = .jst_default_used))
   }
   .jst_check_vars(data, check_names, .jst_data_name, default_used = .jst_default_used)
 
@@ -356,7 +359,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
   # -- Grouped descriptives ---------------------------------------------------
   if (!rlang::quo_is_null(by_quo)) {
-    by_name <- .jst_one_var_name(by_quo, "jdesc", "by =")
+    by_name <- .jst_one_var_name(by_quo, "jdesc", "by =", data = data,
+                                 data_name = .jst_data_name,
+                                 default_used = .jst_default_used)
 
     # The grouping variable cannot also be described (Session 316): the
     # column is converted to group labels below before the per-variable
@@ -3068,7 +3073,9 @@ jmulti <- function(data, ..., none = NULL, ticked = 1, rank = TRUE,
                                  default_used = .jst_default_used)$var_names
   none_quo  <- rlang::enquo(none)
   none_name <- if (rlang::quo_is_null(none_quo)) NULL
-               else .jst_one_var_name(none_quo, "jmulti", "none =")
+               else .jst_one_var_name(none_quo, "jmulti", "none =", data = data,
+                                      data_name = .jst_data_name,
+                                      default_used = .jst_default_used)
   .jst_check_vars(data, c(items, none_name), .jst_data_name,
                   default_used = .jst_default_used)
   twice <- unique(items[duplicated(items)])

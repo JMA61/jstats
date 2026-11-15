@@ -533,7 +533,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                      match.call(), "sheet", "a sheet name", "jload")
   if (missing(file) || !is.character(file) || length(file) != 1 ||
       nchar(trimws(file)) == 0) {
-    .jst_stop("Provide a filename, for example:\n",
+    .jst_stop(.jst_txt_file_in_quotes,
               "  jload(\"mydata.sav\")")
   }
   # A path typed with single backslashes (S343, Jeff's decision; built
@@ -3667,7 +3667,26 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
     .jst_stop(paste(deparse(file_sub), collapse = " "),
               " is a data frame, not a file name.\n",
-              "Provide a filename, for example:\n",
+              .jst_txt_file_in_quotes,
+              "  jload(\"mydata.sav\")")
+  }
+  # A saved result or a built table named without its quotes (Session 430,
+  # the (S429) jload(m1) item; Jeff: "Should we specify "...provide a
+  # filename in quotes...""): jload(m1) after jsave(m1) gave the generic
+  # stop, which did not say the name goes in quotes. Named as jload(d)
+  # names a data frame: what it is, that it is already here, and the call
+  # with the quotes.
+  noun <- .jst_result_noun(value)
+  if (!is.null(noun)) {
+    if (is.symbol(file_sub)) {
+      nm <- as.character(file_sub)
+      .jst_stop("'", nm, "' is ", noun, ", already in your workspace.\n",
+                "To load it from its file, put its name in quotes:\n",
+                "  jload(\"", nm, "\")")
+    }
+    .jst_stop(paste(deparse(file_sub), collapse = " "), " is ", noun,
+              ", not a file name.\n",
+              .jst_txt_file_in_quotes,
               "  jload(\"mydata.sav\")")
   }
   if (is.character(value) && length(value) == 1L && !is.na(value) &&
@@ -6937,7 +6956,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   error. In a script, state it explicitly:
 #'   \code{jsave(mydata, "mydata.rds", overwrite = TRUE)}. Otherwise, if
 #'   the file already exists and the script was run by pasting or with
-#'   RStudio's Run button, the call stops with an error.
+#'   RStudio's Run button, the call stops with an error. A file that is
+#'   open in another program -- a .xlsx or .csv file in Excel, a .sav file
+#'   in SPSS -- cannot be replaced, and the call says so before it asks.
 #' @param preserve.declarations Logical, for a data frame. If \code{TRUE}
 #'   (the default), missing-value declarations are written as they stand;
 #'   formats that cannot store them (notably Excel and CSV) drop the
@@ -7793,6 +7814,12 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
               "Choose a folder you can write to and run jsave() again.")
   }
 
+  # A file another program holds -- a .xlsx or a .csv open in Excel, a .sav
+  # in SPSS (Session 430, the (S429) open-file item: jtable()'s parallel) --
+  # is said before the question, and under overwrite = TRUE before anything
+  # is written.
+  if (.jst_file_locked(out_path)) .jst_file_locked_stop(out_path, "jsave")
+
   # --- The overwrite question, after every check that can stop ---------------
   # (Session 367; see the overwrite check above.) What is left to stop the
   # save needs the write itself: a writer's own error, or a file that cannot
@@ -7906,11 +7933,14 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
 
   # Move the completed temp into place. On Windows file.rename() fails if
   # the destination exists, so explicitly remove first when overwriting.
+  # A file opened in another program since the check before the question
+  # refuses to be removed: R's warning is kept back and the stop is
+  # jtable()'s (Session 430), where it had been file.remove()'s warning and
+  # "Could not remove existing target file:".
   if (file.exists(out_path)) {
-    if (!file.remove(out_path)) {
+    if (!isTRUE(suppressWarnings(file.remove(out_path)))) {
       unlink(temp_path)
-      .jst_stop("Could not remove existing target file: ",
-           .jst_norm_path(out_path))
+      .jst_file_locked_stop(out_path, "jsave")
     }
   }
   if (!file.rename(temp_path, out_path)) {

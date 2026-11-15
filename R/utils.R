@@ -502,6 +502,81 @@ jupdate <- function(ask = FALSE, ...) {
 }
 
 
+#' Internal helper: is a file held open by another program?
+#'
+#' Session 430 (the (S429) open-file item; Jeff, of a Word file open in
+#' Word: "I think that doing this will be common among users, so we should
+#' get the error message down well"). On Windows a program that has a file
+#' open -- Word a .docx, Excel a .xlsx or a .csv, SPSS a .sav -- holds it
+#' against being replaced, and R found that out only at the write, after
+#' the overwrite question had been asked and answered, in R's own warnings
+#' ("Access is denied", "Permission denied"). The file is tried for
+#' writing, opened and closed again with nothing written, so a file that
+#' cannot be replaced is said before the question. Elsewhere a program does
+#' not hold a file so, and the answer is FALSE without a try. A file that
+#' does not exist is not held.
+#'
+#' @param path The file's path.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_file_locked <- function(path) {
+  if (!identical(.Platform$OS.type, "windows") || !file.exists(path) ||
+      dir.exists(path)) {
+    return(FALSE)
+  }
+  con <- tryCatch(suppressWarnings(file(path, open = "r+b")),
+                  error = function(e) NULL)
+  if (is.null(con)) return(TRUE)
+  close(con)
+  FALSE
+}
+
+#' Internal helper: the stop for a file that cannot be written
+#'
+#' One sentence for every function that replaces a file (Session 430, the
+#' (S429) open-file item): jtable() and jstyle() before their overwrite
+#' question and at the write, jsave() the same. The program named is the
+#' one that opens the file's kind -- Word for a .docx, Excel for a .xlsx or
+#' a .csv, SPSS for a .sav, Stata for a .dta -- and "another program" for
+#' any other; the sentence is jtable()'s since Session 400, which Jeff read
+#' as good ("The first part - the actual error message, looks good.").
+#'
+#' @param path The file's path.
+#' @param fn The user-facing function's name.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_file_locked_stop <- function(path, fn) {
+  ext <- tolower(tools::file_ext(path))
+  program <- if (!nzchar(ext)) "another program" else
+    switch(ext, docx = "Word", xlsx = , csv = "Excel", sav = "SPSS",
+           dta = "Stata", "another program")
+  .jst_stop("the file could not be written:\n  ", .jst_norm_path(path),
+            "\nIf it is open in ", program, ", close it and run ", fn,
+            "() again.", fn = fn)
+}
+
+#' Internal helper: put a written file in place, R's warnings kept back
+#'
+#' The last step of a write (Session 430): the temporary file renamed over
+#' the destination, or, where the rename is refused, copied over it. A
+#' destination another program holds refuses both, and R said so in two
+#' warnings of its own, file.rename()'s "Access is denied" and
+#' file.create()'s "Permission denied", after jtable()'s stop had already
+#' said it in the house voice ("The warning is cryptic." -- Jeff, S429). The
+#' warnings are kept back here and the caller stops; the temporary file is
+#' removed whatever happens.
+#'
+#' @param tmp The temporary file.
+#' @param dest The destination.
+#' @return TRUE when the file is in place, FALSE otherwise.
+#' @keywords internal
+.jst_move_into_place <- function(tmp, dest) {
+  on.exit(unlink(tmp), add = TRUE)
+  if (isTRUE(suppressWarnings(file.rename(tmp, dest)))) return(TRUE)
+  isTRUE(suppressWarnings(file.copy(tmp, dest, overwrite = TRUE)))
+}
+
+
 #' Internal helper: install the latest jstats into lib in a child R process
 #'
 #' The callr hand-off jupdate() makes, factored out so a test can stand in
@@ -4378,6 +4453,11 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #'     first argument that is not a data frame.}
 #'   \item{\code{.jst_txt_vars_quoted}}{the stop for vars = that does not
 #'     hold names in quotes.}
+#'   \item{\code{.jst_txt_file_in_quotes}}{the lead of jload()'s stops
+#'     for a file argument that is not a file name: nothing given, a value
+#'     that is not text, a data frame or a saved result given as an
+#'     expression (Session 430: "Provide a filename" until then, which did
+#'     not say the name goes in quotes).}
 #'   \item{\code{.jst_txt_add_overwrite}}{the way to replace, under the way
 #'     to keep, in the stop the overwrite question gives when its answer is
 #'     not y or n -- jload(), jsave(), jcopy() -- and in jsave()'s stop
@@ -4441,6 +4521,7 @@ NULL
 .jst_txt_new_column_it <- paste0("Create it as a new column first, then use ",
                                  "that column in the formula.")
 .jst_txt_first_arg_frame <- "The first input must be a data frame."
+.jst_txt_file_in_quotes <- "Provide a file name in quotes, for example:\n"
 .jst_txt_vars_quoted <- paste0("`vars` must be one or more variable names in ",
                                "quotes, for example:\n",
                                "  vars = c(\"Age\", \"Income\")")

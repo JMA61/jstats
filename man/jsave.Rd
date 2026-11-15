@@ -34,7 +34,9 @@ in interactive sessions. In non-interactive sessions, stops with an
 error. In a script, state it explicitly:
 \code{jsave(mydata, "mydata.rds", overwrite = TRUE)}. Otherwise, if
 the file already exists and the script was run by pasting or with
-RStudio's Run button, the call stops with an error.}
+RStudio's Run button, the call stops with an error. A file that is
+open in another program -- a .xlsx or .csv file in Excel, a .sav file
+in SPSS -- cannot be replaced, and the call says so before it asks.}
 
 \item{preserve.declarations}{Logical, for a data frame. If \code{TRUE}
 (the default), missing-value declarations are written as they stand;

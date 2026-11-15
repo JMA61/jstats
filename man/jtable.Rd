@@ -79,10 +79,14 @@ places it: under apa the general note's last sentence, under report a
 line of its own under the notes, after "Source:" (the style's
 \code{source.position} and \code{source.label}). NULL for none.}
 
-\item{file}{The Word file to write, with its .docx extension: a bare
-name goes in the output folder (\code{joptions(output.dir = )}) or the
-working directory; a path with a folder goes there. NULL writes
-nothing.}
+\item{file}{The Word file to write, in quotes: a bare name goes in the
+output folder (\code{joptions(output.dir = )}) or the working
+directory; a path with a folder goes there. The name may leave off
+.docx, which is added (\code{file = "Report"} writes Report.docx, and
+\code{"Report.v2"} writes Report.v2.docx); a name ending in another
+format's extension, such as .pdf or .doc, stops. A file that is open
+in Word cannot be replaced, and the call says so before it asks
+whether to replace it. NULL writes nothing.}
 
 \item{style}{The style a table is built in, or a chart framed and drawn
 in -- its name in quotes: \code{"apa"}, \code{"report"},

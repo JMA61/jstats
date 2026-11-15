@@ -5890,16 +5890,10 @@
                   fileext = ".docx")
   zip::zip(zipfile = tmp, files = names(parts), root = root,
            mode = "mirror", include_directories = FALSE)
-  if (!file.rename(tmp, file)) {
-    ok <- file.copy(tmp, file, overwrite = TRUE)
-    unlink(tmp)
-    if (!isTRUE(ok)) {
-      # A file open in Word is locked against replacement.
-      .jst_stop("the file could not be written:\n  ", .jst_norm_path(file),
-                "\nIf it is open in Word, close it and run jtable() again.",
-                fn = "jtable")
-    }
-  }
+  # A file open in Word is locked against replacement: R's two warnings are
+  # kept back and the stop says it (Session 430; the file was tried before
+  # the overwrite question too, so this is for a file opened in between).
+  if (!.jst_move_into_place(tmp, file)) .jst_file_locked_stop(file, "jtable")
   invisible(file)
 }
 
@@ -6821,10 +6815,14 @@
 #'   places it: under apa the general note's last sentence, under report a
 #'   line of its own under the notes, after "Source:" (the style's
 #'   \code{source.position} and \code{source.label}). NULL for none.
-#' @param file The Word file to write, with its .docx extension: a bare
-#'   name goes in the output folder (\code{joptions(output.dir = )}) or the
-#'   working directory; a path with a folder goes there. NULL writes
-#'   nothing.
+#' @param file The Word file to write, in quotes: a bare name goes in the
+#'   output folder (\code{joptions(output.dir = )}) or the working
+#'   directory; a path with a folder goes there. The name may leave off
+#'   .docx, which is added (\code{file = "Report"} writes Report.docx, and
+#'   \code{"Report.v2"} writes Report.v2.docx); a name ending in another
+#'   format's extension, such as .pdf or .doc, stops. A file that is open
+#'   in Word cannot be replaced, and the call says so before it asks
+#'   whether to replace it. NULL writes nothing.
 #' @param style The style a table is built in, or a chart framed and drawn
 #'   in -- its name in quotes: \code{"apa"}, \code{"report"},
 #'   or the name of a style file (\code{"myjournal"} for
@@ -6992,11 +6990,7 @@ jtable <- function(x, headings = NULL, markers = NULL, title = NULL,
                 "for example:\n  file = \"Table1.docx\"")
     }
     .jst_check_path_chars(file, what = "path")
-    if (!identical(tolower(tools::file_ext(file)), "docx")) {
-      .jst_stop("the file name needs the .docx extension (a Word file), ",
-                "for example:\n  file = \"",
-                tools::file_path_sans_ext(basename(file)), ".docx\"")
-    }
+    file <- .jst_table_file_name(file, cl, mc)
     out_path <- .jst_table_out_path(file)
   }
   if (!is.null(title) && (!is.character(title) || length(title) != 1L ||
@@ -7874,6 +7868,43 @@ print.jst_figure <- function(x, ...) {
   layer
 }
 
+#' Internal helper: the Word file's name, .docx added where it is left off
+#'
+#' Session 430, the (S429) .docx item (Jeff: "do we really need to specify
+#' the file extension in the syntax? ... We're always writing to a .docx
+#' right?"). jtable() writes Word files only, so a name with no extension,
+#' or one whose ending is no file format's ("Report.v2", "Table 1.2026"),
+#' gets .docx, as jsave() gives a saved result's file .rds (ruling R91);
+#' until v0.9.288 each stopped with a fragment of a call, and "Report.v2"
+#' was offered "Report.docx". A name ending in another format's extension
+#' stops, saying the table is written to a Word file, with the call as
+#' typed and the name ending in .docx. A figure's companion files take the
+#' final name, as they are made from it.
+#'
+#' @param file The file argument, checked as text.
+#' @param cl,mc The call as typed and the matched call.
+#' @return The name to write, ending in .docx.
+#' @keywords internal
+.jst_table_file_name <- function(file, cl, mc) {
+  ext <- tolower(tools::file_ext(file))
+  if (identical(ext, "docx")) return(file)
+  if (ext %in% .jst_table_other_exts) {
+    new <- paste0(tools::file_path_sans_ext(file), ".docx")
+    .jst_stop("the file name ends in .", ext, ", and a table is written to ",
+              "a Word file (.docx).\n",
+              "Name the file with .docx:\n",
+              "  ", .jst_call_with(cl, mc, "file", new), fn = "jtable")
+  }
+  paste0(file, ".docx")
+}
+
+# The endings .jst_table_file_name() reads as another file format's, which a
+# Word file's name does not take (Session 430).
+.jst_table_other_exts <- c("doc", "docm", "dotx", "rtf", "odt", "pdf", "txt",
+                           "md", "htm", "html", "tex", "xls", "xlsx", "csv",
+                           "rds", "rdata", "sav", "dta", "xpt", "pptx",
+                           "png", "jpg", "jpeg", "svg", "jstyle")
+
 #' Internal helper: where jtable() writes a file
 #'
 #' A path with a folder is used as given, and its folder must exist; a
@@ -7914,7 +7945,9 @@ print.jst_figure <- function(x, ...) {
 #' After every check that can stop the call (ruling R42's form, as
 #' jsave()'s): a file that exists and overwrite = FALSE is a question where
 #' the session can ask, and a stop with both ways out where it cannot. A
-#' folder R cannot write to stops first.
+#' folder R cannot write to stops first. A file another program holds
+#' (\code{.jst_file_locked()}) stops before the question, and under
+#' overwrite = TRUE before the write (Session 430).
 #'
 #' @param out_path The path.
 #' @param overwrite Logical.
@@ -7934,12 +7967,20 @@ print.jst_figure <- function(x, ...) {
               "Choose a folder you can write to and run ", fn, "() again.",
               fn = fn)
   }
-  if (!file.exists(out_path) || isTRUE(overwrite)) return(TRUE)
-  if (!ask) {
+  if (!file.exists(out_path)) return(TRUE)
+  if (!isTRUE(overwrite) && !ask) {
     .jst_stop("this file already exists:\n",
               "  ", .jst_norm_path(out_path), "\n",
               .jst_txt_keep_file, .jst_txt_add_overwrite, fn = fn)
   }
+  # A file another program holds (Session 430, the (S429) open-file item's
+  # lean, okayed): said now, before the question is asked about a file that
+  # cannot be replaced -- the S366-S367 rule, the question after every check
+  # that can stop -- and under overwrite = TRUE before anything is written.
+  # A session that cannot ask still stops on the existing file first, as
+  # jsave() does.
+  if (.jst_file_locked(out_path)) .jst_file_locked_stop(out_path, fn)
+  if (isTRUE(overwrite)) return(TRUE)
   ok <- .jst_confirm(
     paste0("This file already exists:\n  ", .jst_norm_path(out_path),
            "\nOverwrite? (y/n): "),

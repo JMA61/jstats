@@ -2251,16 +2251,47 @@
 #' the function takes one. Anything else is deparsed as before and meets
 #' the not-found check.
 #'
+#' A range of variables, \code{A:B} (Session 430, the (S429) range item), is
+#' read as every variable list reads one since ruling R90, when the caller
+#' passes its data frame: every variable from A to B in the data frame's
+#' order, the range's own stops kept (an end not found, the ends the wrong
+#' way round). A range that names one variable gives its name; one that
+#' names several gets the slot's one-variable stop, which says what the
+#' range names. A range inside \code{c()}, and a range with no data frame
+#' given, are deparsed as before and meet the not-found check, as ruling
+#' R90 keeps a range inside \code{c()} in every variable list.
+#'
 #' @param sub The slot as typed (\code{substitute()}), or a quosure.
 #' @param fn Character(1); the user-facing function's name.
 #' @param slot Character(1); how the sentence names the slot:
 #'   "after the data frame" (the default), or "by =".
+#' @param data The data frame, or NULL; a range is read against it.
+#' @param data_name,default_used For a range's not-found sentence, as
+#'   \code{.jst_resolve_varrange()} takes them.
 #' @return Character(1), the name.
 #' @keywords internal
-.jst_one_var_name <- function(sub, fn, slot = "after the data frame") {
+.jst_one_var_name <- function(sub, fn, slot = "after the data frame",
+                              data = NULL, data_name = NULL,
+                              default_used = FALSE) {
   ex <- if (rlang::is_quosure(sub)) rlang::quo_get_expr(sub) else sub
   if (is.character(ex) && length(ex) == 1L && !is.na(ex)) return(ex)
   if (is.symbol(ex)) return(as.character(ex))
+  rng <- .jst_slot_range_names(ex, data, data_name, default_used)
+  if (!is.null(rng)) {
+    nms <- unique(rng)
+    if (length(nms) == 1L) return(nms)
+    what <- if (length(nms) <= 6L) .jst_and_list(nms)
+            else paste(.jst_fmt_n(length(nms)), "variables")
+    .jst_stop(if (identical(slot, "after the data frame"))
+                "only one variable goes after the data frame"
+              else paste0(slot, " takes one variable"),
+              ", and the range ", .jst_term_text(ex), " names ", what,
+              ".\n",
+              "Name one variable",
+              if (identical(slot, "after the data frame"))
+                ", and run the call once for each." else ".",
+              fn = fn)
+  }
   if (is.call(ex) && is.symbol(ex[[1L]]) &&
       identical(as.character(ex[[1L]]), "c") && length(ex) > 1L) {
     items <- as.list(ex)[-1L]
@@ -2281,6 +2312,31 @@
     }
   }
   paste(deparse(ex, width.cutoff = 500L), collapse = " ")
+}
+
+#' Internal helper: the variables a range in a one-variable slot names
+#'
+#' For the slots that take ONE variable, and jrelabel()'s variable slot
+#' (Session 430, the (S429) range item): a range \code{A:B} read against
+#' the data frame as every variable list reads it since ruling R90 -- every
+#' variable from its first end to its last, through
+#' \code{.jst_resolve_varrange()}, so an end that is not a variable takes
+#' the not-found sentence and ends the wrong way round take the stop that
+#' turns them. A range inside \code{c()} is not read so, as ruling R90 keeps
+#' it on the not-found stop in every variable list; nor is a range of
+#' numbers (\code{1:3}). Anything else, or no data frame, gives NULL, and the
+#' caller reads the slot as before.
+#'
+#' @param ex The slot as typed.
+#' @param data The data frame, or NULL.
+#' @param data_name,default_used As \code{.jst_resolve_varrange()}.
+#' @return Character, the names in the data frame's order, or NULL.
+#' @keywords internal
+.jst_slot_range_names <- function(ex, data, data_name = NULL,
+                                  default_used = FALSE) {
+  if (!is.data.frame(data) || !.jst_is_var_range(ex)) return(NULL)
+  .jst_resolve_varrange(list(rlang::new_quosure(ex, env = emptyenv())), data,
+                        "", data_name, default_used = default_used)$var_names
 }
 
 #' Internal helper: the word arguments and what each takes
@@ -3170,8 +3226,15 @@
 #' @return Does not return; stops.
 #' @keywords internal
 .jst_named_args_stop <- function(fn, arg1, data, data_name, cl, slot) {
-  first <- tryCatch(.jst_one_var_name(arg1$first_arg_sub, fn),
-                    error = function(e) NULL)
+  # A range typed first (Session 430): its own stops come first -- an end not
+  # found, the ends the wrong way round, several variables in a slot that
+  # takes one -- so the line below never offers a call that would stop again.
+  first <- if (!is.null(.jst_slot_range_names(arg1$first_arg_sub, data,
+                                              data_name, TRUE))) {
+    .jst_one_var_name(arg1$first_arg_sub, fn, data = data,
+                      data_name = data_name, default_used = TRUE)
+  } else tryCatch(.jst_one_var_name(arg1$first_arg_sub, fn),
+                  error = function(e) NULL)
   if (!is.null(first) && nzchar(first) && is.data.frame(data) &&
       !first %in% names(data)) {
     .jst_check_vars(data, first, data_name, default_used = TRUE)
@@ -3484,13 +3547,20 @@
   # A c() of names is read the same way (Session 356, ruling R18): under a
   # default that has every name, jdesc(c(Age, Score)) is the frame's two
   # variables, not the two vectors joined.
-  c_names <- .jst_c_of_names(data_sub)
+  # A range, A:B, the same (Session 430): with workspace objects A and B
+  # holding numbers, jdesc(A:B) under a default had described R's A:B, the
+  # numbers between them, where the frame's variables from A to B were meant.
+  c_names  <- .jst_c_of_names(data_sub)
+  rng_ends <- if (.jst_is_var_range(data_sub)) {
+    c(as.character(data_sub[[2L]]), as.character(data_sub[[3L]]))
+  }
   if (accept_vector && !eval_result$failed &&
-      (is.symbol(data_sub) || !is.null(c_names)) &&
+      (is.symbol(data_sub) || !is.null(c_names) || !is.null(rng_ends)) &&
       !is.null(default_name) && is.null(frame_col)) {
     dflt <- if (exists(default_name, envir = envir))
               get(default_name, envir = envir) else NULL
-    want <- if (is.symbol(data_sub)) as.character(data_sub) else c_names
+    want <- if (is.symbol(data_sub)) as.character(data_sub)
+            else if (!is.null(c_names)) c_names else rng_ends
     if (is.data.frame(dflt) && all(want %in% names(dflt))) {
       return(list(mode = "symbol_with_default",
                   data = dflt, name = default_name,

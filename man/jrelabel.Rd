@@ -18,8 +18,10 @@ jrelabel(
 \item{data}{A data frame containing the variable.}
 
 \item{var}{The variable to label (unquoted, e.g. \code{StatusR}; a
-quoted name is accepted), or a \code{c()} of two or more for the list
-form (see the section below).}
+quoted name is accepted), or, for the list form (see the section
+below), a \code{c()} of two or more or a range of variables,
+\code{Q1:Q5} -- every variable from Q1 to Q5 in the data frame's
+order.}
 
 \item{labels}{Optional. A quoted string specifying value labels using the
 format \code{"code=Label Text"} with rules separated by semicolons.
@@ -151,6 +153,16 @@ variable and is refused in this form; give each its own call. A list in
 \code{vars =} follows these rules whatever its length, so a script that
 builds its list of names behaves the same when the list holds one name;
 \code{c(Q1)} after the data frame is the one-variable form.
+
+A range of variables names them too, every variable from the first to
+the last in the data frame's order:
+\preformatted{
+jrelabel(MyData, Q1:Q3,
+         labels = "1=Never; 2=Sometimes; 3=Often", modify = TRUE)
+}
+A range goes after the data frame by itself -- not inside a
+\code{c()}, as in every variable list, and not in \code{vars =}, which
+takes names in quotes.
 }
 
 \examples{
