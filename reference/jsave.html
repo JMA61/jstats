@@ -49,7 +49,7 @@ a Word file, and the line that drew it draws it again."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.288</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.289</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -141,7 +141,9 @@ in interactive sessions. In non-interactive sessions, stops with an
 error. In a script, state it explicitly:
 <code>jsave(mydata, "mydata.rds", overwrite = TRUE)</code>. Otherwise, if
 the file already exists and the script was run by pasting or with
-RStudio's Run button, the call stops with an error.</p></dd>
+RStudio's Run button, the call stops with an error. A file that is
+open in another program – a .xlsx or .csv file in Excel, a .sav file
+in SPSS – cannot be replaced, and the call says so before it asks.</p></dd>
 
 
 <dt id="arg-preserve-declarations">preserve.declarations<a class="anchor" aria-label="anchor" href="#arg-preserve-declarations"></a></dt>
@@ -276,20 +278,20 @@ workflow conventions, and complete function listing.</p></div>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># A runnable save into R's session temporary folder</span></span></span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"community.sav"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpWVNkeo/community.sav</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpuRsxQm/community.sav</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> (SPSS format; 103 cases, 15 variables)</span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"community.sav"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>      overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>                   <span class="co"># the data frame given by name</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpWVNkeo/community.sav</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpuRsxQm/community.sav</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> (SPSS format; 103 cases, 15 variables)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A saved result, kept for a later session in R format</span></span></span>
 <span class="r-in"><span><span class="va">m1</span> <span class="op">&lt;-</span> <span class="fu"><a href="jlm.html">jlm</a></span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Age</span>, <span class="va">community</span>, print <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">m1</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"m1.rds"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved m1 to /tmp/RtmpWVNkeo/m1.rds</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved m1 to /tmp/RtmpuRsxQm/m1.rds</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> (R format; a jlm() result)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To load it in a later session:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("/tmp/RtmpWVNkeo/m1")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("/tmp/RtmpuRsxQm/m1")</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="co"># The file extension determines the format ---</span></span></span>

@@ -68,8 +68,10 @@ jrelabel(
 - var:
 
   The variable to label (unquoted, e.g. `StatusR`; a quoted name is
-  accepted), or a [`c()`](https://rdrr.io/r/base/c.html) of two or more
-  for the list form (see the section below).
+  accepted), or, for the list form (see the section below), a
+  [`c()`](https://rdrr.io/r/base/c.html) of two or more or a range of
+  variables, `Q1:Q5` – every variable from Q1 to Q5 in the data frame's
+  order.
 
 - labels:
 
@@ -170,6 +172,17 @@ one variable and is refused in this form; give each its own call. A list
 in `vars =` follows these rules whatever its length, so a script that
 builds its list of names behaves the same when the list holds one name;
 `c(Q1)` after the data frame is the one-variable form.
+
+A range of variables names them too, every variable from the first to
+the last in the data frame's order:
+
+
+    jrelabel(MyData, Q1:Q3,
+             labels = "1=Never; 2=Sometimes; 3=Often", modify = TRUE)
+
+A range goes after the data frame by itself – not inside a
+[`c()`](https://rdrr.io/r/base/c.html), as in every variable list, and
+not in `vars =`, which takes names in quotes.
 
 ## See also
 

@@ -41,6 +41,13 @@ is the text its sites printed before the merge, byte for byte.
 
   the stop for vars = that does not hold names in quotes.
 
+- `.jst_txt_file_in_quotes`:
+
+  the lead of jload()'s stops for a file argument that is not a file
+  name: nothing given, a value that is not text, a data frame or a saved
+  result given as an expression (Session 430: "Provide a filename" until
+  then, which did not say the name goes in quotes).
+
 - `.jst_txt_add_overwrite`:
 
   the way to replace, under the way to keep, in the stop the overwrite

@@ -3,7 +3,10 @@
 After every check that can stop the call (ruling R42's form, as
 jsave()'s): a file that exists and overwrite = FALSE is a question where
 the session can ask, and a stop with both ways out where it cannot. A
-folder R cannot write to stops first.
+folder R cannot write to stops first. A file another program holds
+([`.jst_file_locked()`](https://jma61.github.io/jstats/reference/dot-jst_file_locked.md))
+stops before the question, and under overwrite = TRUE before the write
+(Session 430).
 
 ## Usage
 

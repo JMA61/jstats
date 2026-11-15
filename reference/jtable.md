@@ -113,9 +113,14 @@ print(x, ...)
 
 - file:
 
-  The Word file to write, with its .docx extension: a bare name goes in
-  the output folder (`joptions(output.dir = )`) or the working
-  directory; a path with a folder goes there. NULL writes nothing.
+  The Word file to write, in quotes: a bare name goes in the output
+  folder (`joptions(output.dir = )`) or the working directory; a path
+  with a folder goes there. The name may leave off .docx, which is added
+  (`file = "Report"` writes Report.docx, and `"Report.v2"` writes
+  Report.v2.docx); a name ending in another format's extension, such as
+  .pdf or .doc, stops. A file that is open in Word cannot be replaced,
+  and the call says so before it asks whether to replace it. NULL writes
+  nothing.
 
 - style:
 
@@ -308,7 +313,7 @@ t2 <- jtable(list(m1, m2), file = file.path(tempdir(), "Table2.docx"),
              overwrite = TRUE)
 #> Table 1. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> Table written to /tmp/RtmpWVNkeo/Table2.docx
+#> Table written to /tmp/RtmpuRsxQm/Table2.docx
 #> 
 
 # Several tables in one file: build each, then give them together
@@ -318,7 +323,7 @@ doc <- jtable(list(t1, t2), file = file.path(tempdir(), "Tables.docx"),
 #>   2 variables, on a portrait page.
 #> Table 2. Regression Coefficients Predicting Wellbeing score (0-100) (N = 103)
 #>   2 models side by side, on a portrait page.
-#> 2 tables written to /tmp/RtmpWVNkeo/Tables.docx
+#> 2 tables written to /tmp/RtmpuRsxQm/Tables.docx
 #> 
 print(doc)
 #> Table 1
@@ -356,17 +361,17 @@ doc2 <- jtable(list(t1, p1), file = file.path(tempdir(), "Report.docx"),
 #>   2 variables, on a portrait page.
 #> Figure 1. Region of residence (N = 103)
 #>   a bar chart, 6 by 4 inches, on a portrait page.
-#> 1 table and 1 figure written to /tmp/RtmpWVNkeo/Report.docx
+#> 1 table and 1 figure written to /tmp/RtmpuRsxQm/Report.docx
 #> 
 
 # Keep a result for a later session
 path <- file.path(tempdir(), "m1.rds")
 jsave(m1, path, overwrite = TRUE)
-#> Saved m1 to /tmp/RtmpWVNkeo/m1.rds
+#> Saved m1 to /tmp/RtmpuRsxQm/m1.rds
 #> (R format; a jlm() result)
 #> To load it in a later session:
-#>   jload("/tmp/RtmpWVNkeo/m1")
+#>   jload("/tmp/RtmpuRsxQm/m1")
 jload(path, overwrite = TRUE)
 #> Loading m1 ...
-#> Loaded m1 (R format; a jlm() result made by jstats 0.9.288)
+#> Loaded m1 (R format; a jlm() result made by jstats 0.9.289)
 ```

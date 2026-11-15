@@ -27,7 +27,8 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL, ...)
 - orig.var:
 
   The variable to recode (unquoted, e.g. `AgeGroup`; a quoted name is
-  accepted).
+  accepted). One variable: a range such as `Q1:Q3` that names several
+  stops, saying which.
 
 - map:
 

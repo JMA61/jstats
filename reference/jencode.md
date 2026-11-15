@@ -24,9 +24,10 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL, ...)
 - var:
 
   The text or factor variable to encode (unquoted name; a quoted name is
-  accepted). Character variables and factors are accepted; numeric,
-  logical, and date/time variables are refused with a message naming the
-  right tool (for numeric variables, that is
+  accepted). One variable: a range such as `Q1:Q3` that names several
+  stops, saying which. Character variables and factors are accepted;
+  numeric, logical, and date/time variables are refused with a message
+  naming the right tool (for numeric variables, that is
   [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)).
 
 - map:

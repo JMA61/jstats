@@ -72,7 +72,10 @@ jsave(
   In non-interactive sessions, stops with an error. In a script, state
   it explicitly: `jsave(mydata, "mydata.rds", overwrite = TRUE)`.
   Otherwise, if the file already exists and the script was run by
-  pasting or with RStudio's Run button, the call stops with an error.
+  pasting or with RStudio's Run button, the call stops with an error. A
+  file that is open in another program – a .xlsx or .csv file in Excel,
+  a .sav file in SPSS – cannot be replaced, and the call says so before
+  it asks.
 
 - preserve.declarations:
 
@@ -226,20 +229,20 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpWVNkeo/community.sav
+#> Saved community to /tmp/RtmpuRsxQm/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/RtmpWVNkeo/community.sav
+#> Saved community to /tmp/RtmpuRsxQm/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 # A saved result, kept for a later session in R format
 m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
 jsave(m1, file.path(tempdir(), "m1.rds"), overwrite = TRUE)
-#> Saved m1 to /tmp/RtmpWVNkeo/m1.rds
+#> Saved m1 to /tmp/RtmpuRsxQm/m1.rds
 #> (R format; a jlm() result)
 #> To load it in a later session:
-#>   jload("/tmp/RtmpWVNkeo/m1")
+#>   jload("/tmp/RtmpuRsxQm/m1")
 
 if (FALSE) { # \dontrun{
 # The file extension determines the format ---
