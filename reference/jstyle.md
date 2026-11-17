@@ -159,7 +159,7 @@ jstyle()
 #> No style folder is set, so jstyle() saves copies in your jstats folder, which
 #> is hidden.
 #> To keep them in your Documents folder instead, run:
-#>   joptions(style.dir = "/home/runner/Documents/jstats styles")
+#>   joptions(style.dir = "/home/runner/Documents/Styles")
 #> 
 
 # Every setting of the built-in styles
@@ -583,10 +583,10 @@ jstyle("report")
 
 # A complete copy to edit, and a short one holding two changes
 jstyle("apa", save.as = file.path(tempdir(), "myjournal"), overwrite = TRUE)
-#> Style written to /tmp/RtmpSHjtt5/myjournal.jstyle
+#> Style written to /tmp/Rtmp2HljPm/myjournal.jstyle
 #> 
 jstyle("apa", save.as = file.path(tempdir(), "myapa"), overwrite = TRUE,
        font = "Arial", regression = list(fit.rows = c("r2", "n")))
-#> Style written to /tmp/RtmpSHjtt5/myapa.jstyle
+#> Style written to /tmp/Rtmp2HljPm/myapa.jstyle
 #> 
 ```

@@ -229,20 +229,20 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpSHjtt5/community.sav
+#> Saved community to /tmp/Rtmp2HljPm/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/RtmpSHjtt5/community.sav
+#> Saved community to /tmp/Rtmp2HljPm/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 # A saved result, kept for a later session in R format
 m1 <- jlm(WellbeingScore ~ Age, community, print = FALSE)
 jsave(m1, file.path(tempdir(), "m1.rds"), overwrite = TRUE)
-#> Saved m1 to /tmp/RtmpSHjtt5/m1.rds
+#> Saved m1 to /tmp/Rtmp2HljPm/m1.rds
 #> (R format; a jlm() result)
 #> To load it in a later session:
-#>   jload("/tmp/RtmpSHjtt5/m1")
+#>   jload("/tmp/Rtmp2HljPm/m1")
 
 if (FALSE) { # \dontrun{
 # The file extension determines the format ---
