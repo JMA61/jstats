@@ -13,7 +13,7 @@
 Character(1).
 }
 \description{
-\code{joptions(style.dir = "<Documents>/jstats styles")}, two spaces in,
+\code{joptions(style.dir = "<Documents>/Styles")}, two spaces in,
 the path's quotation marks escaped and the path whole on one line, so it
 runs as printed: the last line of the jstats-folder note and of
 jstyle()'s list when no style folder is set (Session 427; one home for

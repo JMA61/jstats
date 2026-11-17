@@ -8302,10 +8302,12 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
 #' folder's own path: the "Style written to" line gives the file's, which
 #' File Explorer's address bar opens as a file rather than showing its
 #' folder. The folder the last line sets is the one the guides recommend,
-#' Documents/jstats styles, by its full path (the (S423) path item, built
+#' Documents/Styles, by its full path (the (S423) path item, built
 #' Session 424; Jeff: "Some of my students, even at the masters level,
 #' have a difficult time with the ~ and the concept of a working
 #' directory."), so the line runs as printed and says where the folder is.
+#' The folder was named "jstats styles" until Session 435 (the (S434)
+#' item; \code{.jst_style_visible_dir()}).
 #'
 #' @param dir The folder's path, as printed.
 #' @param visible The folder the last line sets
@@ -8345,7 +8347,7 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
 
 #' Internal helper: the line that sets the visible style folder
 #'
-#' \code{joptions(style.dir = "<Documents>/jstats styles")}, two spaces in,
+#' \code{joptions(style.dir = "<Documents>/Styles")}, two spaces in,
 #' the path's quotation marks escaped and the path whole on one line, so it
 #' runs as printed: the last line of the jstats-folder note and of
 #' jstyle()'s list when no style folder is set (Session 427; one home for
@@ -8360,13 +8362,20 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
 
 #' Internal helper: the visible style folder the jstats-folder note names
 #'
-#' Documents/jstats styles, by its full path, worked out on the computer:
+#' Documents/Styles, by its full path, worked out on the computer:
 #' R's home folder is the Documents folder on Windows
 #' (C:/Users/jeff/Documents, or OneDrive's), so the folder is in it; on a
 #' Mac and on Linux the home folder holds Documents. A home whose last part is
 #' Documents is taken as the Documents folder whatever the system, so no
 #' test of the system is needed. joptions(style.dir =) creates the folder
 #' when the line is run.
+#'
+#' The folder is Styles, with a capital S, since Session 435 (the (S434)
+#' item; Jeff: "we should lock in the Styles with a capital S to be used
+#' everywhere for consistency"), beside the folders the guides use (Data,
+#' Tables, Scripts); until then it was "jstats styles". No code reads a
+#' folder named the old way (no backward compatibility before CRAN): a
+#' session whose joptions(style.dir =) line names it keeps that folder.
 #'
 #' @param home The home folder (\code{path.expand("~")}); an argument so a
 #'   battery can stand in for either shape. Its backslashes become forward
@@ -8379,7 +8388,7 @@ jstyle <- function(style = NULL, save.as = NULL, overwrite = FALSE,
   home <- sub("/+$", "", gsub("\\", "/", home, fixed = TRUE))
   docs <- if (identical(tolower(basename(home)), "documents")) home
           else file.path(home, "Documents")
-  file.path(docs, "jstats styles")
+  file.path(docs, "Styles")
 }
 
 #' Internal helper: open a style's file, for jstyle(open = TRUE)

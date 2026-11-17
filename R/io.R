@@ -870,7 +870,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (grepl("^[0-9]", obj_name)) {
     .jst_stop(
       if (is.null(name)) {
-        paste0("The filename '", basename(file), "' starts with a number.\n")
+        paste0("The file name '", basename(file), "' starts with a number.\n")
       } else {
         paste0("The name '", name, "' starts with a number.\n")
       },
@@ -1395,10 +1395,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   for (nt in reg_note) say_note(nt)
 
   # --- Set as default with juse() if requested -------------------------------
-  if (use) {
-    options(.jst_default_data = obj_name)
-    say_note("Default data frame set to: ", obj_name)
-  }
+  # The setting is made here; its line, "Default data frame set to: <name>",
+  # is printed last, after everything the load itself says (the (S433) item,
+  # Session 435; it printed here, above the Loaded line).
+  if (use) options(.jst_default_data = obj_name)
 
   # --- Summary message --------------------------------------------------------
   # Printed BEFORE the UDM narrative (S227, E17 reorder): the load
@@ -1574,6 +1574,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       if (length(mk_vars) > 0L) df[, !names(df) %in% mk_vars, drop = FALSE]
       else df, obj_name)
   }
+
+  # --- The default data frame's line, under use = TRUE ------------------------
+  # Last (the (S433) item, Session 435): jload(file, use = TRUE) reads as
+  # jload(file) then juse() -- the Loaded line leads (S227), everything the
+  # load found follows it, and the line juse() prints closes the output. It
+  # had printed above the Loaded line. A blank line sets it off from what is
+  # above it, the Loaded line included (ruling R6; Rule F): the Loaded line
+  # has always set the flag by here. quiet = TRUE mutes it, as before.
+  if (use) say_note("Default data frame set to: ", obj_name)
 
   # DECISION B (settled S205, implemented S208): return nothing. jload() is
   # a statement -- it places the frame under obj_name above -- and returning
@@ -4815,7 +4824,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                  paste0(search_dirs, " folder")),
           collapse = " and "),
     .jst_missing_data_dir_note(), "\n",
-    "Check that the filename and extension are correct."
+    "Check that the file name and extension are correct."
   )
 }
 
@@ -7393,7 +7402,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     if (missing(file) || !is.character(file) || length(file) != 1 ||
         nchar(trimws(file)) == 0) {
       .jst_stop(
-        expr_lines(paste0("Provide a filename with extension, for example:\n",
+        expr_lines(paste0("Provide a file name with extension, for example:\n",
                           "  jsave(", code_name, ", \"mydata.sav\"",
                           .jst_example_clean_names(data, "mydata.sav"), ")")),
         "\n",
